@@ -212,23 +212,6 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 270,
               {trendPct >= 0 ? '+' : ''}{trendPct.toFixed(1)}%
             </strong>
           </div>
-
-          {/* Daily Average Callout */}
-          <div
-            className="chart-avg-badge-top"
-            style={{
-              backgroundColor: contrast.bg,
-              borderColor: contrast.border,
-              color: contrast.text,
-            }}
-            title={`Average across selected period: ${format(Math.round(avg))}`}
-          >
-            <span className="avg-badge-icon" style={{ color: contrast.stroke }}>⚡</span>
-            <span className="avg-badge-label">Daily Avg:</span>
-            <strong className="avg-badge-val" style={{ color: contrast.stroke }}>
-              {format(Math.round(avg))}
-            </strong>
-          </div>
         </div>
       </div>
 
