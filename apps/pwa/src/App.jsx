@@ -276,7 +276,7 @@ function Shell({ children }) {
               <span className="user-role-label">Owner</span>
             </div>
 
-            {/* Language toggle: Urdu/English text over centrally aligned globe icon */}
+            {/* Language toggle: Urdu/English text in front and centrally aligned with language icon */}
             <button
               type="button"
               className="ghost top-lang-btn"
@@ -284,7 +284,7 @@ function Shell({ children }) {
               onClick={() => setLang(lang === 'ur' ? 'en' : 'ur')}
             >
               <span className="lang-label">{t.lang}</span>
-              <Icon name="globe" color="#38bdf8" size={13} />
+              <Icon name="globe" color="#38bdf8" size={14} />
             </button>
 
             <button

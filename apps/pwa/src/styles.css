@@ -363,14 +363,14 @@ main:focus {
   transform: translateY(-1px);
 }
 
-/* Compact Language Toggle with Urdu/English over central globe icon */
+/* Language Toggle with Urdu/English in front and centrally aligned with language icon */
 .top button.ghost.top-lang-btn {
   display: inline-flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 0.1rem;
-  padding: 0.12rem 0.52rem;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
   min-height: 33px;
   height: 33px;
   line-height: 1;
@@ -380,6 +380,8 @@ main:focus {
   color: #f1f5f9;
   border-radius: 7px;
   cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
 }
 
 .top button.ghost.top-lang-btn:hover {
@@ -390,7 +392,7 @@ main:focus {
 }
 
 .top button.ghost.top-lang-btn .lang-label {
-  font-size: 0.66rem;
+  font-size: 0.78rem;
   font-weight: 800;
   line-height: 1;
   letter-spacing: 0.02em;
@@ -399,7 +401,7 @@ main:focus {
 
 .top button.ghost.top-lang-btn svg {
   display: block;
-  margin: 0 auto;
+  flex-shrink: 0;
 }
 
 .top button.ghost.logout-btn {
