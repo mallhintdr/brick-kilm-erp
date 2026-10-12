@@ -1,0 +1,47 @@
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
+
+export default defineConfig({
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['icon.svg'],
+      manifest: {
+        name: 'Brick Kiln ERP',
+        short_name: 'Kiln',
+        start_url: '/',
+        display: 'standalone',
+        background_color: '#fdf6e9',
+        theme_color: '#b45309',
+        icons: [{ src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }],
+      },
+      workbox: {
+        // App shell (JS/CSS/HTML/font) is precached at build time, so the UI itself
+        // loads with no network — not just the write-outbox this app already had.
+        globPatterns: ['**/*.{js,css,html,svg,woff2}'],
+        navigateFallback: '/index.html',
+        runtimeCaching: [
+          {
+            // Reads: try the network first (fresh data matters), but fall back to the
+            // last-known response within 4s so screens still render while offline.
+            urlPattern: /^\/api\/.*/,
+            handler: 'NetworkFirst',
+            method: 'GET',
+            options: { cacheName: 'api-get-cache', networkTimeoutSeconds: 4, expiration: { maxEntries: 200, maxAgeSeconds: 7 * 24 * 60 * 60 } },
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/,
+            handler: 'CacheFirst',
+            options: { cacheName: 'google-fonts', expiration: { maxEntries: 10, maxAgeSeconds: 365 * 24 * 60 * 60 } },
+          },
+        ],
+      },
+    }),
+  ],
+  server: {
+    port: 5180,
+    proxy: { '/api': { target: 'http://localhost:4000', rewrite: (p) => p.replace(/^\/api/, '') } },
+  },
+});

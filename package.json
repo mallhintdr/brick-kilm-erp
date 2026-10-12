@@ -1,0 +1,12 @@
+{
+  "name": "brick-kiln-erp",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "devDependencies": { "concurrently": "^9.0.1" },
+  "scripts": {
+    "dev": "concurrently -n api,pwa -c yellow,cyan \"npm:dev:api\" \"npm:dev:pwa\"",
+    "dev:api": "npm run dev -w apps/api",
+    "dev:pwa": "npm run dev -w apps/pwa",
+    "test": "npm test -w apps/api"
+  }
+}

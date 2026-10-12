@@ -1,0 +1,9 @@
+node_modules
+dist
+.env
+.env.*
+.mongo-data
+*.log
+*.timestamp-*
+.DS_Store
+Thumbs.db
