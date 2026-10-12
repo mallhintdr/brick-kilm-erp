@@ -63,12 +63,30 @@ function getContrastAvg(seriesColor) {
   };
 }
 
-export default function LineChart({ data, x, y, color = '#8b5cf6', height = 260, format = (v) => v, label }) {
+// Catmull-Rom cubic Bezier smoothing for a silky smooth, thin trend curve
+function getSmoothSpline(pts) {
+  if (!pts || pts.length <= 1) return '';
+  if (pts.length === 2) return `M ${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)} L ${pts[1].x.toFixed(1)},${pts[1].y.toFixed(1)}`;
+  let path = `M ${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i === 0 ? 0 : i - 1];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2 < pts.length ? i + 2 : i + 1];
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+    path += ` C ${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
+  }
+  return path;
+}
+
+export default function LineChart({ data, x, y, color = '#8b5cf6', height = 270, format = (v) => v, label }) {
   const gradId = useId().replace(/:/g, '');
   const [hoverIndex, setHoverIndex] = useState(null);
   const [showBars, setShowBars] = useState(true);
   const [showTrend, setShowTrend] = useState(true);
-  const [showAvgLine, setShowAvgLine] = useState(true);
 
   if (!data || !data.length) {
     return <p className="muted" style={{ padding: '1rem', textAlign: 'center' }}>No historical data available</p>;
@@ -78,33 +96,28 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 260,
   const padL = 60; // room for Y-axis parameter labels
   const padR = 40; // room for right edge
   const padT = 36; // room for top peak values and pills
-  const padB = 40; // room for X-axis dd-mm labels
+  const padB = 48; // room for diagonal X-axis dd-mm labels
 
   const innerW = w - padL - padR;
   const innerH = height - padT - padB;
 
   const ys = data.map((d) => Number(d[y]) || 0);
   const rawMax = Math.max(0, ...ys);
-  // Give 15% headroom above highest value so bars and angled numbers have clear breathing room
+  // Give 15% headroom above highest value so bars have clear breathing room
   const max = rawMax > 0 ? rawMax * 1.15 : 10;
   const avg = ys.reduce((a, b) => a + b, 0) / (ys.length || 1);
 
   // Zero-based Y-axis scale: ALL quantities start from 0 at the bottom axis!
-  // This guarantees every bar has a true, proportional height from the floor.
   const sy = (v) => padT + innerH - (Math.max(0, Number(v) || 0) / max) * innerH;
 
   // Slot-centered X-axis mapping: each data point sits cleanly in its slot
-  // Single points are centered in the chart; multiple points have equal margins.
   const n = data.length || 1;
   const slotW = innerW / n;
   const sx = (i) => padL + (i + 0.5) * slotW;
   const barWidth = Math.max(6, Math.min(32, slotW * 0.72));
 
-  // Linear Regression Trend Line: y = slope * x + intercept
-  let trendStart = avg;
-  let trendEnd = avg;
+  // Linear Regression Trend calculation for percentage trajectory
   let trendPct = 0;
-
   if (data.length > 1) {
     const xBar = (data.length - 1) / 2;
     const yBar = avg;
@@ -118,15 +131,24 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 260,
     }
     const slope = den !== 0 ? num / den : 0;
     const intercept = yBar - slope * xBar;
-    trendStart = Math.max(0, intercept);
-    trendEnd = Math.max(0, slope * (data.length - 1) + intercept);
+    const trendStart = Math.max(0, intercept);
+    const trendEnd = Math.max(0, slope * (data.length - 1) + intercept);
     trendPct = yBar > 0 ? ((trendEnd - trendStart) / yBar) * 100 : 0;
-  } else if (data.length === 1) {
-    trendStart = ys[0];
-    trendEnd = ys[0];
-    trendPct = 0;
   }
   const trendColor = '#6366f1'; // Vibrant Indigo Trend Line
+
+  // Smoother, thinner trend curve generated using local moving average spline
+  const smoothTrendPts = data.map((d, i) => {
+    const yCurr = Number(d[y]) || 0;
+    const yPrev = i > 0 ? Number(data[i - 1][y]) || 0 : yCurr;
+    const yNext = i < data.length - 1 ? Number(data[i + 1][y]) || 0 : yCurr;
+    const valSmoothed = (yPrev + 2 * yCurr + yNext) / 4;
+    return {
+      x: sx(i),
+      y: sy(valSmoothed),
+    };
+  });
+  const smoothTrendPath = getSmoothSpline(smoothTrendPts);
 
   // Horizontal Grid Lines & Y-Axis Parameters (5 reference steps starting from 0)
   const yTicks = [0, 0.25, 0.5, 0.75, 1].map((pct) => {
@@ -136,9 +158,9 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 260,
   });
 
   // Vertical Grid Lines & X-Axis Date Parameters (dd-mm format)
-  const numDateTicks = Math.min(6, data.length);
+  const numDateTicks = Math.min(8, data.length);
   const xTicks = [];
-  if (data.length <= 6) {
+  if (data.length <= 8) {
     data.forEach((d, i) => xTicks.push({ idx: i, date: fmtDateDM(d[x]), xPos: sx(i) }));
   } else {
     for (let k = 0; k < numDateTicks; k++) {
@@ -162,7 +184,6 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 260,
   const avgY = sy(avg);
   // Keep average pill safely within visible plot boundaries
   const clampedAvgY = Math.max(padT + 13, Math.min(padT + innerH - 13, avgY));
-  const step = data.length > 32 ? 3 : data.length > 18 ? 2 : 1;
 
   // Contrasting color palette tailored for this series color
   const contrast = getContrastAvg(color);
@@ -253,7 +274,7 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 260,
           </g>
         ))}
 
-        {/* Vertical Grid Lines & X-Axis Date Parameters (dd-mm) */}
+        {/* Vertical Grid Lines & DIAGONAL X-Axis Date Parameters (dd-mm) */}
         {xTicks.map(({ date, xPos }, idx) => (
           <g key={idx}>
             <line
@@ -267,18 +288,19 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 260,
             />
             <text
               x={xPos}
-              y={padT + innerH + 18}
-              fontSize="11"
+              y={padT + innerH + 12}
+              transform={`rotate(-40, ${xPos}, ${padT + innerH + 12})`}
+              fontSize="10.5"
               fontWeight="800"
               fill="#334155"
-              textAnchor="middle"
+              textAnchor="end"
             >
               {date}
             </text>
           </g>
         ))}
 
-        {/* DAILY BARS: Primary visual data representation for all daily data */}
+        {/* DAILY BARS: Primary visual data representation for all daily data (no diagonal labels on bars) */}
         {showBars && data.map((d, i) => {
           const cx = sx(i);
           const valNum = Number(d[y]) || 0;
@@ -286,7 +308,6 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 260,
           const barH = Math.max(valNum > 0 ? 3 : 0, padT + innerH - cy);
           const bx = cx - barWidth / 2;
           const isHovered = hoverIndex === i;
-          const showDiag = i % step === 0 || i === data.length - 1;
 
           return (
             <g key={`bar-${i}`}>
@@ -308,22 +329,6 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 260,
                 onTouchStart={() => setHoverIndex(i)}
               />
 
-              {/* Angled Value displayed above the bar */}
-              {showDiag && valNum > 0 && hoverIndex !== i && (
-                <text
-                  x={cx}
-                  y={padT + innerH - barH - 8}
-                  transform={`rotate(-35, ${cx}, ${padT + innerH - barH - 8})`}
-                  fontSize="10"
-                  fontWeight="800"
-                  fill="#0f172a"
-                  textAnchor="start"
-                  pointerEvents="none"
-                >
-                  {format(Math.round(valNum))}
-                </text>
-              )}
-
               {/* Touch/Click Target Area for this bar */}
               <rect
                 x={cx - slotW / 2}
@@ -340,65 +345,59 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 260,
           );
         })}
 
-        {/* TREND LINE: Statistical regression trajectory across the period */}
-        {showTrend && (
+        {/* TREND LINE: Smoother and thinner statistical curve across the bars */}
+        {showTrend && smoothTrendPath && (
           <g className="chart-trend-group" pointerEvents="none">
-            <line
-              x1={sx(0)}
-              y1={sy(trendStart)}
-              x2={sx(data.length - 1)}
-              y2={sy(trendEnd)}
+            <path
+              d={smoothTrendPath}
+              fill="none"
               stroke={trendColor}
-              strokeWidth="3.2"
+              strokeWidth="1.8"
               strokeLinecap="round"
-              opacity="0.95"
+              strokeLinejoin="round"
+              opacity="0.9"
             />
-            {/* Trend start and end node anchors */}
-            <circle cx={sx(0)} cy={sy(trendStart)} r="4.5" fill={trendColor} stroke="#ffffff" strokeWidth="2" />
-            <circle cx={sx(data.length - 1)} cy={sy(trendEnd)} r="4.5" fill={trendColor} stroke="#ffffff" strokeWidth="2" />
           </g>
         )}
 
-        {/* OVER THE TOP: High-contrast Dashed Horizontal Daily Average Line & Pill Badge */}
-        {showAvgLine && (
-          <g pointerEvents="none" className="chart-avg-top-layer">
-            {/* Contrasting dashed benchmark line across full width */}
-            <line
-              x1={padL}
-              y1={avgY}
-              x2={w - padR}
-              y2={avgY}
-              stroke={contrast.stroke}
-              strokeDasharray="6 4"
-              strokeWidth="2.5"
+        {/* OVER THE TOP: High-contrast Dashed Horizontal Daily Average Line & Pill Badge (Displayed directly on graph) */}
+        <g pointerEvents="none" className="chart-avg-top-layer">
+          {/* Contrasting dashed benchmark line across full width */}
+          <line
+            x1={padL}
+            y1={avgY}
+            x2={w - padR}
+            y2={avgY}
+            stroke={contrast.stroke}
+            strokeDasharray="6 4"
+            strokeWidth="2.5"
+          />
+          {/* Contrasting Pill Badge rendered over the top layer with shadow for outstanding visibility */}
+          <g transform={`translate(${w / 2}, ${clampedAvgY})`}>
+            <rect
+              x="-78"
+              y="-13"
+              width="156"
+              height="26"
+              rx="13"
+              fill={contrast.stroke}
+              stroke="#ffffff"
+              strokeWidth="2.2"
+              filter={`url(#${gradId}-pill-shadow)`}
             />
-            {/* Contrasting Pill Badge rendered over the top layer with shadow for outstanding visibility */}
-            <g transform={`translate(${w / 2}, ${clampedAvgY})`}>
-              <rect
-                x="-78"
-                y="-13"
-                width="156"
-                height="26"
-                rx="13"
-                fill={contrast.stroke}
-                stroke="#ffffff"
-                strokeWidth="2.2"
-                filter={`url(#${gradId}-pill-shadow)`}
-              />
-              <text
-                x="0"
-                y="5"
-                fontSize="11.5"
-                fontWeight="900"
-                fill="#ffffff"
-                letterSpacing="0.02em"
-                textAnchor="middle"
-              >
-                Daily Avg: {format(Math.round(avg))}
-              </text>
-            </g>
+            <text
+              x="0"
+              y="5"
+              fontSize="11.5"
+              fontWeight="900"
+              fill="#ffffff"
+              letterSpacing="0.02em"
+              textAnchor="middle"
+            >
+              Daily Avg: {format(Math.round(avg))}
+            </text>
           </g>
-        )}
+        </g>
 
         {/* Compact Info Popup (30% opaque fill) on clicking / hovering on graph */}
         {hoverIndex !== null && activeItem && (
@@ -441,7 +440,7 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 260,
         )}
       </svg>
 
-      {/* Bottom Center Checkbox Legends: Bars, Trend Line & Daily Average */}
+      {/* Bottom Center Checkbox Legends: Bars & Trend Line (Daily Avg displayed on graph, not in legend) */}
       <div className="chart-checkbox-legend-row">
         <label className="chart-checkbox-label">
           <input
@@ -461,22 +460,9 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 260,
             onChange={(e) => setShowTrend(e.target.checked)}
             style={{ accentColor: trendColor }}
           />
-          <span className="chart-legend-box" style={{ background: trendColor, height: '3.5px', borderRadius: '2px' }} />
+          <span className="chart-legend-box" style={{ background: trendColor, height: '3px', borderRadius: '2px' }} />
           <span style={{ fontWeight: 800, color: trendColor }}>
             {trendPct >= 0 ? '📈' : '📉'} Trend Line ({trendPct >= 0 ? '+' : ''}{trendPct.toFixed(1)}%)
-          </span>
-        </label>
-
-        <label className="chart-checkbox-label">
-          <input
-            type="checkbox"
-            checked={showAvgLine}
-            onChange={(e) => setShowAvgLine(e.target.checked)}
-            style={{ accentColor: contrast.stroke }}
-          />
-          <span className="chart-legend-box" style={{ background: contrast.stroke }} />
-          <span style={{ fontWeight: 800, color: contrast.stroke }}>
-            Daily Avg: {format(Math.round(avg))}
           </span>
         </label>
       </div>
