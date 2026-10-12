@@ -425,6 +425,240 @@ main:focus {
   color: #fff;
 }
 
+/* Dedicated Home Navigation Button in Header */
+.top-home-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.22rem 0.65rem;
+  min-height: 33px;
+  height: 33px;
+  border-radius: 7px;
+  border: 1.5px solid rgba(234, 88, 12, 0.5);
+  background: rgba(234, 88, 12, 0.15);
+  color: #fed7aa;
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 800;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.top-home-btn:hover {
+  background: rgba(234, 88, 12, 0.3);
+  border-color: rgba(234, 88, 12, 0.9);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.top-home-btn.active {
+  background: var(--brand-gradient);
+  border-color: #ea580c;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.4);
+}
+
+.top-home-btn svg {
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
+   RESPONSIVE HOME PAGE PORTAL (MODULE ROWS & CARDS)
+   ========================================================================== */
+
+.home-page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.5rem 0.25rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.home-hero-banner {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #334155 100%);
+  border: 1px solid rgba(234, 88, 12, 0.35);
+  border-radius: 14px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.12);
+  position: relative;
+  overflow: hidden;
+}
+
+.home-hero-banner::after {
+  content: '';
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 140px;
+  height: 140px;
+  background: radial-gradient(circle, rgba(234, 88, 12, 0.25) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.home-hero-content {
+  position: relative;
+  z-index: 1;
+}
+
+.home-hero-tag {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(234, 88, 12, 0.2);
+  border: 1px solid rgba(234, 88, 12, 0.5);
+  color: #fed7aa;
+  padding: 0.18rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.45rem;
+}
+
+.home-hero-title {
+  margin: 0 0 0.3rem;
+  font-size: 1.45rem;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: -0.015em;
+}
+
+.home-hero-sub {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #cbd5e1;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.home-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.home-section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 0.4rem;
+}
+
+.home-section-icon {
+  font-size: 1.15rem;
+}
+
+.home-section-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #1e293b;
+  letter-spacing: -0.01em;
+}
+
+/* Responsive Grid in Rows */
+.home-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.85rem;
+}
+
+.home-nav-card {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--ink);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.home-nav-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--card-accent, var(--brand));
+  opacity: 0.8;
+  transition: width 0.2s ease;
+}
+
+[dir="rtl"] .home-nav-card::before {
+  left: auto;
+  right: 0;
+}
+
+.home-nav-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--card-accent, var(--brand));
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+}
+
+.home-nav-card:hover::before {
+  width: 6px;
+}
+
+.home-nav-icon-wrapper {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid transparent;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.home-nav-card:hover .home-nav-icon-wrapper {
+  transform: scale(1.08);
+}
+
+.home-nav-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+  min-width: 0;
+}
+
+.home-nav-title {
+  font-size: 0.94rem;
+  font-weight: 800;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-nav-arrow {
+  color: #94a3b8;
+  font-size: 1.1rem;
+  font-weight: 900;
+  transition: transform 0.2s ease, color 0.2s ease;
+  flex-shrink: 0;
+  margin-inline-start: 0.5rem;
+}
+
+.home-nav-card:hover .home-nav-arrow {
+  color: var(--card-accent, var(--brand));
+  transform: translateX(3px);
+}
+
+[dir="rtl"] .home-nav-card:hover .home-nav-arrow {
+  transform: translateX(-3px);
+}
+
 /* ==========================================================================
    FROZEN TWO-ROW NAVIGATION BAR ORDERED BY DAILY USAGE
    ========================================================================== */

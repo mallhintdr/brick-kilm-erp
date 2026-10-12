@@ -65,6 +65,9 @@ const dict = {
     days7: '7 دن', days15: '15 دن', days30: '30 دن', days90: '90 دن', days180: '180 دن', days365: '365 دن (1 سال)',
     reports: 'رپورٹس جنریٹر', generateReport: 'رپورٹ تیار کریں', selectItems: 'شعبہ جات منتخب کریں', weekly: 'ہفتہ وار (7 دن)',
     filterTable: 'فلٹر کریں...', clearFilters: 'فلٹرز صاف کریں', exportPdf: 'پرنٹ / پی ڈی ایف',
+    home: 'ہوم', backToHome: 'ہوم اسکرین',
+    dailyOps: 'روزمرہ بھٹہ آپریشنز', commercialAndFinance: 'کمرشل و مالیات', managementAndReports: 'انتظام، رپورٹس اور ترتیبات',
+    quickOverview: 'تمام اہم ماڈیولز اور فیچرز تک براہِ راست رسائی',
   },
   en: {
     appName: 'Brick Kiln Manager', more: 'More', skipToContent: 'Skip to main content', login: 'Log in', username: 'Username', password: 'Password', logout: 'Log out',
@@ -130,6 +133,9 @@ const dict = {
     days7: '7 Days', days15: '15 Days', days30: '30 Days', days90: '90 Days', days180: '180 Days', days365: '365 Days (1 Year)',
     reports: 'Reports Generator', generateReport: 'Generate Report', selectItems: 'Select Report Modules', weekly: 'Weekly (7 Days)',
     filterTable: 'Filter...', clearFilters: 'Clear Filters', exportPdf: 'Print / PDF Report',
+    home: 'Home', backToHome: 'Back to Home',
+    dailyOps: 'Daily Kiln Operations', commercialAndFinance: 'Commercial & Finances', managementAndReports: 'Management, Reports & Settings',
+    quickOverview: 'Direct access to all kiln ERP operations and management modules',
   },
 };
 

@@ -18,6 +18,7 @@ import AuditLogs from './pages/AuditLogs.jsx';
 import Kharchi from './pages/Kharchi.jsx';
 import Users from './pages/Users.jsx';
 import Reports from './pages/Reports.jsx';
+import Home from './pages/Home.jsx';
 import PrintWorkerSlip from './pages/PrintWorkerSlip.jsx';
 import PrintKharchiSlip from './pages/PrintKharchiSlip.jsx';
 
@@ -123,6 +124,9 @@ const ICONS = {
       <path d="M12 3.5 C11.5 2 13 1.5 13.5 0.5" />
     </>
   ),
+  home: (
+    <path d="M3 10.5 12 3l9 7.5V20a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-4a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-9.5z" />
+  ),
   reports: (
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8" />
   ),
@@ -173,8 +177,9 @@ const ROW_2_LINKS = [
 const visibleLinks = (links) => links.filter((l) => !l.roles || l.roles.includes(getRole()));
 const ALL_LINKS = [...ROW_1_LINKS, ...ROW_2_LINKS];
 
-// Primary items for mobile quick bottom navigation
+// Primary items for mobile quick bottom navigation (Home + key operational areas)
 const PRIMARY = [
+  { to: '/home', icon: 'home', color: '#ea580c', labelKey: 'home' },
   ROW_1_LINKS[0], // Firing
   ROW_1_LINKS[1], // Kiln Board
   ROW_1_LINKS[2], // Moulding
@@ -251,20 +256,34 @@ function Shell({ children }) {
   const t = useT();
   const { lang, setLang } = useLang();
   const nav = useNavigate();
+  const location = useLocation();
   const role = getRole();
   const username = getUsername();
+  const isHomePage = location.pathname === '/' || location.pathname === '/home';
 
   return (
     <>
       <a href="#main" className="skip-link">{t.skipToContent}</a>
       <div className="sticky-header-wrapper">
         <header className="top">
-          <div className="brand-badge">
+          {/* Brand Logo & Name - Clickable to navigate Home */}
+          <NavLink to="/home" className="brand-badge" title={t.home}>
             <div className="brand-icon-box" aria-hidden="true">
               <Icon name="kilnLogo" color="#ffffff" size={19} />
             </div>
             <strong className="brand-text">{t.appName}</strong>
-          </div>
+          </NavLink>
+
+          {/* Dedicated Home Button for Quick One-Tap Navigation Back to Home */}
+          <NavLink
+            to="/home"
+            className={`top-home-btn${isHomePage ? ' active' : ''}`}
+            title={t.home}
+            aria-label={t.home}
+          >
+            <Icon name="home" color={isHomePage ? '#ea580c' : '#f1f5f9'} size={16} />
+            <span className="home-btn-label">{t.home}</span>
+          </NavLink>
 
           <SyncBadge />
           <span className="grow" />
@@ -298,26 +317,6 @@ function Shell({ children }) {
             </button>
           </div>
         </header>
-
-        {/* Frozen Navigation Bar with 2 Rows of Buttons ordered by daily operational usage */}
-        <nav className="tabs two-rows" aria-label={t.appName}>
-          <div className="tabs-row tabs-row-1" aria-label="Daily Operations">
-            {visibleLinks(ROW_1_LINKS).map((l) => (
-              <NavLink key={l.to} to={l.to} className={({ isActive }) => `tab-btn${isActive ? ' active' : ''}`}>
-                <Icon name={l.icon} color={l.color} size={14} />
-                <span>{t[l.labelKey]}</span>
-              </NavLink>
-            ))}
-          </div>
-          <div className="tabs-row tabs-row-2" aria-label="Management & Reports">
-            {visibleLinks(ROW_2_LINKS).map((l) => (
-              <NavLink key={l.to} to={l.to} className={({ isActive }) => `tab-btn${isActive ? ' active' : ''}`}>
-                <Icon name={l.icon} color={l.color} size={14} />
-                <span>{t[l.labelKey]}</span>
-              </NavLink>
-            ))}
-          </div>
-        </nav>
       </div>
 
       <main id="main" tabIndex={-1}>{children}</main>
@@ -338,12 +337,19 @@ export default function App() {
   const guard = (el) => (getToken() ? <Shell>{el}</Shell> : <Navigate to="/login" replace />);
   const bare = (el) => (getToken() ? el : <Navigate to="/login" replace />);
 
+  const homeLinks = ALL_LINKS.map((l) => ({
+    ...l,
+    iconGlyph: ICONS[l.icon] || ICONS.more,
+  }));
+
   return (
     <LangContext.Provider value={{ lang, setLang }}>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/print/worker/:id" element={bare(<PrintWorkerSlip />)} />
         <Route path="/print/kharchi/:id" element={bare(<PrintKharchiSlip />)} />
+        <Route path="/" element={guard(<Home links={homeLinks} />)} />
+        <Route path="/home" element={guard(<Home links={homeLinks} />)} />
         <Route path="/kiln-board" element={guard(<KilnBoard />)} />
         <Route path="/moulding" element={guard(<Moulding />)} />
         <Route path="/firing" element={guard(<Firing />)} />
@@ -359,7 +365,7 @@ export default function App() {
         <Route path="/audit-logs" element={guard(<AuditLogs />)} />
         <Route path="/users" element={guard(<Users />)} />
         <Route path="/settings" element={guard(<Settings />)} />
-        <Route path="*" element={<Navigate to="/kiln-board" replace />} />
+        <Route path="*" element={<Navigate to="/home" replace />} />
       </Routes>
     </LangContext.Provider>
   );
