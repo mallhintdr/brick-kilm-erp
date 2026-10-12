@@ -30,8 +30,8 @@ function rollup(daily, bucketDays) {
 
 export default function Insights() {
   const t = useT();
-  const [range, setRange] = useState(30);
-  const [fromDate, setFromDate] = useState(daysAgoStr(30));
+  const [range, setRange] = useState(180);
+  const [fromDate, setFromDate] = useState(daysAgoStr(180));
   const [toDate, setToDate] = useState(todayStr());
   const [summary, setSummary] = useState(null);
   const [daily, setDaily] = useState([]);

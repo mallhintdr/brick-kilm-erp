@@ -1305,6 +1305,14 @@ tfoot td:last-child {
   letter-spacing: -0.015em;
 }
 
+.chart-header-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.chart-trend-badge-top,
 .chart-avg-badge-top {
   display: inline-flex;
   align-items: center;
@@ -1318,15 +1326,18 @@ tfoot td:last-child {
   transition: transform 0.15s ease;
 }
 
+.chart-trend-badge-top:hover,
 .chart-avg-badge-top:hover {
   transform: translateY(-1px);
 }
 
+.trend-badge-icon,
 .avg-badge-icon {
   font-size: 0.88rem;
   line-height: 1;
 }
 
+.trend-badge-label,
 .avg-badge-label {
   font-weight: 700;
   opacity: 0.9;
@@ -1335,6 +1346,7 @@ tfoot td:last-child {
   letter-spacing: 0.03em;
 }
 
+.trend-badge-val,
 .avg-badge-val {
   font-weight: 900;
   font-size: 0.88rem;

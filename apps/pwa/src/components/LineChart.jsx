@@ -67,7 +67,7 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 260,
   const gradId = useId().replace(/:/g, '');
   const [hoverIndex, setHoverIndex] = useState(null);
   const [showBars, setShowBars] = useState(true);
-  const [showLine, setShowLine] = useState(true);
+  const [showTrend, setShowTrend] = useState(true);
   const [showAvgLine, setShowAvgLine] = useState(true);
 
   if (!data || !data.length) {
@@ -85,7 +85,7 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 260,
 
   const ys = data.map((d) => Number(d[y]) || 0);
   const rawMax = Math.max(0, ...ys);
-  // Give 15% headroom above highest value so bars, peak dots, and angled numbers have clear breathing room
+  // Give 15% headroom above highest value so bars and angled numbers have clear breathing room
   const max = rawMax > 0 ? rawMax * 1.15 : 10;
   const avg = ys.reduce((a, b) => a + b, 0) / (ys.length || 1);
 
@@ -100,11 +100,33 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 260,
   const sx = (i) => padL + (i + 0.5) * slotW;
   const barWidth = Math.max(6, Math.min(32, slotW * 0.72));
 
-  const linePoints = data.map((d, i) => `${i ? 'L' : 'M'}${sx(i).toFixed(1)},${sy(Number(d[y]) || 0).toFixed(1)}`).join(' ');
-  const firstX = sx(0).toFixed(1);
-  const lastX = sx(data.length - 1).toFixed(1);
-  const bottomY = (padT + innerH).toFixed(1);
-  const areaPoints = `${linePoints} L${lastX},${bottomY} L${firstX},${bottomY} Z`;
+  // Linear Regression Trend Line: y = slope * x + intercept
+  let trendStart = avg;
+  let trendEnd = avg;
+  let trendPct = 0;
+
+  if (data.length > 1) {
+    const xBar = (data.length - 1) / 2;
+    const yBar = avg;
+    let num = 0;
+    let den = 0;
+    for (let i = 0; i < data.length; i++) {
+      const xDiff = i - xBar;
+      const yVal = Number(data[i][y]) || 0;
+      num += xDiff * (yVal - yBar);
+      den += xDiff * xDiff;
+    }
+    const slope = den !== 0 ? num / den : 0;
+    const intercept = yBar - slope * xBar;
+    trendStart = Math.max(0, intercept);
+    trendEnd = Math.max(0, slope * (data.length - 1) + intercept);
+    trendPct = yBar > 0 ? ((trendEnd - trendStart) / yBar) * 100 : 0;
+  } else if (data.length === 1) {
+    trendStart = ys[0];
+    trendEnd = ys[0];
+    trendPct = 0;
+  }
+  const trendColor = '#6366f1'; // Vibrant Indigo Trend Line
 
   // Horizontal Grid Lines & Y-Axis Parameters (5 reference steps starting from 0)
   const yTicks = [0, 0.25, 0.5, 0.75, 1].map((pct) => {
@@ -147,25 +169,45 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 260,
 
   return (
     <div className="chart-card">
-      {/* Top Header: Centered Graph Title & Contrasting Daily Avg Callout */}
+      {/* Top Header: Centered Graph Title, Trend Badge & Contrasting Daily Avg Callout */}
       <div className="chart-header-top">
         <h3 className="chart-title-top">
           {chartLabel}
         </h3>
-        <div
-          className="chart-avg-badge-top"
-          style={{
-            backgroundColor: contrast.bg,
-            borderColor: contrast.border,
-            color: contrast.text,
-          }}
-          title={`Average across selected period: ${format(Math.round(avg))}`}
-        >
-          <span className="avg-badge-icon" style={{ color: contrast.stroke }}>⚡</span>
-          <span className="avg-badge-label">Daily Avg:</span>
-          <strong className="avg-badge-val" style={{ color: contrast.stroke }}>
-            {format(Math.round(avg))}
-          </strong>
+        <div className="chart-header-badges">
+          {/* Trend Badge */}
+          <div
+            className="chart-trend-badge-top"
+            style={{
+              backgroundColor: '#eef2ff',
+              borderColor: '#818cf8',
+              color: '#4338ca',
+            }}
+            title={`Overall trend trajectory: ${trendPct >= 0 ? '+' : ''}${trendPct.toFixed(1)}%`}
+          >
+            <span className="trend-badge-icon">{trendPct >= 0 ? '📈' : '📉'}</span>
+            <span className="trend-badge-label">Trend:</span>
+            <strong className="trend-badge-val">
+              {trendPct >= 0 ? '+' : ''}{trendPct.toFixed(1)}%
+            </strong>
+          </div>
+
+          {/* Daily Average Callout */}
+          <div
+            className="chart-avg-badge-top"
+            style={{
+              backgroundColor: contrast.bg,
+              borderColor: contrast.border,
+              color: contrast.text,
+            }}
+            title={`Average across selected period: ${format(Math.round(avg))}`}
+          >
+            <span className="avg-badge-icon" style={{ color: contrast.stroke }}>⚡</span>
+            <span className="avg-badge-label">Daily Avg:</span>
+            <strong className="avg-badge-val" style={{ color: contrast.stroke }}>
+              {format(Math.round(avg))}
+            </strong>
+          </div>
         </div>
       </div>
 
@@ -177,10 +219,6 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 260,
       <svg viewBox={`0 0 ${w} ${height}`} className="chart" role="img" aria-labelledby={titleId} style={{ overflow: 'visible' }}>
         <title id={titleId}>{chartLabel}: {dateSpanStr}</title>
         <defs>
-          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity="0.18" />
-            <stop offset="90%" stopColor={color} stopOpacity="0.01" />
-          </linearGradient>
           <linearGradient id={`${gradId}-bar`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={color} stopOpacity="0.95" />
             <stop offset="100%" stopColor={color} stopOpacity="0.70" />
@@ -240,16 +278,7 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 260,
           </g>
         ))}
 
-        {/* Area fill (rendered below bars and lines with subtle opacity) */}
-        {showLine && (
-          <path
-            d={areaPoints}
-            fill={`url(#${gradId})`}
-            opacity="0.5"
-          />
-        )}
-
-        {/* DAILY BARS: Vertical column bars displayed prominently for each date */}
+        {/* DAILY BARS: Primary visual data representation for all daily data */}
         {showBars && data.map((d, i) => {
           const cx = sx(i);
           const valNum = Number(d[y]) || 0;
@@ -257,6 +286,7 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 260,
           const barH = Math.max(valNum > 0 ? 3 : 0, padT + innerH - cy);
           const bx = cx - barWidth / 2;
           const isHovered = hoverIndex === i;
+          const showDiag = i % step === 0 || i === data.length - 1;
 
           return (
             <g key={`bar-${i}`}>
@@ -277,49 +307,13 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 260,
                 onMouseLeave={() => setHoverIndex(null)}
                 onTouchStart={() => setHoverIndex(i)}
               />
-            </g>
-          );
-        })}
 
-        {/* Main trend line connecting the tops of the bars/data points */}
-        {showLine && (
-          <path
-            d={linePoints}
-            fill="none"
-            stroke={color}
-            strokeWidth="2.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        )}
-
-        {/* Data point indicators & Angled Values */}
-        {showLine && data.map((d, i) => {
-          const cx = sx(i);
-          const valNum = Number(d[y]) || 0;
-          const cy = sy(valNum);
-          const showDiag = i % step === 0 || i === data.length - 1;
-
-          return (
-            <g key={i}>
-              <circle
-                cx={cx}
-                cy={cy}
-                r={hoverIndex === i ? 6 : 3.5}
-                fill={color}
-                stroke="#ffffff"
-                strokeWidth="1.8"
-                style={{ cursor: 'pointer', transition: 'r 0.15s ease' }}
-                onMouseEnter={() => setHoverIndex(i)}
-                onMouseLeave={() => setHoverIndex(null)}
-                onTouchStart={() => setHoverIndex(i)}
-              />
-
+              {/* Angled Value displayed above the bar */}
               {showDiag && valNum > 0 && hoverIndex !== i && (
                 <text
                   x={cx}
-                  y={cy - 9}
-                  transform={`rotate(-35, ${cx}, ${cy - 9})`}
+                  y={padT + innerH - barH - 8}
+                  transform={`rotate(-35, ${cx}, ${padT + innerH - barH - 8})`}
                   fontSize="10"
                   fontWeight="800"
                   fill="#0f172a"
@@ -330,10 +324,12 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 260,
                 </text>
               )}
 
-              <circle
-                cx={cx}
-                cy={cy}
-                r="16"
+              {/* Touch/Click Target Area for this bar */}
+              <rect
+                x={cx - slotW / 2}
+                y={padT}
+                width={slotW}
+                height={innerH}
                 fill="transparent"
                 style={{ cursor: 'pointer' }}
                 onMouseEnter={() => setHoverIndex(i)}
@@ -343,6 +339,25 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 260,
             </g>
           );
         })}
+
+        {/* TREND LINE: Statistical regression trajectory across the period */}
+        {showTrend && (
+          <g className="chart-trend-group" pointerEvents="none">
+            <line
+              x1={sx(0)}
+              y1={sy(trendStart)}
+              x2={sx(data.length - 1)}
+              y2={sy(trendEnd)}
+              stroke={trendColor}
+              strokeWidth="3.2"
+              strokeLinecap="round"
+              opacity="0.95"
+            />
+            {/* Trend start and end node anchors */}
+            <circle cx={sx(0)} cy={sy(trendStart)} r="4.5" fill={trendColor} stroke="#ffffff" strokeWidth="2" />
+            <circle cx={sx(data.length - 1)} cy={sy(trendEnd)} r="4.5" fill={trendColor} stroke="#ffffff" strokeWidth="2" />
+          </g>
+        )}
 
         {/* OVER THE TOP: High-contrast Dashed Horizontal Daily Average Line & Pill Badge */}
         {showAvgLine && (
@@ -386,7 +401,7 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 260,
         )}
 
         {/* Compact Info Popup (30% opaque fill) on clicking / hovering on graph */}
-        {(showBars || showLine) && hoverIndex !== null && activeItem && (
+        {hoverIndex !== null && activeItem && (
           <g pointerEvents="none" className="chart-tooltip-group">
             <line
               x1={activeX}
@@ -426,7 +441,7 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 260,
         )}
       </svg>
 
-      {/* Bottom Center Checkbox Legends */}
+      {/* Bottom Center Checkbox Legends: Bars, Trend Line & Daily Average */}
       <div className="chart-checkbox-legend-row">
         <label className="chart-checkbox-label">
           <input
@@ -436,18 +451,20 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 260,
             style={{ accentColor: color }}
           />
           <span className="chart-legend-box" style={{ background: color, borderRadius: '2px' }} />
-          <span>Daily Bars</span>
+          <span>{chartLabel} (Bars)</span>
         </label>
 
         <label className="chart-checkbox-label">
           <input
             type="checkbox"
-            checked={showLine}
-            onChange={(e) => setShowLine(e.target.checked)}
-            style={{ accentColor: color }}
+            checked={showTrend}
+            onChange={(e) => setShowTrend(e.target.checked)}
+            style={{ accentColor: trendColor }}
           />
-          <span className="chart-legend-box" style={{ background: color, height: '4px', borderRadius: '2px' }} />
-          <span>{chartLabel}</span>
+          <span className="chart-legend-box" style={{ background: trendColor, height: '3.5px', borderRadius: '2px' }} />
+          <span style={{ fontWeight: 800, color: trendColor }}>
+            {trendPct >= 0 ? '📈' : '📉'} Trend Line ({trendPct >= 0 ? '+' : ''}{trendPct.toFixed(1)}%)
+          </span>
         </label>
 
         <label className="chart-checkbox-label">
