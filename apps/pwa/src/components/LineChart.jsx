@@ -245,7 +245,7 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 270,
             <stop offset="100%" stopColor={color} stopOpacity="0.70" />
           </linearGradient>
           <filter id={`${gradId}-pill-shadow`} x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="2" stdDeviation="3.5" floodColor="#0f172a" floodOpacity="0.32" />
+            <feDropShadow dx="0" dy="1.5" stdDeviation="2" floodColor="#0f172a" floodOpacity="0.14" />
           </filter>
         </defs>
 
@@ -360,7 +360,7 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 270,
           </g>
         )}
 
-        {/* OVER THE TOP: High-contrast Dashed Horizontal Daily Average Line & Pill Badge (Displayed directly on graph) */}
+        {/* OVER THE TOP: High-contrast Dashed Horizontal Daily Average Line & Compact 50% Opaque Pill Badge */}
         <g pointerEvents="none" className="chart-avg-top-layer">
           {/* Contrasting dashed benchmark line across full width */}
           <line
@@ -370,33 +370,41 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 270,
             y2={avgY}
             stroke={contrast.stroke}
             strokeDasharray="6 4"
-            strokeWidth="2.5"
+            strokeWidth="2.2"
           />
-          {/* Contrasting Pill Badge rendered over the top layer with shadow for outstanding visibility */}
-          <g transform={`translate(${w / 2}, ${clampedAvgY})`}>
-            <rect
-              x="-78"
-              y="-13"
-              width="156"
-              height="26"
-              rx="13"
-              fill={contrast.stroke}
-              stroke="#ffffff"
-              strokeWidth="2.2"
-              filter={`url(#${gradId}-pill-shadow)`}
-            />
-            <text
-              x="0"
-              y="5"
-              fontSize="11.5"
-              fontWeight="900"
-              fill="#ffffff"
-              letterSpacing="0.02em"
-              textAnchor="middle"
-            >
-              Daily Avg: {format(Math.round(avg))}
-            </text>
-          </g>
+          {/* Compact Pill Badge with 50% opaque fill */}
+          {(() => {
+            const avgLabelText = `Daily Avg: ${format(Math.round(avg))}`;
+            const pillW = Math.max(104, Math.min(148, avgLabelText.length * 6.5 + 16));
+            const halfW = pillW / 2;
+            return (
+              <g transform={`translate(${w / 2}, ${clampedAvgY})`}>
+                <rect
+                  x={-halfW}
+                  y="-10"
+                  width={pillW}
+                  height="20"
+                  rx="10"
+                  fill={contrast.stroke}
+                  fillOpacity="0.50"
+                  stroke={contrast.stroke}
+                  strokeWidth="1.4"
+                  filter={`url(#${gradId}-pill-shadow)`}
+                />
+                <text
+                  x="0"
+                  y="4"
+                  fontSize="10.2"
+                  fontWeight="900"
+                  fill="#0f172a"
+                  letterSpacing="0.01em"
+                  textAnchor="middle"
+                >
+                  {avgLabelText}
+                </text>
+              </g>
+            );
+          })()}
         </g>
 
         {/* Compact Info Popup (30% opaque fill) on clicking / hovering on graph */}
