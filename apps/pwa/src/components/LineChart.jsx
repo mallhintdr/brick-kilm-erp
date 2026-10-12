@@ -407,45 +407,59 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 270,
           })()}
         </g>
 
-        {/* Compact Info Popup (30% opaque fill) on clicking / hovering on graph */}
-        {hoverIndex !== null && activeItem && (
-          <g pointerEvents="none" className="chart-tooltip-group">
-            <line
-              x1={activeX}
-              y1={padT}
-              x2={activeX}
-              y2={padT + innerH}
-              stroke={color}
-              strokeWidth="1.2"
-              strokeDasharray="2 2"
-              opacity="0.8"
-            />
-            <circle cx={activeX} cy={activeY} r="5.5" fill={color} opacity="0.3" />
-            <circle cx={activeX} cy={activeY} r="3.5" fill={color} stroke="#fff" strokeWidth="1.5" />
+        {/* Compact Info Popup (30% opaque fill) on clicking / hovering on graph: in middle-side instead of top */}
+        {hoverIndex !== null && activeItem && (() => {
+          const popupText = format(Math.round(activeVal));
+          const popupW = Math.max(68, Math.min(108, popupText.length * 7.2 + 18));
+          const popupH = 20;
 
-            {/* Compact popup: 30% opaque fill */}
-            <rect
-              x={Math.min(w - padR - 74, Math.max(padL, activeX - 37))}
-              y={Math.max(6, activeY - 26)}
-              width="74"
-              height="20"
-              rx="4"
-              fill="rgba(15, 23, 42, 0.30)"
-              stroke="rgba(15, 23, 42, 0.70)"
-              strokeWidth="1"
-            />
-            <text
-              x={Math.min(w - padR - 74, Math.max(padL, activeX - 37)) + 37}
-              y={Math.max(6, activeY - 26) + 14}
-              fontSize="10.5"
-              fontWeight="900"
-              fill="#0f172a"
-              textAnchor="middle"
-            >
-              {format(Math.round(activeVal))}
-            </text>
-          </g>
-        )}
+          // Position in middle-side of the bar instead of the top
+          const midY = activeVal > 0 ? (activeY + (padT + innerH)) / 2 : (padT + innerH / 2);
+          const popupY = Math.max(padT + 4, Math.min(padT + innerH - popupH - 4, midY - popupH / 2));
+
+          const sideOffset = Math.max(14, barWidth / 2 + 8);
+          const isRight = activeX + sideOffset + popupW <= w - padR;
+          const popupX = isRight ? activeX + sideOffset : activeX - sideOffset - popupW;
+
+          return (
+            <g pointerEvents="none" className="chart-tooltip-group">
+              <line
+                x1={activeX}
+                y1={padT}
+                x2={activeX}
+                y2={padT + innerH}
+                stroke={color}
+                strokeWidth="1.2"
+                strokeDasharray="2 2"
+                opacity="0.8"
+              />
+              <circle cx={activeX} cy={activeY} r="5.5" fill={color} opacity="0.3" />
+              <circle cx={activeX} cy={activeY} r="3.5" fill={color} stroke="#fff" strokeWidth="1.5" />
+
+              {/* Compact popup: 30% opaque fill, positioned in middle-side */}
+              <rect
+                x={popupX}
+                y={popupY}
+                width={popupW}
+                height={popupH}
+                rx="4"
+                fill="rgba(15, 23, 42, 0.30)"
+                stroke="rgba(15, 23, 42, 0.70)"
+                strokeWidth="1"
+              />
+              <text
+                x={popupX + popupW / 2}
+                y={popupY + 14}
+                fontSize="10.5"
+                fontWeight="900"
+                fill="#0f172a"
+                textAnchor="middle"
+              >
+                {popupText}
+              </text>
+            </g>
+          );
+        })()}
       </svg>
 
       {/* Bottom Center Checkbox Legends: Bars & Trend Line (Daily Avg displayed on graph, not in legend) */}
