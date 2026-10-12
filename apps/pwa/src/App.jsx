@@ -147,32 +147,45 @@ function Icon({ name, size = 18, color }) {
   );
 }
 
-// Module links with distinct vibrant colors according to their function
-const PRIMARY = [
+// Row 1: Core Daily Kiln Operations & Field Logs (ordered by high daily frequency)
+const ROW_1_LINKS = [
+  { to: '/firing', icon: 'firing', color: '#ef4444', labelKey: 'firing' },
   { to: '/kiln-board', icon: 'board', color: '#ea580c', labelKey: 'kilnBoard' },
   { to: '/moulding', icon: 'moulding', color: '#d97706', labelKey: 'moulding' },
-  { to: '/firing', icon: 'firing', color: '#ef4444', labelKey: 'firing' },
+  { to: '/cashbook', icon: 'cashbook', color: '#059669', labelKey: 'cashbook' },
+  { to: '/kharchi', icon: 'kharchi', color: '#6366f1', labelKey: 'kharchiRun' },
   { to: '/peshgi', icon: 'money', color: '#10b981', labelKey: 'peshgi' },
+  { to: '/sales', icon: 'sales', color: '#f43f5e', labelKey: 'sales' },
 ];
 
-const MORE_LINKS = [
-  { to: '/reports', icon: 'reports', color: '#0284c7', labelKey: 'reports' },
-  { to: '/kharchi', icon: 'kharchi', color: '#6366f1', labelKey: 'kharchiRun' },
-  { to: '/cashbook', icon: 'cashbook', color: '#059669', labelKey: 'cashbook' },
+// Row 2: Commercial, Reports, Analytics & Master Settings
+const ROW_2_LINKS = [
   { to: '/inventory', icon: 'inventory', color: '#0284c7', labelKey: 'nikasiTab' },
-  { to: '/sales', icon: 'sales', color: '#f43f5e', labelKey: 'sales' },
-  { to: '/workers', icon: 'workers', color: '#0d9488', labelKey: 'workers' },
+  { to: '/reports', icon: 'reports', color: '#0284c7', labelKey: 'reports' },
   { to: '/activity', icon: 'activity', color: '#f97316', labelKey: 'activity' },
   { to: '/insights', icon: 'insights', color: '#8b5cf6', labelKey: 'insights' },
+  { to: '/workers', icon: 'workers', color: '#0d9488', labelKey: 'workers' },
+  { to: '/settings', icon: 'settings', color: '#78716c', labelKey: 'settings' },
   { to: '/audit-logs', icon: 'auditLogs', color: '#64748b', labelKey: 'auditLogs', roles: ['owner', 'accountant'] },
   { to: '/users', icon: 'users', color: '#06b6d4', labelKey: 'users', roles: ['owner'] },
-  { to: '/settings', icon: 'settings', color: '#78716c', labelKey: 'settings' },
 ];
 
 const visibleLinks = (links) => links.filter((l) => !l.roles || l.roles.includes(getRole()));
-const ALL_LINKS = [
-  ...PRIMARY.map(({ to, icon, color, labelKey }) => ({ to, icon, color, labelKey })),
-  ...MORE_LINKS,
+const ALL_LINKS = [...ROW_1_LINKS, ...ROW_2_LINKS];
+
+// Primary items for mobile quick bottom navigation
+const PRIMARY = [
+  ROW_1_LINKS[0], // Firing
+  ROW_1_LINKS[1], // Kiln Board
+  ROW_1_LINKS[2], // Moulding
+  ROW_1_LINKS[3], // Cash Book
+];
+
+const MORE_LINKS = [
+  ROW_1_LINKS[4], // Kharchi
+  ROW_1_LINKS[5], // Peshgi
+  ROW_1_LINKS[6], // Sales
+  ...ROW_2_LINKS,
 ];
 
 function MoreSheet({ open, onClose, t }) {
@@ -244,53 +257,68 @@ function Shell({ children }) {
   return (
     <>
       <a href="#main" className="skip-link">{t.skipToContent}</a>
-      <header className="top">
-        <div className="brand-badge">
-          <div className="brand-icon-box" aria-hidden="true">
-            <Icon name="kilnLogo" color="#ffffff" size={19} />
-          </div>
-          <strong className="brand-text">{t.appName}</strong>
-        </div>
-
-        <SyncBadge />
-        <span className="grow" />
-
-        <div className="top-actions">
-          {/* SAD208 displayed directly over Owner */}
-          <div className="top-user-badge" title={`Kiln SAD208 • ${username || 'Owner'}`}>
-            <span className="user-kiln-code">SAD208</span>
-            <span className="user-role-label">Owner</span>
+      <div className="sticky-header-wrapper">
+        <header className="top">
+          <div className="brand-badge">
+            <div className="brand-icon-box" aria-hidden="true">
+              <Icon name="kilnLogo" color="#ffffff" size={19} />
+            </div>
+            <strong className="brand-text">{t.appName}</strong>
           </div>
 
-          <button
-            type="button"
-            className="ghost"
-            title="Switch Language"
-            onClick={() => setLang(lang === 'ur' ? 'en' : 'ur')}
-          >
-            <Icon name="globe" color="#38bdf8" size={14} />
-            <span>{t.lang}</span>
-          </button>
-          <button
-            type="button"
-            className="ghost logout-btn"
-            title={t.logout}
-            aria-label={t.logout}
-            onClick={() => { clearSession(); nav('/login'); }}
-          >
-            <Icon name="logout" color="#f87171" size={16} />
-          </button>
-        </div>
-      </header>
+          <SyncBadge />
+          <span className="grow" />
 
-      <nav className="tabs" aria-label={t.appName}>
-        {visibleLinks(ALL_LINKS).map((l) => (
-          <NavLink key={l.to} to={l.to}>
-            <Icon name={l.icon} color={l.color} size={15} />
-            <span>{t[l.labelKey]}</span>
-          </NavLink>
-        ))}
-      </nav>
+          <div className="top-actions">
+            {/* SAD208 displayed directly over Owner */}
+            <div className="top-user-badge" title={`Kiln SAD208 • ${username || 'Owner'}`}>
+              <span className="user-kiln-code">SAD208</span>
+              <span className="user-role-label">Owner</span>
+            </div>
+
+            {/* Language toggle: Urdu/English text over centrally aligned globe icon */}
+            <button
+              type="button"
+              className="ghost top-lang-btn"
+              title="Switch Language"
+              onClick={() => setLang(lang === 'ur' ? 'en' : 'ur')}
+            >
+              <span className="lang-label">{t.lang}</span>
+              <Icon name="globe" color="#38bdf8" size={13} />
+            </button>
+
+            <button
+              type="button"
+              className="ghost logout-btn"
+              title={t.logout}
+              aria-label={t.logout}
+              onClick={() => { clearSession(); nav('/login'); }}
+            >
+              <Icon name="logout" color="#f87171" size={16} />
+            </button>
+          </div>
+        </header>
+
+        {/* Frozen Navigation Bar with 2 Rows of Buttons ordered by daily operational usage */}
+        <nav className="tabs two-rows" aria-label={t.appName}>
+          <div className="tabs-row tabs-row-1" aria-label="Daily Operations">
+            {visibleLinks(ROW_1_LINKS).map((l) => (
+              <NavLink key={l.to} to={l.to} className={({ isActive }) => `tab-btn${isActive ? ' active' : ''}`}>
+                <Icon name={l.icon} color={l.color} size={14} />
+                <span>{t[l.labelKey]}</span>
+              </NavLink>
+            ))}
+          </div>
+          <div className="tabs-row tabs-row-2" aria-label="Management & Reports">
+            {visibleLinks(ROW_2_LINKS).map((l) => (
+              <NavLink key={l.to} to={l.to} className={({ isActive }) => `tab-btn${isActive ? ' active' : ''}`}>
+                <Icon name={l.icon} color={l.color} size={14} />
+                <span>{t[l.labelKey]}</span>
+              </NavLink>
+            ))}
+          </div>
+        </nav>
+      </div>
 
       <main id="main" tabIndex={-1}>{children}</main>
       <BottomNav t={t} />

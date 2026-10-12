@@ -80,7 +80,7 @@ body {
   font-size: 15px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden;
+  overflow-x: clip; /* clip prevents horizontal scroll without breaking position: sticky */
 }
 
 /* Multilingual & Urdu Typography: Noori Nastaliq first, fallback to Noto Nastaliq Urdu */
@@ -163,19 +163,24 @@ main:focus {
    TOP HEADER & NAVIGATION WITH REDUCED PADDING & OUTLINE BOXES
    ========================================================================== */
 
+.sticky-header-wrapper {
+  position: sticky;
+  top: 0;
+  z-index: 45;
+  background: #0f172a;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.12);
+}
+
 .top {
   display: flex;
   gap: 0.45rem;
   align-items: center;
-  padding: 0.45rem 0.75rem;
+  padding: 0.4rem 0.75rem;
   background: #0f172a;
   background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
   color: #ffffff;
   border-bottom: 1px solid rgba(234, 88, 12, 0.4);
   box-shadow: 0 3px 15px rgba(15, 23, 42, 0.35);
-  position: sticky;
-  top: 0;
-  z-index: 30;
   backdrop-filter: blur(12px);
 }
 
@@ -358,6 +363,45 @@ main:focus {
   transform: translateY(-1px);
 }
 
+/* Compact Language Toggle with Urdu/English over central globe icon */
+.top button.ghost.top-lang-btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+  padding: 0.12rem 0.52rem;
+  min-height: 33px;
+  height: 33px;
+  line-height: 1;
+  text-align: center;
+  border: 1.5px solid rgba(56, 189, 248, 0.5);
+  background: rgba(255, 255, 255, 0.08);
+  color: #f1f5f9;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.top button.ghost.top-lang-btn:hover {
+  background: rgba(56, 189, 248, 0.22);
+  border-color: rgba(56, 189, 248, 0.85);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.top button.ghost.top-lang-btn .lang-label {
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: #e0f2fe;
+}
+
+.top button.ghost.top-lang-btn svg {
+  display: block;
+  margin: 0 auto;
+}
+
 .top button.ghost.logout-btn {
   width: 33px;
   height: 33px;
@@ -380,39 +424,46 @@ main:focus {
 }
 
 /* ==========================================================================
-   DESKTOP TABS NAVIGATION COMPACTED TO FIT SCREEN AREA
+   FROZEN TWO-ROW NAVIGATION BAR ORDERED BY DAILY USAGE
    ========================================================================== */
 
-.tabs {
+.tabs.two-rows {
   display: flex;
-  gap: 0.2rem;
-  background: rgba(255, 255, 255, 0.96);
+  flex-direction: column;
+  gap: 0.22rem;
+  background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(14px);
   border-bottom: 1.5px solid var(--line);
-  overflow-x: auto;
-  padding: 0.22rem 0.45rem;
-  position: sticky;
-  top: 48px;
-  z-index: 25;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
-  scrollbar-width: thin;
+  padding: 0.25rem 0.5rem;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
 }
 
-.tabs::-webkit-scrollbar {
-  height: 3px;
+.tabs-row {
+  display: flex;
+  align-items: center;
+  gap: 0.22rem;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding-bottom: 0.12rem;
+  white-space: nowrap;
 }
-.tabs::-webkit-scrollbar-thumb {
+
+.tabs-row::-webkit-scrollbar {
+  height: 2px;
+}
+.tabs-row::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 4px;
 }
 
-.tabs a {
-  padding: 0.24rem 0.46rem;
+.tabs a,
+.tabs .tab-btn {
+  padding: 0.2rem 0.44rem;
   color: var(--ink-secondary);
   text-decoration: none;
   white-space: nowrap;
   border-radius: 6px;
-  font-size: 0.77rem;
+  font-size: 0.75rem;
   font-weight: 700;
   display: inline-flex;
   align-items: center;
@@ -420,16 +471,19 @@ main:focus {
   transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1.5px solid rgba(203, 213, 225, 0.9);
   background: #ffffff;
+  flex-shrink: 0;
 }
 
-.tabs a:hover {
+.tabs a:hover,
+.tabs .tab-btn:hover {
   background: var(--brand-tint);
   color: var(--brand-dark);
   border-color: var(--brand-dark);
   transform: translateY(-1px);
 }
 
-.tabs a.active {
+.tabs a.active,
+.tabs .tab-btn.active {
   background: var(--brand-gradient);
   color: #ffffff;
   box-shadow: 0 2px 8px rgba(234, 88, 12, 0.3);
@@ -523,8 +577,22 @@ main:focus {
     height: 1.4rem !important;
   }
 
-  .tabs {
-    display: none;
+  /* Keep the frozen 2-row navigation bar accessible on mobile */
+  .tabs.two-rows {
+    display: flex !important;
+    padding: 0.2rem 0.35rem !important;
+    gap: 0.18rem !important;
+  }
+
+  .tabs-row {
+    gap: 0.2rem !important;
+  }
+
+  .tabs a,
+  .tabs .tab-btn {
+    font-size: 0.74rem !important;
+    padding: 0.2rem 0.42rem !important;
+    min-height: 28px !important;
   }
   main {
     padding: 0.75rem 0.65rem calc(76px + env(safe-area-inset-bottom, 0px));
@@ -1218,13 +1286,68 @@ tfoot td:last-child {
   gap: 0.75rem;
 }
 
+.chart-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.35rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px dashed var(--line-subtle);
+}
+
 .chart-title-top {
-  text-align: center;
-  margin: 0 0 0.35rem;
+  margin: 0;
   font-size: 1.05rem;
   font-weight: 800;
   color: #0f172a;
   letter-spacing: -0.015em;
+}
+
+.chart-avg-badge-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  border: 1.5px solid currentColor;
+  font-size: 0.82rem;
+  font-weight: 800;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: transform 0.15s ease;
+}
+
+.chart-avg-badge-top:hover {
+  transform: translateY(-1px);
+}
+
+.avg-badge-icon {
+  font-size: 0.88rem;
+  line-height: 1;
+}
+
+.avg-badge-label {
+  font-weight: 700;
+  opacity: 0.9;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.avg-badge-val {
+  font-weight: 900;
+  font-size: 0.88rem;
+}
+
+.chart-date-span-top {
+  text-align: center;
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: 0.02em;
+  margin: -0.1rem 0 0.45rem;
+  padding: 0.15rem 0.6rem;
 }
 
 .chart-checkbox-legend-row {

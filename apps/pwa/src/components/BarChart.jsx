@@ -37,10 +37,27 @@ export default function BarChart({ items, colors, height = 230, label = 'Grade B
 
   return (
     <div className="chart-card">
-      {/* Top Center Graph Title */}
-      <h3 className="chart-title-top">
-        {label}
-      </h3>
+      {/* Top Header: Graph Title & Total Badge */}
+      <div className="chart-header-top">
+        <h3 className="chart-title-top">
+          {label}
+        </h3>
+        <div
+          className="chart-avg-badge-top"
+          style={{
+            backgroundColor: '#f0fdf4',
+            borderColor: '#22c55e',
+            color: '#15803d',
+          }}
+          title={`Total stock across all grades: ${total.toLocaleString()}`}
+        >
+          <span className="avg-badge-icon" style={{ color: '#16a34a' }}>📦</span>
+          <span className="avg-badge-label">Total:</span>
+          <strong className="avg-badge-val" style={{ color: '#15803d' }}>
+            {total.toLocaleString()}
+          </strong>
+        </div>
+      </div>
 
       <svg viewBox={`0 0 ${w} ${height}`} className="chart" role="img" aria-labelledby={titleId} style={{ overflow: 'visible' }}>
         <title id={titleId}>{label}: {items.map((i) => `${i.label} ${i.value}`).join(', ')}</title>
@@ -76,7 +93,8 @@ export default function BarChart({ items, colors, height = 230, label = 'Grade B
           const h = isVisible ? Math.max(4, ((it.value / max) * innerH) || 0) : 0;
           const x = padL + i * bw + bw * 0.18;
           const bar = bw * 0.64;
-          const barColor = colors?.[i] || 'var(--brand-dark)';
+          const defaultColors = ['#059669', '#0284c7', '#d97706', '#ef4444'];
+          const barColor = colors?.[i] || defaultColors[i % defaultColors.length];
           const sharePct = total > 0 ? ((it.value / total) * 100).toFixed(1) : 0;
           const barTopY = padT + innerH - h;
 
