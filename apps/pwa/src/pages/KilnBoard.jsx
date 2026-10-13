@@ -25,14 +25,17 @@ export default function KilnBoard() {
   const t = useT();
   const [sections, setSections] = useState([]);
   const [teams, setTeams] = useState([]);
+  const [inventory, setInventory] = useState(null);
   const [sel, setSel] = useState(null);
   const [form, setForm] = useState({});
   const [msg, setMsg] = useState({ text: '', bad: false });
+  const [submitting, setSubmitting] = useState(false);
   const [advancing, setAdvancing] = useState(false);
 
   const load = () => {
     get('/kiln-sections').then(setSections).catch(() => {});
     get('/teams').then(setTeams).catch(() => {});
+    get('/inventory/summary').then(setInventory).catch(() => {});
   };
   useEffect(() => { load(); }, []);
 
@@ -40,6 +43,7 @@ export default function KilnBoard() {
 
   async function act(fn) {
     setMsg({ text: '', bad: false });
+    setSubmitting(true);
     try {
       const r = await fn();
       setMsg({ text: r?.queued ? t.queued : t.savedOk, bad: false });
@@ -47,7 +51,9 @@ export default function KilnBoard() {
       setForm({});
       load();
     } catch (e) {
-      setMsg({ text: e.message, bad: true });
+      setMsg({ text: e.message || 'Operation failed', bad: true });
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -146,8 +152,20 @@ export default function KilnBoard() {
             </button>
           </div>
 
+          {msg.text && (
+            <p role={msg.bad ? 'alert' : 'status'} className={msg.bad ? 'err' : 'ok'} style={{ margin: 0 }}>
+              {msg.text}
+            </p>
+          )}
+
           {sel.state === 'Empty' && (
             <div className="grid two" style={{ gap: '0.85rem' }}>
+              {inventory?.greenStock !== undefined && (
+                <div style={{ gridColumn: '1 / -1', padding: '0.5rem 0.75rem', background: 'var(--brand-tint)', borderRadius: '8px', border: '1px solid rgba(234, 88, 12, 0.25)', fontSize: '0.86rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: 'var(--ink)' }}>🌱 Available Green Stock:</span>
+                  <strong style={{ color: 'var(--brand)', fontSize: '0.96rem' }}>{(inventory.greenStock ?? 0).toLocaleString()} bricks</strong>
+                </div>
+              )}
               <label>
                 {t.team}
                 <select value={form.teamId || ''} onChange={(e) => setForm({ ...form, teamId: e.target.value })}>
@@ -168,11 +186,11 @@ export default function KilnBoard() {
               </label>
               <button
                 className="primary"
-                disabled={!form.teamId || !form.count}
+                disabled={!form.teamId || !form.count || submitting}
                 onClick={() => loadSection(sel)}
                 style={{ gridColumn: '1 / -1' }}
               >
-                📥 {t.loadSection}
+                {submitting ? '...' : `📥 ${t.loadSection}`}
               </button>
             </div>
           )}

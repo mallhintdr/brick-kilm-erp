@@ -1,6 +1,15 @@
+/* Urdu Noori Nastaliq font scoped strictly to Arabic/Urdu unicode characters.
+   Numbers (0-9), Latin characters, and symbols are excluded so numeric values
+   strictly keep English typography (Plus Jakarta Sans).
+   Urdu words strictly and exclusively use Noori Nastaliq (Jameel Noori Nastaleeq). */
 @font-face {
   font-family: 'Noori Nastaleeq';
-  src: local('Jameel Noori Nastaleeq'), local('Jameel Noori Nastaleeq Regular'), local('Noori Nastaleeq'), local('Nafees Nastaleeq'), local('Noto Nastaliq Urdu');
+  src: local('Jameel Noori Nastaleeq'),
+       local('Jameel Noori Nastaleeq Regular'),
+       local('Noori Nastaleeq'),
+       local('Jameel Noori'),
+       url('https://cdn.jsdelivr.net/npm/jameel-noori/fonts/jameel-noori-nastaleeq4.woff2') format('woff2');
+  unicode-range: U+0600-061B, U+061E-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
   font-display: swap;
 }
 
@@ -83,9 +92,12 @@ body {
   overflow-x: clip; /* clip prevents horizontal scroll without breaking position: sticky */
 }
 
-/* Multilingual & Urdu Typography: Noori Nastaliq first, fallback to Noto Nastaliq Urdu */
+/* Multilingual & Urdu Typography:
+   When Urdu is active, 'Noori Nastaleeq' strictly and exclusively matches Urdu words/characters via unicode-range.
+   All numeric digits (0-9, dates, currency, quantities) and English characters automatically
+   fall through to 'Plus Jakarta Sans', keeping English font styling for all numbers! */
 html[lang='ur'] body {
-  font-family: 'Noori Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', 'Noto Sans Arabic', system-ui, sans-serif;
+  font-family: 'Noori Nastaleeq', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   line-height: 1.85;
 }
 
@@ -94,8 +106,23 @@ html[lang='ur'] h2,
 html[lang='ur'] .top strong,
 html[lang='ur'] .brand-text,
 html[lang='ur'] .kpi-group-title {
-  font-family: 'Noori Nastaleeq', 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', 'Noto Sans Arabic', system-ui, sans-serif;
+  font-family: 'Noori Nastaleeq', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   line-height: 1.95;
+}
+
+/* Ensure all numeric values, quantities, dates, currencies, and stats explicitly render in Plus Jakarta Sans */
+html[lang='ur'] input[type="number"],
+html[lang='ur'] input[inputmode="numeric"],
+html[lang='ur'] input[inputmode="decimal"],
+html[lang='ur'] input[type="date"],
+html[lang='ur'] .stat strong,
+html[lang='ur'] .kpi-value,
+html[lang='ur'] .daily-avg-trend-pill,
+html[lang='ur'] td:has(> strong),
+html[lang='ur'] .badge,
+html[lang='ur'] .kiln-pill-code {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  font-variant-numeric: tabular-nums;
 }
 
 h1 {
@@ -1115,7 +1142,6 @@ main:focus {
   }
   .brand-text {
     font-size: 0.92rem;
-  }
   }
 }
 
