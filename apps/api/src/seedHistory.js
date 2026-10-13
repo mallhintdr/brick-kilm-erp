@@ -136,8 +136,6 @@ async function main() {
   for (let t = START.getTime(); t <= TODAY.getTime(); t += days(1)) {
     const date = new Date(t);
     const dow = date.getDay(); // 0 = Sunday
-    const monsoon = date.getMonth() >= 6 && date.getMonth() <= 8; // Jul-Sep: season closed
-    if (monsoon) continue;
     dayCount++;
 
     await withTransaction(db, async (session) => {

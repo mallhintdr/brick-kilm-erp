@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { LangContext, useT, useLang } from './i18n.js';
 import { clearSession, flushOutbox, getRole, getToken, getUsername, onOutboxChange, outboxCount } from './api.js';
@@ -21,38 +21,6 @@ import Reports from './pages/Reports.jsx';
 import Home from './pages/Home.jsx';
 import PrintWorkerSlip from './pages/PrintWorkerSlip.jsx';
 import PrintKharchiSlip from './pages/PrintKharchiSlip.jsx';
-
-function SyncBadge() {
-  const t = useT();
-  const [count, setCount] = useState(0);
-  const [online, setOnline] = useState(navigator.onLine);
-  useEffect(() => {
-    const refresh = () => outboxCount().then(setCount);
-    const sync = () => flushOutbox().then(refresh);
-    refresh();
-    const off = onOutboxChange(refresh);
-    const up = () => { setOnline(true); sync(); };
-    const down = () => setOnline(false);
-    window.addEventListener('online', up);
-    window.addEventListener('offline', down);
-    const timer = setInterval(sync, 30000);
-    return () => { off(); clearInterval(timer); window.removeEventListener('online', up); window.removeEventListener('offline', down); };
-  }, []);
-  const cls = !online ? 'red' : count ? 'yellow' : 'green';
-  const syncColor = !online ? '#f87171' : count ? '#fbbf24' : '#10b981';
-  return (
-    <button
-      type="button"
-      className={`sync-badge-wrapper ${cls}`}
-      title={!online ? t.offline : count ? `${t.pending}: ${count}` : t.synced}
-      aria-label={!online ? t.offline : count ? `${t.pending}: ${count}` : t.synced}
-      onClick={() => flushOutbox()}
-    >
-      <Icon name="sync" color={syncColor} size={16} />
-      {count > 0 && <span className="sync-count-bubble">{count}</span>}
-    </button>
-  );
-}
 
 // Crisp, high-precision SVG icons tailored for Kiln Operations ERP
 const ICONS = {
@@ -130,6 +98,12 @@ const ICONS = {
   reports: (
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8" />
   ),
+  chevronRight: (
+    <polyline points="9 18 15 12 9 6" />
+  ),
+  chevronLeft: (
+    <polyline points="15 18 9 12 15 6" />
+  ),
 };
 
 function Icon({ name, size = 18, color }) {
@@ -177,134 +151,262 @@ const ROW_2_LINKS = [
 const visibleLinks = (links) => links.filter((l) => !l.roles || l.roles.includes(getRole()));
 const ALL_LINKS = [...ROW_1_LINKS, ...ROW_2_LINKS];
 
-// Primary items for mobile quick bottom navigation (Home + key operational areas)
-const PRIMARY = [
-  { to: '/home', icon: 'home', color: '#ea580c', labelKey: 'home' },
-  ROW_1_LINKS[0], // Firing
-  ROW_1_LINKS[1], // Kiln Board
-  ROW_1_LINKS[2], // Moulding
-  ROW_1_LINKS[3], // Cash Book
-];
-
-const MORE_LINKS = [
-  ROW_1_LINKS[4], // Kharchi
-  ROW_1_LINKS[5], // Peshgi
-  ROW_1_LINKS[6], // Sales
-  ...ROW_2_LINKS,
-];
-
-function MoreSheet({ open, onClose, t }) {
-  if (!open) return null;
-  return (
-    <div className="sheet-backdrop" onClick={onClose}>
-      <div className="sheet" role="dialog" aria-modal="true" aria-label={t.more} onClick={(e) => e.stopPropagation()}>
-        <div className="sheet-handle" />
-        {visibleLinks(MORE_LINKS).map((l) => (
-          <NavLink
-            key={l.to}
-            to={l.to}
-            onClick={onClose}
-            className={({ isActive }) => `sheet-link${isActive ? ' active' : ''}`}
-          >
-            <span style={{ display: 'inline-flex', marginInlineEnd: '0.75rem', opacity: 0.9 }}>
-              <Icon name={l.icon} color={l.color} size={20} />
-            </span>
-            {t[l.labelKey]}
-          </NavLink>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function BottomNav({ t }) {
-  const [moreOpen, setMoreOpen] = useState(false);
+function FloatingToolbar() {
+  const t = useT();
+  const { lang, setLang } = useLang();
   const location = useLocation();
-  const moreActive = MORE_LINKS.some((l) => l.to === location.pathname);
+  const isHomePage = location.pathname === '/' || location.pathname === '/home';
+
+  const [count, setCount] = useState(0);
+  const [online, setOnline] = useState(navigator.onLine);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  useEffect(() => {
+    const refresh = () => outboxCount().then(setCount);
+    const sync = () => {
+      setIsSyncing(true);
+      flushOutbox().then(() => {
+        refresh();
+        setTimeout(() => setIsSyncing(false), 500);
+      }).catch(() => setIsSyncing(false));
+    };
+    refresh();
+    const off = onOutboxChange(refresh);
+    const up = () => { setOnline(true); sync(); };
+    const down = () => setOnline(false);
+    window.addEventListener('online', up);
+    window.addEventListener('offline', down);
+    const timer = setInterval(sync, 30000);
+    return () => {
+      off();
+      clearInterval(timer);
+      window.removeEventListener('online', up);
+      window.removeEventListener('offline', down);
+    };
+  }, []);
+
+  const handleManualSync = () => {
+    setIsSyncing(true);
+    flushOutbox().then(() => {
+      outboxCount().then(setCount);
+      setTimeout(() => setIsSyncing(false), 600);
+    }).catch(() => setIsSyncing(false));
+  };
+
+  const [isRetracted, setIsRetracted] = useState(() => {
+    try {
+      return localStorage.getItem('kiln_toolbar_retracted') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  // Vertical position along the right channel (in px from top of viewport)
+  const [topPx, setTopPx] = useState(() => {
+    try {
+      const saved = localStorage.getItem('kiln_toolbar_top_px');
+      return saved ? parseFloat(saved) : (typeof window !== 'undefined' ? window.innerHeight / 2 : 350);
+    } catch {
+      return 350;
+    }
+  });
+
+  const toolbarRef = useRef(null);
+  const isDraggingRef = useRef(false);
+  const dragStartYRef = useRef(0);
+  const dragStartTopPxRef = useRef(350);
+  const hasMovedRef = useRef(false);
+
+  // Dynamically clamp topPx so toolbar is always completely inside the viewport
+  const clampPosition = (desiredTopPx, retractedState = isRetracted) => {
+    const windowH = typeof window !== 'undefined' ? window.innerHeight : 800;
+    const headerSafeMargin = 68; // Below the sticky top header (header height ~54px + margin)
+    const bottomSafeMargin = 16;
+    // Estimate or measure height of toolbar
+    const toolbarH = toolbarRef.current ? toolbarRef.current.offsetHeight : (retractedState ? 58 : 230);
+    const halfH = toolbarH / 2;
+
+    const minCenterY = headerSafeMargin + halfH;
+    const maxCenterY = Math.max(minCenterY, windowH - bottomSafeMargin - halfH);
+
+    return Math.min(maxCenterY, Math.max(minCenterY, desiredTopPx));
+  };
+
+  // Keep inside viewport whenever window resizes or retract state changes
+  useEffect(() => {
+    const handleAdjust = () => {
+      setTopPx((curr) => {
+        const clamped = clampPosition(curr);
+        return clamped;
+      });
+    };
+    handleAdjust();
+    window.addEventListener('resize', handleAdjust);
+    return () => window.removeEventListener('resize', handleAdjust);
+  }, [isRetracted]);
+
+  const handlePointerDown = (e) => {
+    isDraggingRef.current = true;
+    dragStartYRef.current = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+    dragStartTopPxRef.current = topPx;
+    hasMovedRef.current = false;
+
+    const onPointerMove = (ev) => {
+      if (!isDraggingRef.current) return;
+      const clientY = ev.clientY || (ev.touches && ev.touches[0] ? ev.touches[0].clientY : 0);
+      const deltaY = clientY - dragStartYRef.current;
+      if (Math.abs(deltaY) > 4) {
+        hasMovedRef.current = true;
+      }
+      const rawTop = dragStartTopPxRef.current + deltaY;
+      const safeTop = clampPosition(rawTop);
+      setTopPx(safeTop);
+    };
+
+    const onPointerUp = () => {
+      if (isDraggingRef.current) {
+        isDraggingRef.current = false;
+        try {
+          localStorage.setItem('kiln_toolbar_top_px', String(topPx));
+        } catch {
+          // ignore
+        }
+      }
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('touchmove', onPointerMove);
+      window.removeEventListener('touchend', onPointerUp);
+    };
+
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('touchmove', onPointerMove, { passive: true });
+    window.addEventListener('touchend', onPointerUp);
+  };
+
+  const handleToggleClick = (e) => {
+    // If it was dragged, do not toggle retract
+    if (hasMovedRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    setIsRetracted((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('kiln_toolbar_retracted', String(next));
+      } catch {
+        // ignore
+      }
+      // Re-clamp position immediately for the upcoming height
+      setTimeout(() => {
+        setTopPx((curr) => clampPosition(curr, next));
+      }, 50);
+      return next;
+    });
+  };
+
+  const syncStatusCls = !online ? 'offline' : count ? 'pending' : 'synced';
+  const syncColor = !online ? '#f87171' : count ? '#fbbf24' : '#10b981';
 
   return (
-    <>
-      <nav className="bottom-nav" aria-label={t.appName}>
-        {PRIMARY.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            onClick={() => setMoreOpen(false)}
-            className={({ isActive }) => `bottom-nav-item${isActive ? ' active' : ''}`}
-          >
-            <Icon name={item.icon} color={item.color} size={20} />
-            <span>{t[item.labelKey]}</span>
-          </NavLink>
-        ))}
+    <aside
+      ref={toolbarRef}
+      className={`floating-action-toolbar${isRetracted ? ' retracted' : ''}`}
+      style={{ top: `${topPx}px` }}
+      aria-label="Quick Actions Toolbar"
+    >
+      <div className="floating-toolbar-container">
+        {/* Retract / Expand Toggle Button - Always on Right Channel, vertically floatable */}
         <button
           type="button"
-          className={`bottom-nav-item bottom-nav-more ${moreActive ? 'active' : ''}`}
-          aria-haspopup="dialog"
-          aria-expanded={moreOpen}
-          onClick={() => setMoreOpen((v) => !v)}
+          className="toolbar-circle-btn toggle-retract-btn"
+          title={isRetracted ? (lang === 'ur' ? 'ٹول بار کھولیں (پکڑ کر اوپر نیچے کریں)' : 'Expand Toolbar (Drag up/down to move)') : (lang === 'ur' ? 'ٹول بار بند کریں' : 'Retract Toolbar')}
+          aria-label={isRetracted ? 'Expand Toolbar' : 'Retract Toolbar'}
+          onPointerDown={handlePointerDown}
+          onClick={handleToggleClick}
         >
-          <Icon name="more" color="#94a3b8" size={20} />
-          <span>{t.more}</span>
+          <Icon
+            name={isRetracted ? 'chevronLeft' : 'chevronRight'}
+            color="#f97316"
+            size={isRetracted ? 16 : 22} /* 25% smaller when retracted (22 * 0.75 ≈ 16.5px) */
+          />
+          <span className="toolbar-tooltip">
+            {isRetracted ? (lang === 'ur' ? 'ٹول بار کھولیں' : 'Expand Toolbar') : (lang === 'ur' ? 'ٹول بار بند کریں' : 'Retract Toolbar')}
+          </span>
         </button>
-      </nav>
-      <MoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} t={t} />
-    </>
+
+        {/* Retractable Buttons Wrapper */}
+        <div className="toolbar-buttons-collapsible">
+          {/* Circular Home Action Button */}
+          <NavLink
+            to="/home"
+            className={`toolbar-circle-btn home-circle-btn${isHomePage ? ' active' : ''}`}
+            title={t.home}
+            aria-label={t.home}
+          >
+            <Icon name="home" color={isHomePage ? '#ffffff' : '#ea580c'} size={25} />
+            <span className="toolbar-tooltip">{t.home}</span>
+          </NavLink>
+
+          {/* Circular Sync Action Button with White Fill & Centered Icon */}
+          <button
+            type="button"
+            className={`toolbar-circle-btn sync-circle-btn ${syncStatusCls}${isSyncing ? ' spinning' : ''}`}
+            title={!online ? t.offline : count ? `${t.pending}: ${count}` : t.synced}
+            aria-label={!online ? t.offline : count ? `${t.pending}: ${count}` : t.synced}
+            onClick={handleManualSync}
+          >
+            <Icon name="sync" color={syncColor} size={24} />
+            {count > 0 && <span className="toolbar-count-badge">{count}</span>}
+            <span className="toolbar-tooltip">{!online ? t.offline : count ? `${t.pending}: ${count}` : t.synced}</span>
+          </button>
+
+          {/* Circular Language Toggle Action Button with Centered Language Code */}
+          <button
+            type="button"
+            className="toolbar-circle-btn lang-circle-btn"
+            title={`Switch to ${lang === 'ur' ? 'English' : 'اردو'}`}
+            aria-label={`Switch to ${lang === 'ur' ? 'English' : 'اردو'}`}
+            onClick={() => setLang(lang === 'ur' ? 'en' : 'ur')}
+          >
+            <span className="lang-center-text">{lang === 'ur' ? 'EN' : 'UR'}</span>
+            <span className="toolbar-tooltip">{lang === 'ur' ? 'Switch to English' : 'اردو میں تبدیل کریں'}</span>
+          </button>
+        </div>
+      </div>
+    </aside>
   );
 }
 
 function Shell({ children }) {
   const t = useT();
-  const { lang, setLang } = useLang();
   const nav = useNavigate();
-  const location = useLocation();
   const role = getRole();
   const username = getUsername();
-  const isHomePage = location.pathname === '/' || location.pathname === '/home';
 
   return (
     <>
       <a href="#main" className="skip-link">{t.skipToContent}</a>
       <div className="sticky-header-wrapper">
         <header className="top">
-          {/* Brand Logo & Name - Clickable to navigate Home */}
+          {/* Brand Logo & Name */}
           <NavLink to="/home" className="brand-badge" title={t.home}>
             <div className="brand-icon-box" aria-hidden="true">
-              <Icon name="kilnLogo" color="#ffffff" size={19} />
+              <Icon name="kilnLogo" color="#ffffff" size={22} />
             </div>
             <strong className="brand-text">{t.appName}</strong>
           </NavLink>
 
-          {/* Dedicated Home Button for Quick One-Tap Navigation Back to Home */}
-          <NavLink
-            to="/home"
-            className={`top-home-btn${isHomePage ? ' active' : ''}`}
-            title={t.home}
-            aria-label={t.home}
-          >
-            <Icon name="home" color={isHomePage ? '#ea580c' : '#f1f5f9'} size={16} />
-            <span className="home-btn-label">{t.home}</span>
-          </NavLink>
-
-          <SyncBadge />
           <span className="grow" />
 
+          {/* Header Actions: Only Name, Role, and Logout */}
           <div className="top-actions">
             {/* SAD208 displayed directly over Owner */}
             <div className="top-user-badge" title={`Kiln SAD208 • ${username || 'Owner'}`}>
               <span className="user-kiln-code">SAD208</span>
-              <span className="user-role-label">Owner</span>
+              <span className="user-role-label">{role || 'Owner'}</span>
             </div>
-
-            {/* Language toggle: Urdu/English text in front and centrally aligned with language icon */}
-            <button
-              type="button"
-              className="ghost top-lang-btn"
-              title="Switch Language"
-              onClick={() => setLang(lang === 'ur' ? 'en' : 'ur')}
-            >
-              <span className="lang-label">{t.lang}</span>
-              <Icon name="globe" color="#38bdf8" size={14} />
-            </button>
 
             <button
               type="button"
@@ -313,14 +415,16 @@ function Shell({ children }) {
               aria-label={t.logout}
               onClick={() => { clearSession(); nav('/login'); }}
             >
-              <Icon name="logout" color="#f87171" size={16} />
+              <Icon name="logout" color="#f87171" size={18} />
             </button>
           </div>
         </header>
       </div>
 
       <main id="main" tabIndex={-1}>{children}</main>
-      <BottomNav t={t} />
+
+      {/* Stylish Right-Center Floating Circular Toolbar */}
+      <FloatingToolbar />
     </>
   );
 }
