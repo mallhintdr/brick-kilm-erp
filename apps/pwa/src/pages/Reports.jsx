@@ -211,12 +211,43 @@ export default function Reports() {
           <h2 style={{ margin: 0, border: 'none', padding: 0 }}>
             📊 {lang === 'ur' ? 'جامع کاروباری رپورٹ جنریٹر' : 'Comprehensive Kiln Operations Reports'}
           </h2>
-          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-            <button type="button" className="primary" onClick={() => window.print()} style={{ minHeight: '34px', fontSize: '0.82rem' }}>
-              🖨️ {lang === 'ur' ? 'پرنٹ / پی ڈی ایف' : 'Print / Export PDF'}
+          <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            <button
+              type="button"
+              className="primary"
+              onClick={() => window.print()}
+              style={{
+                minHeight: '32px',
+                padding: '0.2rem 0.65rem',
+                fontSize: '0.78rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                fontWeight: 700,
+              }}
+              title={lang === 'ur' ? 'پرنٹ / پی ڈی ایف' : 'Print / Export PDF'}
+            >
+              <span style={{ fontSize: '1.45rem', lineHeight: 1, display: 'inline-block' }}>🖨️</span>
+              <span>{lang === 'ur' ? 'پرنٹ / پی ڈی ایف' : 'Print / Export PDF'}</span>
             </button>
-            <button type="button" className="ghost" onClick={generateReport} disabled={loading} style={{ minHeight: '34px', fontSize: '0.82rem' }}>
-              🔄 {loading ? '...' : (lang === 'ur' ? 'ریفریش' : 'Refresh')}
+            <button
+              type="button"
+              className="ghost"
+              onClick={generateReport}
+              disabled={loading}
+              style={{
+                minHeight: '32px',
+                padding: '0.2rem 0.65rem',
+                fontSize: '0.78rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                fontWeight: 700,
+              }}
+              title={lang === 'ur' ? 'ریفریش' : 'Refresh'}
+            >
+              <span style={{ fontSize: '1.45rem', lineHeight: 1, display: 'inline-block' }}>🔄</span>
+              <span>{loading ? '...' : (lang === 'ur' ? 'ریفریش' : 'Refresh')}</span>
             </button>
           </div>
         </div>

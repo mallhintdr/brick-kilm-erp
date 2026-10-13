@@ -1,7 +1,8 @@
 /* Urdu Noori Nastaliq font scoped strictly to Arabic/Urdu unicode characters.
    Numbers (0-9), Latin characters, and symbols are excluded so numeric values
    strictly keep English typography (Plus Jakarta Sans).
-   Urdu words strictly and exclusively use Noori Nastaliq (Jameel Noori Nastaleeq). */
+   Urdu words strictly and exclusively use Noori Nastaliq (Jameel Noori Nastaleeq).
+   size-adjust: 100% normalizes Nastaleeq x-height so Urdu and English font sizes match identically. */
 @font-face {
   font-family: 'Noori Nastaleeq';
   src: local('Jameel Noori Nastaleeq'),
@@ -11,6 +12,7 @@
        url('https://cdn.jsdelivr.net/npm/jameel-noori/fonts/jameel-noori-nastaleeq4.woff2') format('woff2');
   unicode-range: U+0600-061B, U+061E-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF;
   font-display: swap;
+  size-adjust: 100%;
 }
 
 :root {
@@ -95,10 +97,12 @@ body {
 /* Multilingual & Urdu Typography:
    When Urdu is active, 'Noori Nastaleeq' strictly and exclusively matches Urdu words/characters via unicode-range.
    All numeric digits (0-9, dates, currency, quantities) and English characters automatically
-   fall through to 'Plus Jakarta Sans', keeping English font styling for all numbers! */
+   fall through to 'Plus Jakarta Sans', keeping English font styling for all numbers!
+   Font sizes and metrics are strictly normalized so English and Urdu render at the identical size. */
 html[lang='ur'] body {
   font-family: 'Noori Nastaleeq', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-  line-height: 1.85;
+  font-size: 15px;
+  line-height: 1.65;
 }
 
 html[lang='ur'] h1, 
@@ -107,7 +111,7 @@ html[lang='ur'] .top strong,
 html[lang='ur'] .brand-text,
 html[lang='ur'] .kpi-group-title {
   font-family: 'Noori Nastaleeq', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-  line-height: 1.95;
+  line-height: 1.6;
 }
 
 /* Ensure all numeric values, quantities, dates, currencies, and stats explicitly render in Plus Jakarta Sans */
