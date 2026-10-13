@@ -37,25 +37,29 @@ export default function BarChart({ items, colors, height = 230, label = 'Grade B
 
   return (
     <div className="chart-card">
-      {/* Top Header: Graph Title & Total Badge */}
+      {/* Top Header: Centered Graph Title (+15% larger) & Top-Right Total Badge */}
       <div className="chart-header-top">
-        <h3 className="chart-title-top">
-          {label}
-        </h3>
-        <div
-          className="chart-avg-badge-top"
-          style={{
-            backgroundColor: '#f0fdf4',
-            borderColor: '#22c55e',
-            color: '#15803d',
-          }}
-          title={`Total stock across all grades: ${total.toLocaleString()}`}
-        >
-          <span className="avg-badge-icon" style={{ color: '#16a34a' }}>📦</span>
-          <span className="avg-badge-label">Total:</span>
-          <strong className="avg-badge-val" style={{ color: '#15803d' }}>
-            {total.toLocaleString()}
-          </strong>
+        <div className="chart-header-side-spacer" aria-hidden="true" />
+        <div className="chart-title-center-block">
+          <h3 className="chart-title-top">
+            {label}
+          </h3>
+        </div>
+        <div className="chart-header-right-kpi">
+          <div
+            className="chart-daily-avg-kpi-badge"
+            style={{
+              backgroundColor: '#f0fdf4',
+              borderColor: '#22c55e',
+              color: '#15803d',
+            }}
+            title={`Total stock across all grades: ${total.toLocaleString()}`}
+          >
+            <span className="daily-avg-kpi-label">📦 Total:</span>
+            <strong className="daily-avg-kpi-val" style={{ color: '#15803d' }}>
+              {total.toLocaleString()}
+            </strong>
+          </div>
         </div>
       </div>
 

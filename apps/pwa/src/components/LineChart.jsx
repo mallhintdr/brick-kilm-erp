@@ -1,5 +1,5 @@
 import { useId, useState } from 'react';
-import { fmtDateDM, fmtDateSpan } from '../api.js';
+import { fmtDateDM, fmtDateSpan, fmtDateRangeSpaced } from '../api.js';
 
 // Advanced SVG Time-Series Chart matching user reference dashboard:
 // - Top-center title
@@ -171,7 +171,7 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 270,
 
   const firstDate = data[0][x];
   const lastDate = data[data.length - 1][x];
-  const dateSpanStr = `${fmtDateSpan(firstDate)} to ${fmtDateSpan(lastDate)}`;
+  const dateSpanStr = fmtDateRangeSpaced(firstDate, lastDate);
   const chartLabel = label || `${y} trend`;
   const titleId = `lc-title-${y}-${gradId}`;
 
@@ -190,34 +190,48 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 270,
 
   return (
     <div className="chart-card">
-      {/* Top Header: Centered Graph Title, Trend Badge & Contrasting Daily Avg Callout */}
+      {/* Top Header: Centered Graph Title (+15% larger), Date Range, and Top-Right Daily Avg with Trend */}
       <div className="chart-header-top">
-        <h3 className="chart-title-top">
-          {chartLabel}
-        </h3>
-        <div className="chart-header-badges">
-          {/* Trend Badge */}
-          <div
-            className="chart-trend-badge-top"
-            style={{
-              backgroundColor: '#eef2ff',
-              borderColor: '#818cf8',
-              color: '#4338ca',
-            }}
-            title={`Overall trend trajectory: ${trendPct >= 0 ? '+' : ''}${trendPct.toFixed(1)}%`}
-          >
-            <span className="trend-badge-icon">{trendPct >= 0 ? '📈' : '📉'}</span>
-            <span className="trend-badge-label">Trend:</span>
-            <strong className="trend-badge-val">
-              {trendPct >= 0 ? '+' : ''}{trendPct.toFixed(1)}%
-            </strong>
+        {/* Placeholder to balance the flex container so title stays precisely in the middle */}
+        <div className="chart-header-side-spacer" aria-hidden="true" />
+
+        {/* Center: Graph Title (+15% size) and Spaced Date Range (e.g. 17-4-26   to   9-10-26) */}
+        <div className="chart-title-center-block">
+          <h3 className="chart-title-top">
+            {chartLabel}
+          </h3>
+          <div className="chart-date-span-top">
+            📅 {dateSpanStr}
           </div>
         </div>
-      </div>
 
-      {/* Top Center Date Range Span (below graph title header in slightly larger size) */}
-      <div className="chart-date-span-top">
-        📅 {dateSpanStr}
+        {/* Top Right: Daily Avg badge with Trend trajectory for all graphs */}
+        <div className="chart-header-right-kpi">
+          <div
+            className="chart-daily-avg-kpi-badge"
+            style={{
+              backgroundColor: contrast.bg,
+              borderColor: contrast.border,
+              color: contrast.text,
+            }}
+            title={`Daily Average: ${format(Math.round(avg))} (Trend: ${trendPct >= 0 ? '+' : ''}${trendPct.toFixed(1)}%)`}
+          >
+            <span className="daily-avg-kpi-label">⚡ Daily Avg:</span>
+            <strong className="daily-avg-kpi-val" style={{ color: contrast.stroke }}>
+              {format(Math.round(avg))}
+            </strong>
+            <span
+              className="daily-avg-trend-pill"
+              style={{
+                backgroundColor: trendPct >= 0 ? '#ecfdf5' : '#fef2f2',
+                color: trendPct >= 0 ? '#059669' : '#dc2626',
+                borderColor: trendPct >= 0 ? '#a7f3d0' : '#fecaca',
+              }}
+            >
+              {trendPct >= 0 ? '↗' : '↘'} {trendPct >= 0 ? '+' : ''}{trendPct.toFixed(1)}%
+            </span>
+          </div>
+        </div>
       </div>
 
       <svg viewBox={`0 0 ${w} ${height}`} className="chart" role="img" aria-labelledby={titleId} style={{ overflow: 'visible' }}>
@@ -342,53 +356,6 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 270,
             />
           </g>
         )}
-
-        {/* OVER THE TOP: High-contrast Dashed Horizontal Daily Average Line & Compact 50% Opaque Pill Badge */}
-        <g pointerEvents="none" className="chart-avg-top-layer">
-          {/* Contrasting dashed benchmark line across full width */}
-          <line
-            x1={padL}
-            y1={avgY}
-            x2={w - padR}
-            y2={avgY}
-            stroke={contrast.stroke}
-            strokeDasharray="6 4"
-            strokeWidth="2.2"
-          />
-          {/* Compact Pill Badge with 50% opaque fill */}
-          {(() => {
-            const avgLabelText = `Daily Avg: ${format(Math.round(avg))}`;
-            const pillW = Math.max(104, Math.min(148, avgLabelText.length * 6.5 + 16));
-            const halfW = pillW / 2;
-            return (
-              <g transform={`translate(${w / 2}, ${clampedAvgY})`}>
-                <rect
-                  x={-halfW}
-                  y="-10"
-                  width={pillW}
-                  height="20"
-                  rx="10"
-                  fill={contrast.stroke}
-                  fillOpacity="0.50"
-                  stroke={contrast.stroke}
-                  strokeWidth="1.4"
-                  filter={`url(#${gradId}-pill-shadow)`}
-                />
-                <text
-                  x="0"
-                  y="4"
-                  fontSize="10.2"
-                  fontWeight="900"
-                  fill="#0f172a"
-                  letterSpacing="0.01em"
-                  textAnchor="middle"
-                >
-                  {avgLabelText}
-                </text>
-              </g>
-            );
-          })()}
-        </g>
 
         {/* Compact Info Popup (30% opaque fill) on clicking / hovering on graph: in middle-side instead of top */}
         {hoverIndex !== null && activeItem && (() => {

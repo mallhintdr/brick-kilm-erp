@@ -84,24 +84,41 @@ export default function Insights() {
           <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
             📅 {t.insights}
           </span>
-          <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-            {RANGES.map((r) => (
-              <button
-                key={r.key}
-                type="button"
-                className={r.key === range ? 'primary' : 'ghost'}
-                style={{ minHeight: '34px', padding: '0.25rem 0.65rem', fontSize: '0.82rem' }}
-                onClick={() => {
-                  setRange(r.key);
-                  if (r.key !== 'custom') {
-                    setFromDate(daysAgoStr(r.key));
-                    setToDate(todayStr());
-                  }
-                }}
-              >
-                {r.label}
-              </button>
-            ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <label htmlFor="insights-range-select" className="visually-hidden">
+              {t.insights}
+            </label>
+            <select
+              id="insights-range-select"
+              value={range}
+              onChange={(e) => {
+                const val = e.target.value === 'custom' ? 'custom' : Number(e.target.value);
+                setRange(val);
+                if (val !== 'custom') {
+                  setFromDate(daysAgoStr(val));
+                  setToDate(todayStr());
+                }
+              }}
+              style={{
+                minHeight: '38px',
+                padding: '0.35rem 0.9rem',
+                fontSize: '0.92rem',
+                fontWeight: 700,
+                color: '#0f172a',
+                background: '#ffffff',
+                border: '1.5px solid #cbd5e1',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+                minWidth: '180px',
+              }}
+            >
+              {RANGES.map((r) => (
+                <option key={r.key} value={r.key}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 

@@ -20,7 +20,7 @@ export default function Login() {
       const r = await post('/auth/login', f);
       if (r.queued) throw new Error('Server unreachable — check the API is running and try again');
       setSession(r.token, r.role, f.username);
-      nav('/kiln-board');
+      nav('/home');
     } catch (e2) {
       if (e2.status === 409) setNeedsCode(true);
       setErr(e2.message);

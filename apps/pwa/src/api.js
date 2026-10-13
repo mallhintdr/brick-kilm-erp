@@ -28,6 +28,12 @@ async function raw(method, path, body) {
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
+  if (res.status === 401) {
+    clearSession();
+    if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+      window.location.href = '/login';
+    }
+  }
   if (!res.ok) throw Object.assign(new Error(data.error || res.statusText), { status: res.status });
   return data;
 }
@@ -95,6 +101,10 @@ export const fmtDateSpan = (d) => {
   const month = dt.getMonth() + 1;
   const year = String(dt.getFullYear()).slice(-2);
   return `${day}-${month}-${year}`;
+};
+
+export const fmtDateRangeSpaced = (startD, endD) => {
+  return `${fmtDateSpan(startD)}   to   ${fmtDateSpan(endD)}`;
 };
 
 export const fmtDateTime = (d) => {

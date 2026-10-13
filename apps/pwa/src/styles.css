@@ -398,6 +398,11 @@ main:focus {
   pointer-events: auto;
   user-select: none;
   touch-action: none; /* Allows smooth vertical dragging */
+  transition: top 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.floating-action-toolbar.dragging {
+  transition: none !important;
 }
 
 /* Retracted & expanded always remain on the right channel irrespective of language */
@@ -688,6 +693,10 @@ main:focus {
     left: auto !important;
     transform: translateY(-50%) !important;
     z-index: 998 !important;
+    transition: top 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+  .floating-action-toolbar.dragging {
+    transition: none !important;
   }
   [dir="rtl"] .floating-action-toolbar {
     right: 1.15rem !important;
@@ -2236,4 +2245,149 @@ tfoot td:last-child {
   body {
     background: #ffffff !important;
   }
+}
+
+/* ==========================================================================
+   ADVANCED TIME-SERIES CHART STYLING: CENTERED TITLE (+15%) & TOP-RIGHT KPI
+   ========================================================================== */
+
+.chart-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.chart-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  position: relative;
+  flex-wrap: wrap;
+}
+
+/* Side spacer keeps the title block centered relative to the whole container */
+.chart-header-side-spacer {
+  flex: 1 1 0%;
+  min-width: 100px;
+}
+
+@media (max-width: 767px) {
+  .chart-header-side-spacer {
+    display: none;
+  }
+}
+
+/* Middle Title Block (+15% font size, centered alignment) */
+.chart-title-center-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex: 2 1 auto;
+}
+
+.chart-title-top {
+  margin: 0;
+  font-size: 1.28rem; /* +15% over standard 1.1rem */
+  font-weight: 850;
+  color: #0f172a;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+}
+
+/* Date range with prominent spacing (e.g. 17-4-26   to   9-10-26) */
+.chart-date-span-top {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #475569;
+  margin-top: 0.25rem;
+  letter-spacing: 0.03em;
+  white-space: pre;
+}
+
+/* Top Right KPI Container */
+.chart-header-right-kpi {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 1 1 0%;
+  min-width: 160px;
+}
+
+/* Top Right Daily Avg Badge with high-contrast text and trend trajectory */
+.chart-daily-avg-kpi-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.32rem 0.65rem;
+  border-radius: 999px;
+  border: 1.5px solid;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  font-size: 0.82rem;
+  white-space: nowrap;
+  backdrop-filter: blur(6px);
+  transition: all 0.2s ease;
+}
+
+.chart-daily-avg-kpi-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+}
+
+.daily-avg-kpi-label {
+  font-weight: 800;
+  font-size: 0.78rem;
+  opacity: 0.9;
+  letter-spacing: 0.02em;
+}
+
+.daily-avg-kpi-val {
+  font-weight: 900;
+  font-size: 0.92rem;
+  letter-spacing: -0.01em;
+}
+
+.daily-avg-trend-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  font-size: 0.72rem;
+  font-weight: 900;
+  padding: 0.12rem 0.4rem;
+  border-radius: 999px;
+  border: 1px solid;
+  letter-spacing: 0.02em;
+  margin-inline-start: 0.15rem;
+}
+
+/* Legend row at bottom */
+.chart-checkbox-legend-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  padding-top: 0.35rem;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.chart-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #334155;
+  user-select: none;
+}
+
+.chart-legend-box {
+  width: 14px;
+  height: 10px;
+  display: inline-block;
 }

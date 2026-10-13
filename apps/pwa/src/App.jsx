@@ -217,13 +217,19 @@ function FloatingToolbar() {
   const dragStartTopPxRef = useRef(350);
   const hasMovedRef = useRef(false);
 
+  const [isDragging, setIsDragging] = useState(false);
+
   // Dynamically clamp topPx so toolbar is always completely inside the viewport
   const clampPosition = (desiredTopPx, retractedState = isRetracted) => {
     const windowH = typeof window !== 'undefined' ? window.innerHeight : 800;
-    const headerSafeMargin = 68; // Below the sticky top header (header height ~54px + margin)
+    // Top header is ~52px tall; add safety margin so toolbar never touches header
+    const headerSafeMargin = 64; 
     const bottomSafeMargin = 16;
-    // Estimate or measure height of toolbar
-    const toolbarH = toolbarRef.current ? toolbarRef.current.offsetHeight : (retractedState ? 58 : 230);
+    
+    // When expanded, toolbar has 4 buttons (each 48px + gaps + padding ~245px). When retracted, ~62px.
+    const toolbarH = toolbarRef.current && toolbarRef.current.offsetHeight > 50
+      ? toolbarRef.current.offsetHeight
+      : (retractedState ? 62 : 248);
     const halfH = toolbarH / 2;
 
     const minCenterY = headerSafeMargin + halfH;
@@ -235,10 +241,7 @@ function FloatingToolbar() {
   // Keep inside viewport whenever window resizes or retract state changes
   useEffect(() => {
     const handleAdjust = () => {
-      setTopPx((curr) => {
-        const clamped = clampPosition(curr);
-        return clamped;
-      });
+      setTopPx((curr) => clampPosition(curr));
     };
     handleAdjust();
     window.addEventListener('resize', handleAdjust);
@@ -247,6 +250,7 @@ function FloatingToolbar() {
 
   const handlePointerDown = (e) => {
     isDraggingRef.current = true;
+    setIsDragging(true);
     dragStartYRef.current = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
     dragStartTopPxRef.current = topPx;
     hasMovedRef.current = false;
@@ -266,6 +270,7 @@ function FloatingToolbar() {
     const onPointerUp = () => {
       if (isDraggingRef.current) {
         isDraggingRef.current = false;
+        setIsDragging(false);
         try {
           localStorage.setItem('kiln_toolbar_top_px', String(topPx));
         } catch {
@@ -298,10 +303,8 @@ function FloatingToolbar() {
       } catch {
         // ignore
       }
-      // Re-clamp position immediately for the upcoming height
-      setTimeout(() => {
-        setTopPx((curr) => clampPosition(curr, next));
-      }, 50);
+      // Instantly adjust position so the newly expanded toolbar smoothly repositions inside view
+      setTopPx((curr) => clampPosition(curr, next));
       return next;
     });
   };
@@ -312,7 +315,7 @@ function FloatingToolbar() {
   return (
     <aside
       ref={toolbarRef}
-      className={`floating-action-toolbar${isRetracted ? ' retracted' : ''}`}
+      className={`floating-action-toolbar${isRetracted ? ' retracted' : ''}${isDragging ? ' dragging' : ''}`}
       style={{ top: `${topPx}px` }}
       aria-label="Quick Actions Toolbar"
     >

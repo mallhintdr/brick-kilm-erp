@@ -5,7 +5,7 @@ import App from './App.jsx';
 import './styles.css';
 
 createRoot(document.getElementById('root')).render(
-  <BrowserRouter>
+  <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
     <App />
   </BrowserRouter>,
 );
