@@ -63,7 +63,8 @@ export default function BarChart({ items, colors, height = 230, label = 'Grade B
         </div>
       </div>
 
-      <svg viewBox={`0 0 ${w} ${height}`} className="chart" role="img" aria-labelledby={titleId} style={{ overflow: 'visible' }}>
+      <div className="chart-scroll-wrap">
+        <svg viewBox={`0 0 ${w} ${height}`} className="chart" role="img" aria-labelledby={titleId} style={{ overflow: 'visible' }}>
         <title id={titleId}>{label}: {items.map((i) => `${i.label} ${i.value}`).join(', ')}</title>
 
         {/* Horizontal Reference Lines & Y-Axis Parameters */}
@@ -166,7 +167,8 @@ export default function BarChart({ items, colors, height = 230, label = 'Grade B
             </g>
           );
         })}
-      </svg>
+        </svg>
+      </div>
 
       {/* Bottom Center Checkbox Legends */}
       <div className="chart-checkbox-legend-row">

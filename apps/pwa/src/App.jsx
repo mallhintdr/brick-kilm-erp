@@ -226,10 +226,10 @@ function FloatingToolbar() {
     const headerSafeMargin = 64; 
     const bottomSafeMargin = 16;
     
-    // When expanded, toolbar has 4 buttons (each 48px + gaps + padding ~245px). When retracted, ~62px.
-    const toolbarH = toolbarRef.current && toolbarRef.current.offsetHeight > 50
+    // When expanded, toolbar has 4 buttons (each 36px + gaps + padding ~185px). When retracted, ~40px.
+    const toolbarH = toolbarRef.current && toolbarRef.current.offsetHeight > 30
       ? toolbarRef.current.offsetHeight
-      : (retractedState ? 62 : 248);
+      : (retractedState ? 40 : 185);
     const halfH = toolbarH / 2;
 
     const minCenterY = headerSafeMargin + halfH;
@@ -332,7 +332,7 @@ function FloatingToolbar() {
           <Icon
             name={isRetracted ? 'chevronLeft' : 'chevronRight'}
             color="#f97316"
-            size={isRetracted ? 16 : 22} /* 25% smaller when retracted (22 * 0.75 ≈ 16.5px) */
+            size={isRetracted ? 14 : 16}
           />
           <span className="toolbar-tooltip">
             {isRetracted ? (lang === 'ur' ? 'ٹول بار کھولیں' : 'Expand Toolbar') : (lang === 'ur' ? 'ٹول بار بند کریں' : 'Retract Toolbar')}
@@ -348,7 +348,7 @@ function FloatingToolbar() {
             title={t.home}
             aria-label={t.home}
           >
-            <Icon name="home" color={isHomePage ? '#ffffff' : '#ea580c'} size={25} />
+            <Icon name="home" color={isHomePage ? '#ffffff' : '#ea580c'} size={18} />
             <span className="toolbar-tooltip">{t.home}</span>
           </NavLink>
 
@@ -360,7 +360,7 @@ function FloatingToolbar() {
             aria-label={!online ? t.offline : count ? `${t.pending}: ${count}` : t.synced}
             onClick={handleManualSync}
           >
-            <Icon name="sync" color={syncColor} size={24} />
+            <Icon name="sync" color={syncColor} size={18} />
             {count > 0 && <span className="toolbar-count-badge">{count}</span>}
             <span className="toolbar-tooltip">{!online ? t.offline : count ? `${t.pending}: ${count}` : t.synced}</span>
           </button>

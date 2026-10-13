@@ -234,7 +234,8 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 270,
         </div>
       </div>
 
-      <svg viewBox={`0 0 ${w} ${height}`} className="chart" role="img" aria-labelledby={titleId} style={{ overflow: 'visible' }}>
+      <div className="chart-scroll-wrap">
+        <svg viewBox={`0 0 ${w} ${height}`} className="chart" role="img" aria-labelledby={titleId} style={{ overflow: 'visible' }}>
         <title id={titleId}>{chartLabel}: {dateSpanStr}</title>
         <defs>
           <linearGradient id={`${gradId}-bar`} x1="0" y1="0" x2="0" y2="1">
@@ -410,7 +411,8 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 270,
             </g>
           );
         })()}
-      </svg>
+        </svg>
+      </div>
 
       {/* Bottom Center Checkbox Legends: Bars & Trend Line (Daily Avg displayed on graph, not in legend) */}
       <div className="chart-checkbox-legend-row">
