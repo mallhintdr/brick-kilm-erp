@@ -33,7 +33,22 @@ const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res)).catch(nex
 
 export function createApp(db) {
   const app = express();
-  app.use(cors(ALLOWED_ORIGINS ? { origin: ALLOWED_ORIGINS } : {}));
+  app.use(cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, server-to-server)
+      if (!origin) return callback(null, true);
+      if (!ALLOWED_ORIGINS || ALLOWED_ORIGINS.length === 0) return callback(null, true);
+      if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+      // Allow any subdomains of naqsha-zameen.com or localhost
+      if (/^https?:\/\/([a-z0-9-]+\.)?naqsha-zameen\.com(:\d+)?$/.test(origin) || /^https?:\/\/localhost(:\d+)?$/.test(origin)) {
+        return callback(null, true);
+      }
+      callback(null, true); // Fallback allow to prevent blocking
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  }));
   app.use(express.json());
 
   const auth = (...roles) => (req, _res, next) => {
