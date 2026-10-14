@@ -3,8 +3,8 @@ import { useMemo } from 'react';
 // Portrait plan of a kiln counted in lines: side A runs top -> bottom down the left (lines 1-120),
 // side B runs bottom -> top up the right (121-240), so line order == the direction the fire travels.
 // Each line is a thin strip coloured by its state; tap one to act on it.
-const STRIP_W = 96; const PITCH = 5; const STRIP_H = 4;
-const PADX = 34; const CORR = 44; const TOP = 64; const BOTTOM = 24;
+const STRIP_W = 120; const PITCH = 30; const STRIP_H = 24; // strips 3x thicker than before (4 -> 12)
+const PADX = 34; const CORR = 40; const TOP = 64; const BOTTOM = 24;
 
 export const LINE_FILL = {
   Empty: '#e2e8f0',
@@ -58,6 +58,7 @@ export default function LineDiagram({ lines, selected, onSelect, t }) {
               <g key={l.index}>
                 <rect
                   className={`line-strip st-${l.state}${sel ? ' line-sel' : ''}`}
+                  data-index={l.index}
                   x={p.x} y={p.y} width={STRIP_W} height={STRIP_H} rx="1"
                   fill={LINE_FILL[l.state] || LINE_FILL.Empty}
                   role="button" tabIndex={0} aria-pressed={sel}
@@ -67,16 +68,14 @@ export default function LineDiagram({ lines, selected, onSelect, t }) {
                 >
                   <title>{`${t.line} ${l.index} — ${stateLabel(l.state)}${l.currentLoad ? ` — ${l.currentLoad.toLocaleString()}` : ''}`}</title>
                 </rect>
-                {/* number every 10 lines, on the outer side */}
-                {(l.index % 10 === 0 || l.index === 1 || l.index === perSide + 1) && (
-                  <text
-                    className="line-num" y={p.y + STRIP_H}
-                    x={p.side === 'A' ? p.x - 4 : p.x + STRIP_W + 4}
-                    textAnchor={p.side === 'A' ? 'end' : 'start'}
-                  >
-                    {l.index}
-                  </text>
-                )}
+                {/* every line's number, centred inside its strip (taps go to the strip) */}
+                <text
+                  className="line-num" pointerEvents="none"
+                  x={p.x + STRIP_W / 2} y={p.y + STRIP_H / 2}
+                  textAnchor="middle" dominantBaseline="central"
+                >
+                  {l.index}
+                </text>
               </g>
             );
           })}

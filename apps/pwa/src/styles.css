@@ -3124,3 +3124,29 @@ form.grid { grid-template-columns: minmax(0, 1fr) !important; }
 textarea.issues-box { width: 100%; min-height: 120px !important; resize: vertical; line-height: 1.5; font: inherit; padding: 0.5rem 0.65rem !important; }
 .cycle-history { max-height: 300px; overflow: auto; }
 td.issues-cell { white-space: normal !important; min-width: 220px; max-width: 420px; text-align: start !important; }
+
+/* Line plan: real size (strips 3x thicker), scrolls inside its own box */
+.kiln-scroll:has(.kiln-lines) { max-height: 70vh; max-height: 70dvh; overflow: auto !important; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; overscroll-behavior: contain; }
+.kiln.kiln-lines { max-width: none !important; width: 420px; margin: 0 auto; }
+.kiln.kiln-lines svg { max-height: none !important; width: 100%; height: auto; }
+.line-num { font-size: 9px; }
+.line-side { font-size: 11px; }
+.kiln.kiln-lines { width: 840px; }
+.line-num { font-size: 14px; }
+.line-side { font-size: 16px; }
+/* line plan fits the screen width; scrolls up/down only */
+.kiln.kiln-lines { width: 100%; max-width: 360px !important; }
+.kiln-scroll:has(.kiln-lines) { overflow-x: hidden !important; }
+.line-num { font-size: 13px !important; font-weight: 800; fill: #0f172a; }
+.line-strip.st-Firing + .line-num, .line-strip.st-Cooling + .line-num { fill: #fff; }
+/* kiln list: state badges in the plan's colours */
+.state-badge { border: 1px solid transparent; font-weight: 700; }
+.state-badge.st-Empty { background: #f1f5f9; color: #334155; border-color: #cbd5e1; }
+.state-badge.st-Loading { background: #dbeafe; color: #1d4ed8; }
+.state-badge.st-Preheating { background: #fef3c7; color: #b45309; }
+.state-badge.st-Firing { background: #fee2e2; color: #b91c1c; }
+.state-badge.st-Cooling { background: #e0e7ff; color: #4338ca; }
+.state-badge.st-Unloading { background: #dcfce7; color: #15803d; }
+.kiln-panel { scroll-margin-top: 0.75rem; }
+button.close-btn { width: 34px; height: 34px; min-height: 34px !important; padding: 0 !important; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; background: #dc2626; color: #fff; font-size: 1rem; font-weight: 900; cursor: pointer; }
+button.close-btn:hover { background: #b91c1c; }

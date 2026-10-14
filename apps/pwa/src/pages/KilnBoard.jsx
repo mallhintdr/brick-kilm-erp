@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useT } from '../i18n.js';
 import { get, post, put, uuid, getRole, fmtDate, fmtDateTime } from '../api.js';
 import KilnDiagram from '../components/KilnDiagram.jsx';
@@ -42,6 +42,26 @@ export default function KilnBoard({ focus } = {}) {
   const [workers, setWorkers] = useState([]);
   const [notes, setNotes] = useState({ coalKg: '', issues: '' });
   const [history, setHistory] = useState([]);
+  const [lf, setLf] = useState({}); // list filters
+  const panelRef = useRef(null);
+  const planRef = useRef(null);
+  const lastIndex = useRef(null);
+
+  // Opening a line brings its form into view; closing or saving returns to the plan at that line.
+  useEffect(() => {
+    if (sel) {
+      lastIndex.current = sel.index;
+      requestAnimationFrame(() => panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    } else if (lastIndex.current != null) {
+      const idx = lastIndex.current;
+      lastIndex.current = null;
+      requestAnimationFrame(() => {
+        planRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // inside the plan's own scroll box, centre the line that was just worked on
+        planRef.current?.querySelector(`[data-index="${idx}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+      });
+    }
+  }, [sel?.index, sel == null]);
 
   const base = `/${UNIT_PATH[unit || 'chamber']}`;
   const unitLabel = unit === 'line' ? t.line : t.section;
@@ -206,7 +226,7 @@ export default function KilnBoard({ focus } = {}) {
       )}
 
       {/* Main Diagram Card */}
-      <div className="card">
+      <div className="card" ref={planRef}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
           <h2>{t.kilnBoard} — {unit === 'line' ? t.lines : t.chambers}</h2>
           <span style={{ fontSize: '0.8rem', color: 'var(--muted)', fontWeight: 600 }}>
@@ -229,9 +249,69 @@ export default function KilnBoard({ focus } = {}) {
         </div>
       </div>
 
+      {/* Every chamber / line as a list */}
+      {(() => {
+        const teamName = (id) => teams.find((tm) => tm._id === id)?.label || '';
+        const stateText = (st) => t[STATE_LABEL_KEY[st]] || st;
+        const cols = [
+          ['index', (r) => r.index], ['side', (r) => r.side || ''], ['state', (r) => stateText(r.state)],
+          ['count', (r) => r.currentLoad || 0], ['team', (r) => teamName(r.loadTeamId)],
+          ['loaded', (r) => (r.loadedAt ? fmtDate(r.loadedAt) : '')], ['fired', (r) => (r.firedAt ? fmtDateTime(r.firedAt) : '')],
+          ['coal', (r) => r.coalKg || ''], ['issues', (r) => r.issues || ''],
+        ];
+        const shown = rows.filter((r) => cols.every(([k, get]) => !lf[k] || String(get(r)).toLowerCase().includes(lf[k].toLowerCase())));
+        const any = Object.values(lf).some(Boolean);
+        return (
+          <div className="card table-wrap">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.65rem 0.85rem' }}>
+              <h2 style={{ margin: 0, border: 'none', padding: 0 }}>{unit === 'line' ? t.lines : t.chambers} ({shown.length} / {rows.length})</h2>
+              {any && <button type="button" className="clear-filter-btn" onClick={() => setLf({})}>✕ {t.clearAll}</button>}
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th className="sticky-col">{unitLabel}</th>
+                  {unit === 'line' && <th>{t.side}</th>}
+                  <th>{t.status}</th>
+                  <th>{t.kachiBharai}</th>
+                  <th>{t.team}</th>
+                  <th>{t.loadedOn}</th>
+                  <th>{t.firedOn}</th>
+                  <th>{t.coalUsed}</th>
+                  <th>{t.issuesAndCauses}</th>
+                </tr>
+                <tr className="filter-row">
+                  {cols.filter(([k]) => unit === 'line' || k !== 'side').map(([k]) => (
+                    <th key={k} className={k === 'index' ? 'sticky-col' : undefined}>
+                      <input type="search" className="table-col-filter" aria-label={k} value={lf[k] || ''} onChange={(e) => setLf({ ...lf, [k]: e.target.value })} />
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {shown.map((r) => (
+                  <tr key={r.index} className={`pick-row${sel?.index === r.index ? ' picked' : ''}`} onClick={() => pick(r)}>
+                    <td><strong>{r.index}</strong></td>
+                    {unit === 'line' && <td>{r.side}</td>}
+                    <td><span className={`badge state-badge st-${r.state}`}>{stateText(r.state)}</span></td>
+                    <td>{r.currentLoad ? r.currentLoad.toLocaleString() : '—'}</td>
+                    <td>{teamName(r.loadTeamId) || '—'}</td>
+                    <td>{r.loadedAt ? <strong>{fmtDate(r.loadedAt)}</strong> : '—'}</td>
+                    <td>{r.firedAt ? fmtDateTime(r.firedAt) : '—'}</td>
+                    <td>{r.coalKg ? `${Number(r.coalKg).toLocaleString()} kg` : '—'}</td>
+                    <td className="issues-cell">{r.issues || '—'}</td>
+                  </tr>
+                ))}
+                {!shown.length && <tr><td colSpan={9} className="muted">{t.noEntries}</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        );
+      })()}
+
       {/* Chamber / line action panel */}
       {sel && (
-        <div className="card grid" style={{ borderInlineStart: '5px solid var(--brand)', animation: 'slide-up 0.2s ease' }}>
+        <div ref={panelRef} className="card grid kiln-panel" style={{ borderInlineStart: '5px solid var(--brand)', animation: 'slide-up 0.2s ease' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
             {unit === 'line' && (
               <button type="button" className="ghost" aria-label={t.previous} disabled={!rows.some((x) => x.index === sel.index - 1)} onClick={() => stepSel(-1)}>‹</button>
@@ -242,9 +322,7 @@ export default function KilnBoard({ focus } = {}) {
             {unit === 'line' && (
               <button type="button" className="ghost" aria-label={t.next} disabled={!rows.some((x) => x.index === sel.index + 1)} onClick={() => stepSel(1)}>›</button>
             )}
-            <button type="button" className="ghost" style={{ minHeight: '34px', padding: '0.2rem 0.6rem' }} onClick={() => setSel(null)}>
-              ✕ {t.close || 'Close'}
-            </button>
+            <button type="button" className="close-btn" aria-label={t.close || 'Close'} title={t.close || 'Close'} onClick={() => setSel(null)}>✕</button>
           </div>
 
           {msg.text && (
