@@ -86,9 +86,13 @@ export async function balance(db, user, partyId, account, session) {
 
 // Owner-editable lookup lists ("types"). Built-ins are created lazily per tenant/kiln
 // so existing installs pick them up without a migration.
+const typesReady = new Set();
 export async function ensureBuiltinTypes(db, user) {
   const s = scope(user);
-  if (await db.collection('types').countDocuments({ ...s, builtin: true }, { limit: 1 })) return;
+  // once per kiln per server run; new built-ins added in an update reach existing kilns too
+  const k = `${s.tenantId}:${s.kilnId}`;
+  if (typesReady.has(k)) return;
+  typesReady.add(k);
   const docs = [];
   for (const [kind, rows] of Object.entries(BUILTIN_TYPES)) {
     for (const [key, label, labelUr] of rows) docs.push({ ...s, kind, key, label, labelUr, builtin: true, active: true, createdAt: new Date() });

@@ -453,3 +453,41 @@ test('every form: an existing record can be edited and saved (payloads as the sc
   r = await api('PUT', `/expenses/${exp.id}`, { amount: '1000.00', payee: 'Edited Payee' });
   assert.equal(r.status, 200, `expense: ${JSON.stringify(r.body)}`);
 });
+
+test('kiln lines: 240 lines, a full cycle keeps dates, coal, issues and output', async () => {
+  await api('PUT', '/settings', { key: 'allowNegativeStock', value: '1' });
+  const lines = (await api('GET', '/kiln-lines')).body;
+  assert.equal(lines.length, 240);
+  assert.equal(lines[119].side, 'A'); assert.equal(lines[120].side, 'B');
+  const w = (await newWorker()).body.id;
+  const team = await testDb.collection('teams').insertOne({ tenantId: ctx.tenantId, kilnId: ctx.kilnId, category: 'bharai', label: 'Line Loaders', memberIds: [w] });
+  const nteam = await testDb.collection('teams').insertOne({ tenantId: ctx.tenantId, kilnId: ctx.kilnId, category: 'nikasi', label: 'Line Unloaders', memberIds: [w] });
+  assert.equal((await api('POST', '/kiln-lines/1/load', { teamId: String(team.insertedId), count: 4800, clientUuid: randomUUID() })).status, 201);
+  assert.equal((await api('POST', '/fire-advance', { unit: 'line', clientUuid: randomUUID() })).status, 201);
+  let l1 = (await api('GET', '/kiln-lines')).body[0];
+  assert.equal(l1.state, 'Firing'); assert.ok(l1.firedAt && l1.loadedAt);
+  assert.equal((await api('PUT', '/kiln-lines/1/notes', { coalKg: 850, issues: 'Fan stopped 40 min; too much khangar at the top.' }, 'munshi')).status, 200);
+  await api('POST', '/fire-advance', { unit: 'line', clientUuid: randomUUID() });
+  assert.equal((await api('POST', '/kiln-lines/1/unload/start', { teamId: String(nteam.insertedId), clientUuid: randomUUID() })).status, 201);
+  assert.equal((await api('POST', '/kiln-lines/1/unload/complete', { awwal: 4000, doem: 500, khangar: 200, broken: 100, clientUuid: randomUUID() })).status, 201);
+  const hist = (await api('GET', '/kiln-lines/1/history')).body;
+  assert.equal(hist.length, 1);
+  assert.equal(hist[0].coalKg, 850); assert.match(hist[0].issues, /Fan stopped/); assert.equal(hist[0].awwal, 4000);
+  assert.ok(hist[0].firedAt && hist[0].loadedAt && hist[0].unloadedAt);
+  // the chamber board is untouched
+  assert.ok((await api('GET', '/kiln-sections')).body.every((s) => s.state === 'Empty' || s.state));
+});
+
+test('daily kharcha: entries are listed, hit the cash book, and reduce the settlement balance', async () => {
+  const w = (await newWorker({ category: 'driver' })).body.id;
+  const today = new Date().toISOString().slice(0, 10);
+  assert.equal((await api('POST', '/kharcha', { workerId: w, amount: '500', clientUuid: randomUUID() }, 'munshi')).status, 201);
+  const rows = (await api('GET', `/kharcha?from=${today}&to=${today}`)).body;
+  assert.ok(rows.some((r) => r.workerId === w && r.amount === '500'));
+  const book = (await api('GET', `/cashbook?date=${today}`)).body;
+  assert.ok(book.expense.some((r) => r.kind === 'kharcha' && r.amount === '500'));
+  const p = (await api('GET', `/kharchi-runs/propose?periodStart=${today}&periodEnd=${today}&category=driver`)).body;
+  const it = p.items.find((i) => i.workerId === w);
+  assert.ok(it, 'worker taken kharcha appears in the proposal');
+  assert.equal(it.taken, '500.00');
+});

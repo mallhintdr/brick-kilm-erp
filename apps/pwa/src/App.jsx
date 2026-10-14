@@ -128,9 +128,11 @@ function Icon({ name, size = 18, color, stroke = 2.2 }) {
 
 // Row 1: Core Daily Kiln Operations & Field Logs (ordered by high daily frequency)
 const ROW_1_LINKS = [
-  { to: '/firing', icon: 'firing', color: '#ef4444', labelKey: 'firing' },
+  { to: '/firing', icon: 'firing', color: '#ef4444', labelKey: 'firingAndBoard' },
   { to: '/kiln-board', icon: 'board', color: '#ea580c', labelKey: 'kilnBoard' },
   { to: '/moulding', icon: 'moulding', color: '#d97706', labelKey: 'moulding' },
+  { to: '/loading', icon: 'board', color: '#2563eb', labelKey: 'loadingBharai' },
+  { to: '/unloading', icon: 'inventory', color: '#16a34a', labelKey: 'unloadingNikasi' },
   { to: '/cashbook', icon: 'cashbook', color: '#059669', labelKey: 'cashbook' },
   { to: '/kharchi', icon: 'kharchi', color: '#6366f1', labelKey: 'kharchiRun' },
   { to: '/peshgi', icon: 'money', color: '#10b981', labelKey: 'peshgi' },
@@ -139,7 +141,7 @@ const ROW_1_LINKS = [
 
 // Row 2: Commercial, Reports, Analytics & Master Settings
 const ROW_2_LINKS = [
-  { to: '/inventory', icon: 'inventory', color: '#0284c7', labelKey: 'nikasiTab' },
+  { to: '/inventory', icon: 'inventory', color: '#0284c7', labelKey: 'purchasesKhareed' },
   { to: '/reports', icon: 'reports', color: '#0284c7', labelKey: 'reports' },
   { to: '/activity', icon: 'activity', color: '#f97316', labelKey: 'activity' },
   { to: '/insights', icon: 'insights', color: '#8b5cf6', labelKey: 'insights' },
@@ -253,6 +255,8 @@ export default function App() {
         <Route path="/" element={guard(<Home links={homeLinks} />)} />
         <Route path="/home" element={guard(<Home links={homeLinks} />)} />
         <Route path="/kiln-board" element={guard(<KilnBoard />)} />
+        <Route path="/loading" element={guard(<KilnBoard key="load" focus="load" />)} />
+        <Route path="/unloading" element={guard(<KilnBoard key="unload" focus="unload" />)} />
         <Route path="/moulding" element={guard(<Moulding />)} />
         <Route path="/firing" element={guard(<Firing />)} />
         <Route path="/kharchi" element={guard(<Kharchi />)} />

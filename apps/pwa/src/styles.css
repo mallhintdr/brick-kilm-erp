@@ -3011,3 +3011,116 @@ h2, .kpi-group-title { width: 100%; }
 @keyframes bar-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
 @media (prefers-reduced-motion: reduce) { .chart-bar { animation: none; transition: none; } }
 @media print { .chart-bar { animation: none; transition: none; } }
+
+/* ==========================================================================
+   LAPTOP / DESKTOP LAYOUT
+   ========================================================================== */
+/* A form stacks title, fields, button; its fields grid does the columns (it used to split the
+   whole form in two, squeezing every field into the left half). */
+form.grid { grid-template-columns: minmax(0, 1fr) !important; }
+
+/* One content width for every page; the scroll area stays full width so its scrollbar sits
+   at the window edge, not in the middle of the screen. */
+.app-shell > main {
+  max-width: none !important; width: 100%; margin: 0;
+  padding-inline: max(0.85rem, calc((100% - 1360px) / 2)) !important;
+}
+.app-shell > main > * { max-width: none; width: 100%; min-width: 0; }
+
+@media (min-width: 1024px) {
+  .app-shell > main { padding-top: 1.25rem !important; gap: 1.25rem; }
+
+  /* Forms: fields flow 3-6 per row; the submit button sits at the end, normal width */
+  form .grid.two, .card .grid.two { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)) !important; gap: 0.75rem 1rem !important; }
+  form.grid > button.primary, form > button.primary { justify-self: end; width: auto; min-width: 260px; padding-inline: 2rem; }
+  input[inputmode="decimal"], input[inputmode="numeric"], input[type="date"] { max-width: none; }
+
+  /* Home: the three groups side by side */
+  .home-page-container {
+    display: grid !important; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.25rem;
+    align-items: start; max-width: none !important; width: 100%;
+  }
+  .home-page-container > .home-group { max-width: none !important; width: 100%; margin: 0 !important; }
+  .home-module { min-height: 52px; font-size: 0.92rem; }
+
+  /* Info cards: a little more room, still filling the row */
+  * > .stat { flex-basis: 180px; padding: 0.7rem 1rem; }
+
+  /* Lists use more of the screen height */
+  .card.table-wrap { max-height: calc(100dvh - 140px); }
+
+  /* Kiln board: plan on the left, chamber actions on the right */
+  main > .grid:has(.kiln-scroll) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  main > .grid:has(.kiln-scroll) > * { grid-column: 1 / -1; }
+  main > .grid:has(.kiln-scroll) > .card:has(.kiln-scroll) { grid-column: 1; grid-row: span 8; }
+  main > .grid:has(.kiln-scroll) > .card.grid { grid-column: 2; }
+  .kiln { max-width: 440px; }
+}
+
+@media (min-width: 1280px) {
+  /* Insights: charts two per row; summaries and tables keep the full width */
+  main > .grid:has(.chart-card) { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  main > .grid:has(.chart-card) > * { grid-column: 1 / -1; }
+  main > .grid:has(.chart-card) > .card:has(> .chart-card) { grid-column: auto; }
+  .chart-scroll-wrap svg.chart { min-width: 0 !important; width: 100%; }
+}
+
+/* Chart headers respond to the chart's own width (phone, or half-width on a desktop) */
+.chart-card { container-type: inline-size; }
+@container (max-width: 760px) {
+  .chart-header-top { display: flex !important; flex-direction: column !important; align-items: center !important; gap: 0.35rem; }
+  .chart-header-side-spacer { display: none !important; }
+  .chart-header-right-kpi { position: static !important; transform: none !important; margin: 0 !important; width: auto !important; }
+  .chart-title-center-block { width: 100%; text-align: center; }
+}
+
+@media (min-width: 1024px) {
+  /* Kiln board: full width until a chamber is opened, then plan | chamber panel */
+  main > .grid:has(.kiln-scroll) > .card:has(.kiln-scroll) { grid-column: 1 / -1; grid-row: auto; }
+  main > .grid:has(.kiln-scroll):has(> .card.grid) > .card:has(.kiln-scroll) { grid-column: 1; grid-row: span 8; }
+  /* no chamber open: kiln on the left, state cards stacked on the right of the same card */
+  main > .grid:has(.kiln-scroll):not(:has(> .card.grid)) > .card:has(> .kiln-scroll) {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 300px); column-gap: 2rem; align-items: center;
+  }
+  main > .grid:has(.kiln-scroll):not(:has(> .card.grid)) > .card:has(> .kiln-scroll) > :not(.kiln-scroll):not(.legend) { grid-column: 1 / -1; }
+  main > .grid:has(.kiln-scroll):not(:has(> .card.grid)) > .card:has(> .kiln-scroll) > .legend { grid-template-columns: repeat(2, 1fr) !important; margin: 0; }
+}
+@media (min-width: 1024px) {
+  .week-grid input, .week-grid input.cell-input { max-width: 120px !important; }
+  .card.grid > button.primary { justify-self: end; width: auto; min-width: 260px; padding-inline: 2rem; }
+}
+
+/* ==========================================================================
+   KILN BOARD: chambers / lines switch and the line plan
+   ========================================================================== */
+.kiln-hero-actions { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; justify-content: flex-end; }
+.unit-switch { display: inline-flex; align-items: center; border: 1.5px solid #cbd5e1; border-radius: 9px; overflow: hidden; background: #f8fafc; }
+.unit-switch-label { font-size: 0.74rem; font-weight: 700; color: #64748b; padding: 0 0.55rem; }
+.unit-switch button {
+  min-height: 34px !important; height: 34px; padding: 0 0.85rem !important; border: 0; border-radius: 0;
+  background: transparent; color: #334155; font-weight: 800; font-size: 0.82rem; cursor: pointer;
+}
+.unit-switch button.on { background: var(--brand-dark, #c2410c); color: #fff; }
+.unit-switch button:disabled:not(.on) { opacity: 0.45; cursor: not-allowed; }
+.steps-field { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; font-weight: 700; color: #334155; }
+.steps-field input { width: 56px !important; min-width: 0 !important; text-align: center; }
+
+.kiln-lines { max-width: 420px; }
+.line-strip { cursor: pointer; stroke: rgba(15, 23, 42, 0.18); stroke-width: 0.4; transition: fill 0.2s ease; }
+.line-strip:hover, .line-strip:focus { stroke: #0f172a; stroke-width: 1; outline: none; }
+.line-strip.line-sel { stroke: #0f172a; stroke-width: 1.4; }
+.line-strip.st-Firing { animation: line-fire 1.2s ease-in-out infinite alternate; }
+@keyframes line-fire { from { opacity: 1; } to { opacity: 0.55; } }
+@media (prefers-reduced-motion: reduce) { .line-strip.st-Firing { animation: none; } }
+.line-num { font-size: 5.5px; font-weight: 700; fill: #475569; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+.line-side { font-size: 8px; font-weight: 800; fill: #334155; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+
+/* Line / chamber register in the action panel */
+.cycle-register { display: grid; gap: 0.65rem; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 10px; background: #f8fafc; }
+.cycle-dates { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.5rem; }
+.cycle-dates > div { display: grid; gap: 0.1rem; padding: 0.45rem 0.6rem; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; text-align: center; }
+.cycle-dates span { font-size: 0.72rem; font-weight: 700; color: #64748b; }
+.cycle-dates strong { font-size: 0.9rem; color: #0f172a; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+textarea.issues-box { width: 100%; min-height: 120px !important; resize: vertical; line-height: 1.5; font: inherit; padding: 0.5rem 0.65rem !important; }
+.cycle-history { max-height: 300px; overflow: auto; }
+td.issues-cell { white-space: normal !important; min-width: 220px; max-width: 420px; text-align: start !important; }

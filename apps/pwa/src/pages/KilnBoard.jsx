@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useT } from '../i18n.js';
-import { get, post, uuid } from '../api.js';
+import { get, post, put, uuid, getRole, fmtDate, fmtDateTime } from '../api.js';
 import KilnDiagram from '../components/KilnDiagram.jsx';
+import LineDiagram from '../components/LineDiagram.jsx';
 
 const STATE_LABEL_KEY = {
   Empty: 'empty',
@@ -21,9 +22,15 @@ const STATE_CLASS = {
   Unloading: 'sec-unloading',
 };
 
-export default function KilnBoard() {
+// A kiln is counted either by chambers or by lines (the owner picks); both run the same cycle.
+const UNIT_PATH = { chamber: 'kiln-sections', line: 'kiln-lines' };
+
+// focus: 'load' opens the first empty chamber/line (bharai); 'unload' the first one cooled or unloading (nikasi).
+export default function KilnBoard({ focus } = {}) {
   const t = useT();
-  const [sections, setSections] = useState([]);
+  const isOwner = getRole() === 'owner';
+  const [unit, setUnit] = useState(null); // null until the kiln's setting has loaded
+  const [rows, setRows] = useState([]);
   const [teams, setTeams] = useState([]);
   const [inventory, setInventory] = useState(null);
   const [sel, setSel] = useState(null);
@@ -31,25 +38,80 @@ export default function KilnBoard() {
   const [msg, setMsg] = useState({ text: '', bad: false });
   const [submitting, setSubmitting] = useState(false);
   const [advancing, setAdvancing] = useState(false);
+  const [steps, setSteps] = useState('1');
+  const [workers, setWorkers] = useState([]);
+  const [notes, setNotes] = useState({ coalKg: '', issues: '' });
+  const [history, setHistory] = useState([]);
 
-  const load = () => {
-    get('/kiln-sections').then(setSections).catch(() => {});
+  const base = `/${UNIT_PATH[unit || 'chamber']}`;
+  const unitLabel = unit === 'line' ? t.line : t.section;
+
+  const loadRows = (u = unit) => (u ? get(`/${UNIT_PATH[u]}`).then((r) => { setRows(r); return r; }) : Promise.resolve([]));
+  const load = (u = unit) => {
     get('/teams').then(setTeams).catch(() => {});
+    get('/workers').then(setWorkers).catch(() => {});
     get('/inventory/summary').then(setInventory).catch(() => {});
+    return loadRows(u).catch(() => []);
   };
-  useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    get('/settings')
+      .then((s) => setUnit(s.kilnUnit === 'line' ? 'line' : 'chamber'))
+      .catch(() => setUnit('chamber'));
+  }, []);
+  useEffect(() => {
+    if (!unit) return;
+    setSel(null); setForm({});
+    load(unit).then((r) => {
+      const want = focus === 'load' ? ['Empty'] : focus === 'unload' ? ['Unloading', 'Cooling'] : null;
+      const first = want && want.map((st) => r.find((x) => x.state === st)).find(Boolean);
+      if (first) setSel(first);
+    });
+  }, [unit]);
+
+  async function switchUnit(next) {
+    if (next === unit || !isOwner) return;
+    if (!window.confirm(next === 'line' ? t.switchToLinesConfirm : t.switchToChambersConfirm)) return;
+    try {
+      await put('/settings', { key: 'kilnUnit', value: next });
+      setUnit(next);
+    } catch (e) {
+      setMsg({ text: e.message, bad: true });
+    }
+  }
 
   const teamsOf = (cat) => teams.filter((tm) => tm.category === cat);
+  // team name plus its members' names, so the head (e.g. the jalai mistri) shows in the list
+  const teamText = (tm) => {
+    const names = (tm.memberIds || []).map((id) => workers.find((w) => w._id === id)?.name).filter(Boolean);
+    return names.length ? `${tm.label} — ${names.join(', ')}` : tm.label;
+  };
 
-  async function act(fn) {
+  useEffect(() => {
+    if (!sel || !unit) { setHistory([]); return; }
+    setNotes({ coalKg: sel.coalKg ? String(sel.coalKg) : '', issues: sel.issues || '' });
+    get(`${base}/${sel.index}/history`).then(setHistory).catch(() => setHistory([]));
+  }, [sel?.index, unit]);
+
+  const saveNotes = () => act(() => put(`${base}/${sel.index}/notes`, {
+    coalKg: notes.coalKg === '' ? 0 : Number(notes.coalKg), issues: notes.issues,
+  }), { keep: true });
+
+  // After a line is loaded, step straight to the next line so a whole run can be entered in a row.
+  async function act(fn, { next, keep } = {}) {
     setMsg({ text: '', bad: false });
     setSubmitting(true);
     try {
       const r = await fn();
       setMsg({ text: r?.queued ? t.queued : t.savedOk, bad: false });
+      const fresh = await load();
+      if (keep) { setSel(fresh.find((x) => x.index === sel.index) || null); return; }
+      if (next && unit === 'line') {
+        const nextRow = fresh.find((x) => x.index === sel.index + 1);
+        if (nextRow) { setSel(nextRow); setForm({ teamId: form.teamId }); return; }
+      }
       setSel(null);
       setForm({});
-      load();
     } catch (e) {
       setMsg({ text: e.message || 'Operation failed', bad: true });
     } finally {
@@ -59,22 +121,22 @@ export default function KilnBoard() {
 
   const fireAdvance = async () => {
     setAdvancing(true);
-    await act(() => post('/fire-advance', { clientUuid: uuid() }));
+    await act(() => post('/fire-advance', { unit, steps: unit === 'line' ? Number(steps) || 1 : 1, clientUuid: uuid() }));
     setAdvancing(false);
   };
 
-  const loadSection = (sec) => act(() => post(`/kiln-sections/${sec.index}/load`, {
+  const loadRow = (row) => act(() => post(`${base}/${row.index}/load`, {
     teamId: form.teamId,
     count: Number(form.count),
     clientUuid: uuid(),
-  }));
+  }), { next: true });
 
-  const startUnload = (sec) => act(() => post(`/kiln-sections/${sec.index}/unload/start`, {
+  const startUnload = (row) => act(() => post(`${base}/${row.index}/unload/start`, {
     teamId: form.teamId,
     clientUuid: uuid(),
   }));
 
-  const completeUnload = (sec) => act(() => post(`/kiln-sections/${sec.index}/unload/complete`, {
+  const completeUnload = (row) => act(() => post(`${base}/${row.index}/unload/complete`, {
     awwal: Number(form.awwal || 0),
     doem: Number(form.doem || 0),
     khangar: Number(form.khangar || 0),
@@ -82,8 +144,14 @@ export default function KilnBoard() {
     clientUuid: uuid(),
   }));
 
-  const firingSec = sections.find((s) => s.state === 'Firing');
-  const totalInKiln = sections.reduce((acc, s) => acc + (s.currentLoad || 0), 0);
+  const pick = (row) => { setSel(row); setForm((f) => ({ teamId: f.teamId })); };
+  const stepSel = (d) => {
+    const r = rows.find((x) => x.index === sel.index + d);
+    if (r) pick(r);
+  };
+
+  const firing = rows.filter((s) => s.state === 'Firing');
+  const totalInKiln = rows.reduce((acc, s) => acc + (s.currentLoad || 0), 0);
 
   return (
     <div className="grid">
@@ -97,7 +165,7 @@ export default function KilnBoard() {
           </div>
           <div>
             <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              {t.firingState} {firingSec ? `#${firingSec.index}` : '—'}
+              {t.firingState} {firing.length ? `— ${unitLabel} #${firing.map((f) => f.index).join(', ')}` : '—'}
             </div>
             <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--ink)' }}>
               {totalInKiln.toLocaleString()} {t.count} in Kiln
@@ -105,14 +173,33 @@ export default function KilnBoard() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <button className="primary" disabled={advancing} onClick={fireAdvance}>
+        <div className="kiln-hero-actions">
+          {/* how this kiln is counted: owner switches, others see it */}
+          <div className="unit-switch" role="group" aria-label={t.countBy}>
+            <span className="unit-switch-label">{t.countBy}</span>
+            {['chamber', 'line'].map((u) => (
+              <button
+                key={u} type="button" className={unit === u ? 'on' : ''} aria-pressed={unit === u}
+                disabled={!isOwner && unit !== u} onClick={() => switchUnit(u)}
+                title={isOwner ? '' : t.ownerOnly}
+              >
+                {u === 'line' ? t.lines : t.chambers}
+              </button>
+            ))}
+          </div>
+          {unit === 'line' && (
+            <label className="steps-field">
+              {t.linesPerAdvance}
+              <input inputMode="numeric" value={steps} onChange={(e) => setSteps(e.target.value.replace(/[^\d]/g, ''))} />
+            </label>
+          )}
+          <button className="primary" disabled={advancing || !unit} onClick={fireAdvance}>
             🔥 {t.advanceFire}
           </button>
         </div>
       </div>
 
-      {msg.text && (
+      {msg.text && !sel && (
         <p role={msg.bad ? 'alert' : 'status'} className={msg.bad ? 'err' : 'ok'}>
           {msg.text}
         </p>
@@ -121,32 +208,40 @@ export default function KilnBoard() {
       {/* Main Diagram Card */}
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <h2>{t.kilnBoard}</h2>
+          <h2>{t.kilnBoard} — {unit === 'line' ? t.lines : t.chambers}</h2>
           <span style={{ fontSize: '0.8rem', color: 'var(--muted)', fontWeight: 600 }}>
-            {t.kilnHint}
+            {unit === 'line' ? t.kilnLinesHint : t.kilnHint}
           </span>
         </div>
 
-        <KilnDiagram sections={sections} selected={sel} onSelect={(s) => { setSel(s); setForm({}); }} t={t} />
+        {unit === 'line'
+          ? <LineDiagram lines={rows} selected={sel} onSelect={pick} t={t} />
+          : unit && <KilnDiagram sections={rows} selected={sel} onSelect={pick} t={t} />}
 
         <div className="legend">
           {Object.entries(STATE_LABEL_KEY).map(([state, key]) => (
             <span key={state} className="legend-item">
               <i className={`dot ${STATE_CLASS[state]}`} />
               <span>{t[key]}</span>
-              <b>{sections.filter((s) => s.state === state).length}</b>
+              <b>{rows.filter((s) => s.state === state).length}</b>
             </span>
           ))}
         </div>
       </div>
 
-      {/* Chamber Action Drawer / Panel */}
+      {/* Chamber / line action panel */}
       {sel && (
         <div className="card grid" style={{ borderInlineStart: '5px solid var(--brand)', animation: 'slide-up 0.2s ease' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
+            {unit === 'line' && (
+              <button type="button" className="ghost" aria-label={t.previous} disabled={!rows.some((x) => x.index === sel.index - 1)} onClick={() => stepSel(-1)}>‹</button>
+            )}
             <h2>
-              {t.section} #{sel.index} — {t[STATE_LABEL_KEY[sel.state]] || sel.state}
+              {unitLabel} #{sel.index}{unit === 'line' && sel.side ? ` (${sel.side})` : ''} — {t[STATE_LABEL_KEY[sel.state]] || sel.state}
             </h2>
+            {unit === 'line' && (
+              <button type="button" className="ghost" aria-label={t.next} disabled={!rows.some((x) => x.index === sel.index + 1)} onClick={() => stepSel(1)}>›</button>
+            )}
             <button type="button" className="ghost" style={{ minHeight: '34px', padding: '0.2rem 0.6rem' }} onClick={() => setSel(null)}>
               ✕ {t.close || 'Close'}
             </button>
@@ -162,7 +257,7 @@ export default function KilnBoard() {
             <div className="grid two" style={{ gap: '0.85rem' }}>
               {inventory?.greenStock !== undefined && (
                 <div style={{ gridColumn: '1 / -1', padding: '0.5rem 0.75rem', background: 'var(--brand-tint)', borderRadius: '8px', border: '1px solid rgba(234, 88, 12, 0.25)', fontSize: '0.86rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: 'var(--ink)' }}>🌱 Available Green Stock:</span>
+                  <span style={{ color: 'var(--ink)' }}>Available Green Stock:</span>
                   <strong style={{ color: 'var(--brand)', fontSize: '0.96rem' }}>{(inventory.greenStock ?? 0).toLocaleString()} bricks</strong>
                 </div>
               )}
@@ -171,15 +266,15 @@ export default function KilnBoard() {
                 <select value={form.teamId || ''} onChange={(e) => setForm({ ...form, teamId: e.target.value })}>
                   <option value="" disabled>— {t.team} —</option>
                   {teamsOf('bharai').map((tm) => (
-                    <option key={tm._id} value={tm._id}>{tm.label}</option>
+                    <option key={tm._id} value={tm._id}>{teamText(tm)}</option>
                   ))}
                 </select>
               </label>
               <label>
-                {t.count}
+                {t.kachiBharai}
                 <input
                   inputMode="numeric"
-                  placeholder="e.g. 45000"
+                  placeholder={unit === 'line' ? 'e.g. 4000' : 'e.g. 45000'}
                   value={form.count || ''}
                   onChange={(e) => setForm({ ...form, count: e.target.value })}
                 />
@@ -187,11 +282,12 @@ export default function KilnBoard() {
               <button
                 className="primary"
                 disabled={!form.teamId || !form.count || submitting}
-                onClick={() => loadSection(sel)}
+                onClick={() => loadRow(sel)}
                 style={{ gridColumn: '1 / -1' }}
               >
-                {submitting ? '...' : `📥 ${t.loadSection}`}
+                {submitting ? '...' : (unit === 'line' ? t.loadLine : t.loadSection)}
               </button>
+              {unit === 'line' && <p className="muted" style={{ gridColumn: '1 / -1', margin: 0, fontSize: '0.8rem' }}>{t.nextLineHint}</p>}
             </div>
           )}
 
@@ -202,7 +298,7 @@ export default function KilnBoard() {
                 <select value={form.teamId || ''} onChange={(e) => setForm({ ...form, teamId: e.target.value })}>
                   <option value="" disabled>— {t.team} —</option>
                   {teamsOf('nikasi').map((tm) => (
-                    <option key={tm._id} value={tm._id}>{tm.label}</option>
+                    <option key={tm._id} value={tm._id}>{teamText(tm)}</option>
                   ))}
                 </select>
               </label>
@@ -212,7 +308,7 @@ export default function KilnBoard() {
                 onClick={() => startUnload(sel)}
                 style={{ gridColumn: '1 / -1' }}
               >
-                🏗️ {t.assignNikasi}
+                {t.assignNikasi}
               </button>
             </div>
           )}
@@ -238,15 +334,62 @@ export default function KilnBoard() {
                 </label>
               </div>
               <button className="primary" onClick={() => completeUnload(sel)}>
-                💾 {t.completeUnload}
+                {t.completeUnload}
               </button>
+            </div>
+          )}
+
+          {sel.state !== 'Empty' && (
+            <div className="cycle-register">
+              <div className="cycle-dates">
+                <div><span>{t.loadedOn}</span><strong>{sel.loadedAt ? fmtDate(sel.loadedAt) : '—'}</strong></div>
+                <div><span>{t.firedOn}</span><strong>{sel.firedAt ? fmtDateTime(sel.firedAt) : '—'}</strong></div>
+                <div><span>{t.cooledOn}</span><strong>{sel.cooledAt ? fmtDateTime(sel.cooledAt) : '—'}</strong></div>
+                <div><span>{t.kachiBharai}</span><strong>{(sel.currentLoad || 0).toLocaleString()}</strong></div>
+              </div>
+              <div className="grid two">
+                <label>
+                  {t.coalUsed}
+                  <input inputMode="decimal" placeholder={t.coalUsedHint} value={notes.coalKg} onChange={(e) => setNotes({ ...notes, coalKg: e.target.value.replace(/[^\d.]/g, '') })} />
+                </label>
+              </div>
+              <label>
+                {t.issuesAndCauses}
+                <textarea rows={5} className="issues-box" placeholder={t.issuesHint} value={notes.issues} onChange={(e) => setNotes({ ...notes, issues: e.target.value })} />
+              </label>
+              <button type="button" className="ghost" disabled={submitting} onClick={saveNotes}>{t.saveNotes}</button>
+            </div>
+          )}
+
+          {history.length > 0 && (
+            <div className="table-wrap cycle-history">
+              <table>
+                <thead>
+                  <tr>
+                    <th>{t.loadedOn}</th><th>{t.firedOn}</th><th>{t.unloadedOn}</th><th>{t.kachiBharai}</th>
+                    <th>{t.coalUsed}</th><th>{t.awwal}</th><th>{t.doem}</th><th>{t.khangar}</th><th>{t.broken}</th><th>{t.issuesAndCauses}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.map((h) => (
+                    <tr key={h._id}>
+                      <td>{h.loadedAt ? fmtDate(h.loadedAt) : '—'}</td>
+                      <td>{h.firedAt ? fmtDateTime(h.firedAt) : '—'}</td>
+                      <td>{fmtDate(h.unloadedAt)}</td>
+                      <td>{(h.count || 0).toLocaleString()}</td>
+                      <td>{h.coalKg ? `${Number(h.coalKg).toLocaleString()} kg` : '—'}</td>
+                      <td>{h.awwal.toLocaleString()}</td><td>{h.doem.toLocaleString()}</td><td>{h.khangar.toLocaleString()}</td><td>{h.broken.toLocaleString()}</td>
+                      <td className="issues-cell">{h.issues || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
 
           {['Loading', 'Preheating', 'Firing'].includes(sel.state) && (
             <div style={{ padding: '0.75rem 1rem', background: '#f8fafc', borderRadius: '10px', color: 'var(--muted)', fontSize: '0.88rem' }}>
-              <span>Chamber is currently in cycle. Advances automatically with fire progression.</span>
-              {sel.currentLoad > 0 && <div style={{ marginTop: '0.25rem', fontWeight: 700, color: 'var(--ink)' }}>Current Bricks: {sel.currentLoad.toLocaleString()}</div>}
+              <span>{t.inCycleHint}</span>
             </div>
           )}
         </div>

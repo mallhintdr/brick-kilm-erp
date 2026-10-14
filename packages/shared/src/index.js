@@ -96,7 +96,9 @@ export const BUILTIN_TYPES = {
     ['jamadar', 'Jamadar', 'جمعدار'],
   ],
   procurementItem: [
-    ['coal', 'Coal', 'کوئلہ'], ['soil', 'Soil', 'مٹی'], ['diesel', 'Diesel', 'ڈیزل'], ['spare', 'Spare part', 'پرزہ جات'],
+    ['coal', 'Coal', 'کوئلہ'], ['wood', 'Wood', 'لکڑی'], ['diesel', 'Diesel', 'ڈیزل'], ['soil', 'Soil', 'مٹی'],
+    ['sand', 'Sand', 'ریت'], ['shopper', 'Shopper', 'شاپر'], ['kalab', 'Kalab', 'کلب'], ['electric', 'Electric goods', 'برقی سامان'],
+    ['spare', 'Spare parts', 'پرزہ جات'], ['misc', 'Miscellaneous', 'متفرق'],
   ],
   customerType: [['individual', 'Cash buyer', 'نقد گاہک'], ['registered', 'Registered customer', 'رجسٹرڈ گاہک']],
   paymentMode: [['cash', 'Cash', 'نقد'], ['bank', 'Bank', 'بینک'], ['jazzcash', 'JazzCash', 'جیز کیش']],
@@ -164,7 +166,7 @@ export const recoveryInput = z.object({
 export const SETTING_KEYS = [
   'peshgiLimit', 'munshiAdvanceLimit', 'recoveryPct', 'kharchiFloor',
   'ratePathera', 'rateBharai', 'rateNikasi', 'rateJalai', 'priceAwwal', 'priceDoem', 'priceKhangar',
-  'allowNegativeStock',
+  'allowNegativeStock', 'kilnUnit', 'kilnLineCount',
 ];
 
 export const settingInput = z.object({
@@ -190,6 +192,9 @@ export const SETTING_DEFAULTS = {
   // '0' = refuse to load more green bricks than exist, or fire with no coal in stock.
   // '1' = allow it (a real kiln sometimes runs ahead of its own stock records on paper).
   allowNegativeStock: '0',
+  // How this kiln counts bharai, firing and nikasi: 'chamber' (the chamber board) or 'line'.
+  kilnUnit: 'chamber',
+  kilnLineCount: '240', // lines in the kiln, split evenly between its two sides
 };
 
 const positiveInt = z.coerce.number().int().positive();
@@ -245,7 +250,24 @@ export const sectionLoadInput = z.object({
   clientUuid: z.string().uuid(),
 });
 
+// Running notes for one chamber/line's current cycle: coal burnt and what went wrong (and why).
+// Cash a worker takes during the week (dasti kharcha), settled against the weekly kharchi.
+export const kharchaInput = z.object({
+  workerId: z.string(),
+  amount: moneyString,
+  date: z.coerce.date().refine((d) => d.getTime() <= Date.now() + 24 * 60 * 60 * 1000, 'Date cannot be in the future').optional(),
+  note: z.string().max(300).optional(),
+  clientUuid: z.string().uuid(),
+});
+
+export const kilnNoteInput = z.object({
+  coalKg: z.coerce.number().min(0).max(1000000).optional(),
+  issues: z.string().max(5000).optional(),
+});
+
 export const fireAdvanceInput = z.object({
+  unit: z.enum(['chamber', 'line']).default('chamber'),
+  steps: z.coerce.number().int().min(1).max(40).default(1), // lines (or chambers) the fire moves on
   clientUuid: z.string().uuid(),
 });
 

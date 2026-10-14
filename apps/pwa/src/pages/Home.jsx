@@ -3,8 +3,8 @@ import { useT } from '../i18n.js';
 import { getRole } from '../api.js';
 
 const GROUPS = [
-  { titleKey: 'dailyOps', paths: ['/firing', '/kiln-board', '/moulding', '/inventory'] },
-  { titleKey: 'commercialAndFinance', paths: ['/cashbook', '/kharchi', '/peshgi', '/sales'] },
+  { titleKey: 'dailyOps', paths: ['/moulding', '/loading', '/kiln-board', '/firing', '/unloading'] },
+  { titleKey: 'commercialAndFinance', paths: ['/cashbook', '/sales', '/peshgi', '/kharchi', '/inventory'] },
   { titleKey: 'managementAndReports', paths: ['/reports', '/insights', '/activity', '/workers', '/settings', '/audit-logs', '/users'] },
 ];
 
@@ -16,7 +16,7 @@ export default function Home({ links = [] }) {
   return (
     <div className="home-page-container">
       {GROUPS.map((g) => {
-        const items = visible.filter((l) => g.paths.includes(l.to));
+        const items = g.paths.map((p) => visible.find((l) => l.to === p)).filter(Boolean);
         if (!items.length) return null;
         return (
           <section key={g.titleKey} className="home-group" aria-label={t[g.titleKey]}>

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useT } from '../i18n.js';
-import { get, post, uuid, fmtDateTime } from '../api.js';
+import { get, post, del, uuid, fmtDateTime, getRole } from '../api.js';
+import SearchSelect from '../components/SearchSelect.jsx';
 import DateTime from '../components/DateTime.jsx';
 import { useTypes, typeLabel } from '../useTypes.js';
 import { useLang } from '../i18n.js';
@@ -22,6 +23,31 @@ export default function Kharchi() {
 
   const loadRuns = () => get('/kharchi-runs').then(setRuns).catch(() => {});
   useEffect(() => { loadRuns(); }, []);
+
+  // ---- daily (dasti) kharcha: cash a worker takes during the week ----
+  const [workers, setWorkers] = useState([]);
+  const [kf, setKf] = useState({ category: 'pathera', workerId: '', amount: '', date: isoDaysAgo(0) });
+  const [entries, setEntries] = useState([]);
+  const [kMsg, setKMsg] = useState({ text: '', bad: false });
+  useEffect(() => { get('/workers').then(setWorkers).catch(() => {}); }, []);
+  const loadEntries = () => get(`/kharcha?from=${periodStart}&to=${periodEnd}`).then(setEntries).catch(() => setEntries([]));
+  useEffect(() => { loadEntries(); }, [periodStart, periodEnd]);
+  const workersOf = workers.filter((w) => w.category === kf.category && w.status !== 'inactive');
+
+  async function addKharcha(e) {
+    e.preventDefault();
+    setKMsg({ text: '', bad: false });
+    try {
+      const r = await post('/kharcha', { workerId: kf.workerId, amount: kf.amount, date: kf.date, clientUuid: uuid() });
+      setKMsg({ text: r.queued ? t.queued : t.savedOk, bad: false });
+      setKf({ ...kf, workerId: '', amount: '' });
+      loadEntries();
+    } catch (e2) { setKMsg({ text: e2.message, bad: true }); }
+  }
+  async function removeKharcha(id) {
+    if (!window.confirm(t.confirmDelete)) return;
+    try { await del(`/kharcha/${id}`); loadEntries(); } catch (e2) { setKMsg({ text: e2.message, bad: true }); }
+  }
 
   async function propose() {
     setMsg({ text: '', bad: false });
@@ -61,6 +87,60 @@ export default function Kharchi() {
 
   return (
     <div className="grid">
+      {/* Daily kharcha entry */}
+      <form className="card grid" onSubmit={addKharcha}>
+        <h2>{t.dailyKharcha}</h2>
+        <div className="grid two">
+          <label>
+            {t.category}
+            <select value={kf.category} onChange={(e) => setKf({ ...kf, category: e.target.value, workerId: '' })}>
+              {cats.active.map((c) => <option key={c.key} value={c.key}>{typeLabel(c, lang)}</option>)}
+            </select>
+          </label>
+          <label>
+            {t.name}
+            <SearchSelect
+              required ariaLabel={t.name} placeholder={t.typeToSearch} value={kf.workerId}
+              onChange={(v) => setKf({ ...kf, workerId: v })}
+              options={workersOf.map((w) => ({ value: w._id, label: w.fatherName ? `${w.name} — ${w.fatherName}` : w.name, search: w.cnic || '' }))}
+            />
+          </label>
+          <label>
+            {t.amount}
+            <input required inputMode="decimal" value={kf.amount} onChange={(e) => setKf({ ...kf, amount: e.target.value })} />
+          </label>
+          <label>
+            {t.entryDate}
+            <input type="date" required max={isoDaysAgo(0)} value={kf.date} onChange={(e) => setKf({ ...kf, date: e.target.value })} />
+          </label>
+        </div>
+        {!workersOf.length && <p className="muted" style={{ margin: 0 }}>{t.noWorkersInCategory}</p>}
+        <button className="primary" disabled={!kf.workerId || !kf.amount}>{t.add}</button>
+        {kMsg.text && <p role={kMsg.bad ? 'alert' : 'status'} className={kMsg.bad ? 'err' : 'ok'}>{kMsg.text}</p>}
+      </form>
+
+      <div className="card table-wrap">
+        <h2>{t.kharchaTaken} ({entries.length}) — {entries.reduce((a, r) => a + Number(r.amount || 0), 0).toLocaleString()}</h2>
+        <table>
+          <thead>
+            <tr><th className="rownum">#</th><th>{t.dateTime}</th><th className="sticky-col">{t.name}</th><th>{t.category}</th><th>{t.amount}</th><th className="actions">{t.action}</th></tr>
+          </thead>
+          <tbody>
+            {entries.map((r, i) => (
+              <tr key={r._id}>
+                <td className="rownum">{i + 1}</td>
+                <td><DateTime value={r.date} /></td>
+                <td><strong>{r.name}</strong></td>
+                <td>{cats.label(r.category)}</td>
+                <td><strong>{Number(r.amount).toLocaleString()}</strong></td>
+                <td className="actions">{getRole() === 'owner' && <button type="button" className="icon-btn icon-btn-delete" title={t.delete} onClick={() => removeKharcha(r._id)}>✕</button>}</td>
+              </tr>
+            ))}
+            {!entries.length && <tr><td colSpan={6} className="muted">{t.noEntries}</td></tr>}
+          </tbody>
+        </table>
+      </div>
+
       {/* Run Proposal Card */}
       <div className="card grid">
         <h2>{t.kharchiRun} (ہفتہ وار خرچی تصفیہ)</h2>
@@ -105,6 +185,8 @@ export default function Kharchi() {
                   <th style={{ textAlign: 'end' }}>{t.amount} ({t.gross})</th>
                   <th style={{ textAlign: 'end' }}>{t.recovery}</th>
                   <th style={{ textAlign: 'end' }}>{t.kharchiPaid}</th>
+                  <th style={{ textAlign: 'end' }}>{t.kharchaTaken}</th>
+                  <th style={{ textAlign: 'end' }}>{t.balanceToPay}</th>
                 </tr>
               </thead>
               <tbody>
@@ -122,6 +204,8 @@ export default function Kharchi() {
                         style={{ maxWidth: '8rem', minHeight: '36px', padding: '0.25rem 0.5rem', textAlign: 'end', fontWeight: 700 }}
                       />
                     </td>
+                    <td style={{ textAlign: 'end' }}>{Number(it.taken || 0).toLocaleString()}</td>
+                    <td style={{ textAlign: 'end' }}><strong className={Number(it.kharchi) - Number(it.taken || 0) < 0 ? 'err' : 'ok'}>{(Number(it.kharchi || 0) - Number(it.taken || 0)).toLocaleString()}</strong></td>
                   </tr>
                 ))}
               </tbody>
@@ -131,6 +215,8 @@ export default function Kharchi() {
                   <td style={{ textAlign: 'end' }}>{proposal.items.reduce((a, it) => a + Number(it.gross || 0), 0).toLocaleString()}</td>
                   <td style={{ textAlign: 'end' }} className="warn"><strong>{totalRecovery.toLocaleString()}</strong></td>
                   <td style={{ textAlign: 'end' }} className="ok"><strong>{totalKharchi.toLocaleString()}</strong></td>
+                  <td style={{ textAlign: 'end' }}>{proposal.items.reduce((a, it) => a + Number(it.taken || 0), 0).toLocaleString()}</td>
+                  <td style={{ textAlign: 'end' }}><strong>{(totalKharchi - proposal.items.reduce((a, it) => a + Number(it.taken || 0), 0)).toLocaleString()}</strong></td>
                 </tr>
               </tfoot>
             </table>

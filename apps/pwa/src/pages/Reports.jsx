@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useT, useLang } from '../i18n.js';
 import { get, fmtDate, fmtDateDM } from '../api.js';
+import DateTime from '../components/DateTime.jsx';
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const daysAgoStr = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
 
 const REPORT_MODULES = [
   { id: 'moulding', labelKey: 'moulding', en: 'Moulding (Pathai)', ur: 'کچی اینٹ (پتھائی)', color: '#d97706' },
+  { id: 'bharai', labelKey: 'kachiBharai', en: 'Kachi Bharai (Loading)', ur: 'کچی بھرائی', color: '#2563eb' },
+  { id: 'nikasi', labelKey: 'unloadingNikasi', en: 'Nikasi (Awwal, Doem, Khangar)', ur: 'نکاسی (اول، دوم، کھنگر)', color: '#16a34a' },
+  { id: 'stock', labelKey: 'remainingStock', en: 'Remaining Stock', ur: 'باقی ذخیرہ', color: '#7c3aed' },
   { id: 'firing', labelKey: 'firing', en: 'Firing & Kiln Shifts', ur: 'پکائی و شفٹیں', color: '#ef4444' },
   { id: 'coal', labelKey: 'coalConsumption', en: 'Coal Consumption', ur: 'کوئلہ کھپت', color: '#334155' },
   { id: 'sales', labelKey: 'sales', en: 'Brick Sales & Dispatch', ur: 'اینٹ فروخت و نکاسی', color: '#f43f5e' },
@@ -28,6 +32,9 @@ export default function Reports() {
   // Checkbox selection for modules
   const [selectedModules, setSelectedModules] = useState({
     moulding: true,
+    bharai: true,
+    nikasi: true,
+    stock: true,
     firing: true,
     coal: true,
     sales: true,
@@ -85,7 +92,7 @@ export default function Reports() {
   const generateReport = async () => {
     setLoading(true);
     try {
-      const [mouldingRes, firingRes, salesRes, peshgiRes, kharchiRes, grnRes, cashRes] = await Promise.all([
+      const [mouldingRes, firingRes, salesRes, peshgiRes, kharchiRes, grnRes, cashRes, loadsRes, unloadRes, stockRes] = await Promise.all([
         get('/moulding').catch(() => []),
         get('/firing-logs').catch(() => []),
         get('/invoices').catch(() => []),
@@ -93,6 +100,9 @@ export default function Reports() {
         get('/kharchi/runs').catch(() => []),
         get('/grns').catch(() => []),
         get('/cashbook/transactions').catch(() => []),
+        get('/section-loads').catch(() => []),
+        get('/unloadings').catch(() => []),
+        get('/inventory/summary').catch(() => null),
       ]);
 
       const fStart = new Date(`${fromDate}T00:00:00`).getTime();
@@ -113,6 +123,9 @@ export default function Reports() {
         kharchi: (kharchiRes || []).filter(inRange),
         grn: (grnRes || []).filter(inRange),
         cashbook: (cashRes || []).filter(inRange),
+        bharai: (loadsRes || []).filter(inRange),
+        nikasi: (unloadRes || []).filter(inRange),
+        stock: stockRes,
       });
     } finally {
       setLoading(false);
@@ -412,7 +425,62 @@ export default function Reports() {
                 <strong>{stats.totalCoalKg.toLocaleString()} kg</strong>
               </div>
             )}
-            {selectedModules.sales && (
+            {/* Kachi bharai, nikasi and remaining stock */}
+      {selectedModules.bharai && (
+        <div className="card table-wrap">
+          <h2>{lang === 'ur' ? 'کچی بھرائی' : 'Kachi Bharai (Loading)'} — {(data.bharai || []).reduce((a, r) => a + (r.count || 0), 0).toLocaleString()}</h2>
+          <table>
+            <thead><tr><th className="rownum">#</th><th className="sticky-col">{lang === 'ur' ? 'تاریخ' : 'Date'}</th><th>{lang === 'ur' ? 'لائن / چیمبر' : 'Line / chamber'}</th><th>{lang === 'ur' ? 'اینٹیں' : 'Bricks'}</th></tr></thead>
+            <tbody>
+              {(data.bharai || []).map((r, i) => (
+                <tr key={r._id}><td className="rownum">{i + 1}</td><td><DateTime value={r.date} /></td><td>{r.unit === 'line' ? 'Line' : 'Chamber'} {r.sectionIndex}</td><td><strong>{(r.count || 0).toLocaleString()}</strong></td></tr>
+              ))}
+              {!(data.bharai || []).length && <tr><td colSpan={4} className="muted">{t.noEntries}</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {selectedModules.nikasi && (() => {
+        const rows = data.nikasi || [];
+        const sum = (k) => rows.reduce((a, r) => a + (Number(r[k]) || 0), 0);
+        return (
+          <div className="card table-wrap">
+            <h2>{lang === 'ur' ? 'نکاسی' : 'Nikasi (Unloading)'}</h2>
+            <div className="kpi-grid" style={{ padding: '0.5rem 0.75rem' }}>
+              <div className="stat" style={{ borderInlineStartColor: 'var(--ok-dark)' }}><span>{t.awwal}</span><strong className="ok">{sum('awwal').toLocaleString()}</strong></div>
+              <div className="stat" style={{ borderInlineStartColor: 'var(--info)' }}><span>{t.doem}</span><strong>{sum('doem').toLocaleString()}</strong></div>
+              <div className="stat" style={{ borderInlineStartColor: 'var(--warn-dark)' }}><span>{t.khangar}</span><strong className="warn">{sum('khangar').toLocaleString()}</strong></div>
+              <div className="stat" style={{ borderInlineStartColor: 'var(--err-dark)' }}><span>{t.broken}</span><strong className="err">{sum('broken').toLocaleString()}</strong></div>
+            </div>
+            <table>
+              <thead><tr><th className="rownum">#</th><th className="sticky-col">{lang === 'ur' ? 'تاریخ' : 'Date'}</th><th>{lang === 'ur' ? 'لائن / چیمبر' : 'Line / chamber'}</th><th>{t.awwal}</th><th>{t.doem}</th><th>{t.khangar}</th><th>{t.broken}</th></tr></thead>
+              <tbody>
+                {rows.map((r, i) => (
+                  <tr key={r._id}><td className="rownum">{i + 1}</td><td><DateTime value={r.date} /></td><td>{r.unit === 'line' ? 'Line' : 'Chamber'} {r.sectionIndex}</td><td>{(r.awwal || 0).toLocaleString()}</td><td>{(r.doem || 0).toLocaleString()}</td><td>{(r.khangar || 0).toLocaleString()}</td><td>{(r.broken || 0).toLocaleString()}</td></tr>
+                ))}
+                {!rows.length && <tr><td colSpan={7} className="muted">{t.noEntries}</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        );
+      })()}
+
+      {selectedModules.stock && data.stock && (
+        <div className="kpi-section">
+          <div className="kpi-group">
+            <h3 className="kpi-group-title">{lang === 'ur' ? 'باقی ذخیرہ (آج تک)' : 'Remaining Stock (as of today)'}</h3>
+            <div className="kpi-grid">
+              <div className="stat" style={{ borderInlineStartColor: 'var(--brand-dark)' }}><span>{t.greenStock}</span><strong>{(data.stock.greenStock || 0).toLocaleString()}</strong></div>
+              <div className="stat" style={{ borderInlineStartColor: 'var(--ok-dark)' }}><span>{t.awwal}</span><strong className="ok">{(data.stock.firedStockByGrade?.awwal || 0).toLocaleString()}</strong></div>
+              <div className="stat" style={{ borderInlineStartColor: 'var(--info)' }}><span>{t.doem}</span><strong>{(data.stock.firedStockByGrade?.doem || 0).toLocaleString()}</strong></div>
+              <div className="stat" style={{ borderInlineStartColor: 'var(--warn-dark)' }}><span>{t.khangar}</span><strong className="warn">{(data.stock.firedStockByGrade?.khangar || 0).toLocaleString()}</strong></div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedModules.sales && (
               <div className="stat">
                 <span>{lang === 'ur' ? 'کل فروخت آمدن' : 'Sales Revenue'}</span>
                 <strong className="ok">{stats.totalSalesRev.toLocaleString()}</strong>

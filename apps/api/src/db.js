@@ -77,6 +77,7 @@ async function ensureIndexes(db) {
   await db.collection('settings').createIndex({ tenantId: 1, kilnId: 1, key: 1, effectiveFrom: -1 });
   await db.collection('auditLog').createIndex({ tenantId: 1, at: -1 });
   await db.collection('kilnSections').createIndex({ tenantId: 1, kilnId: 1, index: 1 }, { unique: true });
+  await db.collection('kilnLines').createIndex({ tenantId: 1, kilnId: 1, index: 1 }, { unique: true });
   await db.collection('mouldingBatches').createIndex({ tenantId: 1, date: -1 });
   await db.collection('firingLogs').createIndex({ tenantId: 1, date: -1 });
   await db.collection('unloadings').createIndex({ tenantId: 1, date: -1 });

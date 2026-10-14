@@ -1,6 +1,6 @@
 import { ObjectId } from 'mongodb';
 import {
-  mouldingInput, sectionLoadInput, fireAdvanceInput, firingLogInput,
+  mouldingInput, sectionLoadInput, fireAdvanceInput, kilnNoteInput, firingLogInput,
   unloadStartInput, unloadCompleteInput, grnInput, customerInput, invoiceInput, paymentInput,
   SETTING_DEFAULTS, toPaisa,
 } from '@kiln/shared';
@@ -67,92 +67,148 @@ async function getStockLevels(db, user, session) {
 export function registerProductionRoutes(app, db) {
   const auth = app.locals.auth;
 
-  // ---- Kiln section board ----
-  app.get('/kiln-sections', auth(), wrap(async (req, res) => {
-    res.json(await db.collection('kilnSections').find(scope(req.user)).sort({ index: 1 }).toArray());
-  }));
+  // ---- Kiln board: chambers or lines ----
+  // A kiln is counted either by chambers (kilnSections) or by lines (kilnLines, 120 a side by default).
+  // Both run the same cycle: Empty -> load -> Preheating -> Firing -> Cooling -> Unloading -> Empty.
+  const KILN_UNITS = {
+    chamber: { coll: 'kilnSections', path: 'kiln-sections', label: 'Section' },
+    line: { coll: 'kilnLines', path: 'kiln-lines', label: 'Line' },
+  };
 
-  app.post('/kiln-sections/:index/load', auth('owner', 'munshi'), wrap(async (req, res) => {
-    const b = sectionLoadInput.parse({ ...req.body, sectionIndex: req.params.index });
-    await withTransaction(db, async (session) => {
-      const sec = await db.collection('kilnSections').findOne({ ...scope(req.user), index: b.sectionIndex }, { session });
-      if (!sec) throw httpError(404, 'Section not found');
-      if (sec.state !== 'Empty') throw httpError(422, `Section ${b.sectionIndex} is not empty (state: ${sec.state})`);
-      const allowNegative = (await getSetting(db, req.user, 'allowNegativeStock', SETTING_DEFAULTS, session)) === '1';
-      if (!allowNegative) {
-        const { greenStock } = await getStockLevels(db, req.user, session);
-        if (b.count > greenStock) {
-          throw httpError(422, `Only ${greenStock.toLocaleString()} green bricks in stock; enter ${b.count.toLocaleString()} or less (or allow negative stock in Settings)`);
+  // Lines are created the first time the line board is opened, from the kilnLineCount setting.
+  async function ensureLines(user) {
+    const s = scope(user);
+    if (await db.collection('kilnLines').countDocuments(s)) return;
+    const total = Math.max(2, Number(await getSetting(db, user, 'kilnLineCount', SETTING_DEFAULTS)) || 240);
+    const perSide = Math.ceil(total / 2);
+    await db.collection('kilnLines').insertMany(Array.from({ length: total }, (_, i) => ({
+      ...s, index: i + 1, side: i < perSide ? 'A' : 'B', state: 'Empty', currentLoad: 0,
+    }))).catch((e) => { if (e?.code !== 11000) throw e; }); // two first visits at once: one insert wins
+  }
+
+  for (const [unit, U] of Object.entries(KILN_UNITS)) {
+    app.get(`/${U.path}`, auth(), wrap(async (req, res) => {
+      if (unit === 'line') await ensureLines(req.user);
+      res.json(await db.collection(U.coll).find(scope(req.user)).sort({ index: 1 }).toArray());
+    }));
+
+    app.post(`/${U.path}/:index/load`, auth('owner', 'munshi'), wrap(async (req, res) => {
+      const b = sectionLoadInput.parse({ ...req.body, sectionIndex: req.params.index });
+      await withTransaction(db, async (session) => {
+        const sec = await db.collection(U.coll).findOne({ ...scope(req.user), index: b.sectionIndex }, { session });
+        if (!sec) throw httpError(404, `${U.label} not found`);
+        if (sec.state !== 'Empty') throw httpError(422, `${U.label} ${b.sectionIndex} is not empty (state: ${sec.state})`);
+        const allowNegative = (await getSetting(db, req.user, 'allowNegativeStock', SETTING_DEFAULTS, session)) === '1';
+        if (!allowNegative) {
+          const { greenStock } = await getStockLevels(db, req.user, session);
+          if (b.count > greenStock) {
+            throw httpError(422, `Only ${greenStock.toLocaleString()} green bricks in stock; enter ${b.count.toLocaleString()} or less (or allow negative stock in Settings)`);
+          }
         }
-      }
-      await db.collection('sectionLoads').insertOne({ ...scope(req.user), sectionIndex: b.sectionIndex, teamId: b.teamId, count: b.count, date: new Date() }, { session });
-      await db.collection('kilnSections').updateOne(
-        { ...scope(req.user), index: b.sectionIndex },
-        { $set: { state: 'Preheating', currentLoad: b.count, loadedAt: new Date() } }, { session },
-      );
-      const rate = await getSetting(db, req.user, 'rateBharai', SETTING_DEFAULTS, session);
-      const gross = ((b.count / 1000) * Number(rate)).toFixed(2);
-      await creditTeam(db, session, req.user, b.teamId, gross, 'loading_credit', `sectionLoad:${b.sectionIndex}:${Date.now()}`, b.clientUuid);
-      await audit(db, session, req.user, 'section.load', b);
-    });
-    res.status(201).json({ ok: true });
-  }));
+        await db.collection('sectionLoads').insertOne({ ...scope(req.user), unit, sectionIndex: b.sectionIndex, teamId: b.teamId, count: b.count, date: new Date() }, { session });
+        await db.collection(U.coll).updateOne(
+          { ...scope(req.user), index: b.sectionIndex },
+          { $set: { state: 'Preheating', currentLoad: b.count, loadedAt: new Date(), loadTeamId: b.teamId, firedAt: null, cooledAt: null, coalKg: 0, issues: '' } }, { session },
+        );
+        const rate = await getSetting(db, req.user, 'rateBharai', SETTING_DEFAULTS, session);
+        const gross = ((b.count / 1000) * Number(rate)).toFixed(2);
+        await creditTeam(db, session, req.user, b.teamId, gross, 'loading_credit', `${unit}Load:${b.sectionIndex}:${Date.now()}`, b.clientUuid);
+        await audit(db, session, req.user, `${unit}.load`, b);
+      });
+      res.status(201).json({ ok: true });
+    }));
 
-  // "Advance fire": moves the fire line forward one step across the whole board.
+    app.post(`/${U.path}/:index/unload/start`, auth('owner', 'munshi'), wrap(async (req, res) => {
+      const b = unloadStartInput.parse({ ...req.body, sectionIndex: req.params.index });
+      await withTransaction(db, async (session) => {
+        const sec = await db.collection(U.coll).findOne({ ...scope(req.user), index: b.sectionIndex }, { session });
+        if (!sec) throw httpError(404, `${U.label} not found`);
+        if (sec.state !== 'Cooling') throw httpError(422, `${U.label} ${b.sectionIndex} is not cooled yet (state: ${sec.state})`);
+        await db.collection(U.coll).updateOne(
+          { ...scope(req.user), index: b.sectionIndex }, { $set: { state: 'Unloading', nikasiTeamId: b.teamId } }, { session },
+        );
+        await audit(db, session, req.user, `${unit}.unload.start`, b);
+      });
+      res.status(201).json({ ok: true });
+    }));
+
+    app.post(`/${U.path}/:index/unload/complete`, auth('owner', 'munshi', 'mistri'), wrap(async (req, res) => {
+      const b = unloadCompleteInput.parse({ ...req.body, sectionIndex: req.params.index });
+      await withTransaction(db, async (session) => {
+        const sec = await db.collection(U.coll).findOne({ ...scope(req.user), index: b.sectionIndex }, { session });
+        if (!sec) throw httpError(404, `${U.label} not found`);
+        if (sec.state !== 'Unloading') throw httpError(422, `${U.label} ${b.sectionIndex} has no nikasi team assigned yet (state: ${sec.state})`);
+        const total = b.awwal + b.doem + b.khangar + b.broken;
+        await db.collection('unloadings').insertOne({
+          ...scope(req.user), unit, sectionIndex: b.sectionIndex, nikasiTeamId: sec.nikasiTeamId,
+          awwal: b.awwal, doem: b.doem, khangar: b.khangar, broken: b.broken, date: new Date(),
+        }, { session });
+        // one row per finished cycle: when it was loaded, fired, unloaded, its coal, output and issues
+        await db.collection('kilnCycles').insertOne({
+          ...scope(req.user), unit, index: b.sectionIndex, count: sec.currentLoad || 0,
+          loadTeamId: sec.loadTeamId ?? null, nikasiTeamId: sec.nikasiTeamId ?? null,
+          loadedAt: sec.loadedAt ?? null, firedAt: sec.firedAt ?? null, cooledAt: sec.cooledAt ?? null, unloadedAt: new Date(),
+          coalKg: sec.coalKg || 0, issues: sec.issues || '',
+          awwal: b.awwal, doem: b.doem, khangar: b.khangar, broken: b.broken,
+        }, { session });
+        await db.collection(U.coll).updateOne(
+          { ...scope(req.user), index: b.sectionIndex },
+          { $set: { state: 'Empty', currentLoad: 0, nikasiTeamId: null, loadTeamId: null, loadedAt: null, firedAt: null, cooledAt: null, coalKg: 0, issues: '' } }, { session },
+        );
+        const rate = await getSetting(db, req.user, 'rateNikasi', SETTING_DEFAULTS, session);
+        const gross = ((total / 1000) * Number(rate)).toFixed(2);
+        await creditTeam(db, session, req.user, sec.nikasiTeamId, gross, 'unloading_credit', `${unit}Unloading:${b.sectionIndex}:${Date.now()}`, b.clientUuid);
+        await audit(db, session, req.user, `${unit}.unload.complete`, b);
+      });
+      res.status(201).json({ ok: true });
+    }));
+
+    // Coal and issues can be noted at any point in the cycle (they are saved with the cycle on unloading).
+    app.put(`/${U.path}/:index/notes`, auth('owner', 'munshi', 'mistri'), wrap(async (req, res) => {
+      const b = kilnNoteInput.parse(req.body);
+      const index = Number(req.params.index);
+      const set = {};
+      if (b.coalKg !== undefined) set.coalKg = b.coalKg;
+      if (b.issues !== undefined) set.issues = b.issues;
+      const r = await db.collection(U.coll).updateOne({ ...scope(req.user), index }, { $set: set });
+      if (!r.matchedCount) throw httpError(404, `${U.label} not found`);
+      await audit(db, undefined, req.user, `${unit}.notes`, { index, ...set });
+      res.json({ ok: true });
+    }));
+
+    // Past cycles of one chamber/line, newest first.
+    app.get(`/${U.path}/:index/history`, auth(), wrap(async (req, res) => {
+      res.json(await db.collection('kilnCycles').find({ ...scope(req.user), unit, index: Number(req.params.index) })
+        .sort({ unloadedAt: -1 }).limit(50).toArray());
+    }));
+  }
+
+  // "Advance fire": the firing chamber/line cools and the next preheated one catches fire.
+  // In line mode the fire can move several lines in one go (`steps`).
   app.post('/fire-advance', auth('owner', 'munshi'), wrap(async (req, res) => {
     const b = fireAdvanceInput.parse(req.body);
+    const U = KILN_UNITS[b.unit];
     const moved = await withTransaction(db, async (session) => {
-      const sections = await db.collection('kilnSections').find(scope(req.user)).sort({ index: 1 }).toArray();
       const changes = [];
-      const firing = sections.find((s) => s.state === 'Firing');
-      if (firing) changes.push({ index: firing.index, from: 'Firing', to: 'Cooling' });
-      const preheating = sections.find((s) => s.state === 'Preheating');
-      if (preheating) changes.push({ index: preheating.index, from: 'Preheating', to: 'Firing' });
-      for (const c of changes) {
-        await db.collection('kilnSections').updateOne({ ...scope(req.user), index: c.index }, { $set: { state: c.to } }, { session });
+      for (let step = 0; step < b.steps; step++) {
+        const rows = await db.collection(U.coll).find(scope(req.user), { session }).sort({ index: 1 }).toArray();
+        const stepChanges = [];
+        const firing = rows.find((r) => r.state === 'Firing');
+        if (firing) stepChanges.push({ index: firing.index, from: 'Firing', to: 'Cooling' });
+        const preheating = rows.find((r) => r.state === 'Preheating');
+        if (preheating) stepChanges.push({ index: preheating.index, from: 'Preheating', to: 'Firing' });
+        if (!stepChanges.length) break; // nothing left to fire
+        for (const c of stepChanges) {
+          const stamp = c.to === 'Firing' ? { firedAt: new Date() } : c.to === 'Cooling' ? { cooledAt: new Date() } : {};
+          await db.collection(U.coll).updateOne({ ...scope(req.user), index: c.index }, { $set: { state: c.to, ...stamp } }, { session });
+        }
+        changes.push(...stepChanges);
       }
-      await db.collection('fireAdvances').insertOne({ ...scope(req.user), date: new Date(), changes, by: req.user.sub, clientUuid: b.clientUuid }, { session });
-      await audit(db, session, req.user, 'fire.advance', { changes });
+      await db.collection('fireAdvances').insertOne({ ...scope(req.user), unit: b.unit, steps: b.steps, date: new Date(), changes, by: req.user.sub, clientUuid: b.clientUuid }, { session });
+      await audit(db, session, req.user, 'fire.advance', { unit: b.unit, steps: b.steps, changes });
       return changes;
     });
     res.status(201).json({ moved });
-  }));
-
-  app.post('/kiln-sections/:index/unload/start', auth('owner', 'munshi'), wrap(async (req, res) => {
-    const b = unloadStartInput.parse({ ...req.body, sectionIndex: req.params.index });
-    await withTransaction(db, async (session) => {
-      const sec = await db.collection('kilnSections').findOne({ ...scope(req.user), index: b.sectionIndex }, { session });
-      if (!sec) throw httpError(404, 'Section not found');
-      if (sec.state !== 'Cooling') throw httpError(422, `Section ${b.sectionIndex} is not cooled yet (state: ${sec.state})`);
-      await db.collection('kilnSections').updateOne(
-        { ...scope(req.user), index: b.sectionIndex }, { $set: { state: 'Unloading', nikasiTeamId: b.teamId } }, { session },
-      );
-      await audit(db, session, req.user, 'section.unload.start', b);
-    });
-    res.status(201).json({ ok: true });
-  }));
-
-  app.post('/kiln-sections/:index/unload/complete', auth('owner', 'munshi', 'mistri'), wrap(async (req, res) => {
-    const b = unloadCompleteInput.parse({ ...req.body, sectionIndex: req.params.index });
-    await withTransaction(db, async (session) => {
-      const sec = await db.collection('kilnSections').findOne({ ...scope(req.user), index: b.sectionIndex }, { session });
-      if (!sec) throw httpError(404, 'Section not found');
-      if (sec.state !== 'Unloading') throw httpError(422, `Section ${b.sectionIndex} has no nikasi team assigned yet (state: ${sec.state})`);
-      const total = b.awwal + b.doem + b.khangar + b.broken;
-      await db.collection('unloadings').insertOne({
-        ...scope(req.user), sectionIndex: b.sectionIndex, nikasiTeamId: sec.nikasiTeamId,
-        awwal: b.awwal, doem: b.doem, khangar: b.khangar, broken: b.broken, date: new Date(),
-      }, { session });
-      await db.collection('kilnSections').updateOne(
-        { ...scope(req.user), index: b.sectionIndex },
-        { $set: { state: 'Empty', currentLoad: 0, nikasiTeamId: null } }, { session },
-      );
-      const rate = await getSetting(db, req.user, 'rateNikasi', SETTING_DEFAULTS, session);
-      const gross = ((total / 1000) * Number(rate)).toFixed(2);
-      await creditTeam(db, session, req.user, sec.nikasiTeamId, gross, 'unloading_credit', `unloading:${b.sectionIndex}:${Date.now()}`, b.clientUuid);
-      await audit(db, session, req.user, 'section.unload.complete', b);
-    });
-    res.status(201).json({ ok: true });
   }));
 
   // ---- Moulding (pathai) ----
@@ -206,6 +262,11 @@ export function registerProductionRoutes(app, db) {
 
   app.get('/firing-logs', auth(), wrap(async (req, res) => {
     res.json(await db.collection('firingLogs').find(scope(req.user)).sort({ date: -1 }).limit(200).toArray());
+  }));
+
+  // Kachi bharai: every chamber/line load (newest first)
+  app.get('/section-loads', auth(), wrap(async (req, res) => {
+    res.json(await db.collection('sectionLoads').find(scope(req.user)).sort({ date: -1 }).limit(1000).toArray());
   }));
 
   app.get('/unloadings', auth(), wrap(async (req, res) => {
@@ -428,9 +489,9 @@ export function registerProductionRoutes(app, db) {
     ]);
     const rows = [
       ...moulding.map((r) => ({ at: r.date, kind: 'moulding', summary: `+${r.netCount} green bricks (kharaba ${r.kharaba})` })),
-      ...loads.map((r) => ({ at: r.date, kind: 'load', summary: `Section ${r.sectionIndex}: -${r.count} green → loaded` })),
+      ...loads.map((r) => ({ at: r.date, kind: 'load', summary: `${r.unit === 'line' ? 'Line' : 'Section'} ${r.sectionIndex}: -${r.count} green → loaded` })),
       ...firing.map((r) => ({ at: r.date, kind: 'firing', summary: `${r.shift} shift: ${r.coalKg} kg coal, ${r.tempC}°C${r.fanOn ? '' : ' — FAN OFF'}` })),
-      ...unloads.map((r) => ({ at: r.date, kind: 'unload', summary: `Section ${r.sectionIndex}: Awwal ${r.awwal}, Doem ${r.doem}, Khangar ${r.khangar}, Broken ${r.broken}` })),
+      ...unloads.map((r) => ({ at: r.date, kind: 'unload', summary: `${r.unit === 'line' ? 'Line' : 'Section'} ${r.sectionIndex}: Awwal ${r.awwal}, Doem ${r.doem}, Khangar ${r.khangar}, Broken ${r.broken}` })),
       ...grns.map((r) => ({ at: r.date, kind: 'grn', summary: `+${r.qty} ${r.item} from ${r.supplierName} @ Rs ${r.landedUnitCost}/unit` })),
       ...invoices.map((r) => ({ at: r.date, kind: 'invoice', summary: `Sold ${r.qty} ${r.grade} — Rs ${r.amount}`, amount: r.amount })),
       ...payments.map((r) => ({ at: r.date, kind: 'payment', summary: `Payment received — Rs ${r.amount} (${r.mode})`, amount: r.amount })),
@@ -467,13 +528,14 @@ export function registerProductionRoutes(app, db) {
       ]).toArray();
       return r?.total ?? 0;
     };
-    const [inBefore, expBefore, advBefore, advRevBefore] = await Promise.all([
+    const [inBefore, expBefore, advBefore, advRevBefore, kharchaBefore] = await Promise.all([
       sumBefore('payments', 'date'),
       sumBefore('expenses', 'date'),
       sumBefore('ledgerEntries', 'createdAt', { account: 'peshgi', type: 'advance' }, '$debit'),
       sumCreditBefore({ account: 'peshgi', type: 'advance_reversal' }),
+      sumBefore('kharchaEntries', 'date'),
     ]);
-    const openingCash = inBefore - expBefore - advBefore + advRevBefore;
+    const openingCash = inBefore - expBefore - advBefore + advRevBefore - kharchaBefore;
 
     const [incomeRows, expenseRows, advanceRows] = await Promise.all([
       db.collection('payments').find({ ...s, date: { $gte: dayStart, $lte: dayEnd } }).sort({ date: 1 }).toArray(),
@@ -487,7 +549,8 @@ export function registerProductionRoutes(app, db) {
     const liveAdvances = advanceRows.filter((r) => !reversed.has(String(r._id)));
 
     const customerIds = [...new Set(incomeRows.map((r) => r.partyId))].map(oid);
-    const workerIds = [...new Set(liveAdvances.map((r) => r.partyId))].map(oid);
+    const kharchaRows = await db.collection('kharchaEntries').find({ ...s, date: { $gte: dayStart, $lte: dayEnd } }).sort({ date: 1 }).toArray();
+    const workerIds = [...new Set([...liveAdvances.map((r) => r.partyId), ...kharchaRows.map((r) => r.workerId)])].map(oid);
     const [customers, workers] = await Promise.all([
       customerIds.length ? db.collection('customers').find({ _id: { $in: customerIds } }).toArray() : [],
       workerIds.length ? db.collection('workers').find({ _id: { $in: workerIds } }).toArray() : [],
@@ -498,6 +561,7 @@ export function registerProductionRoutes(app, db) {
     const income = incomeRows.map((r) => ({ kind: 'payment', id: r._id, at: r.date, name: customerName[r.partyId] || '—', detail: `Payment (${r.mode})`, amount: r.amount }));
     const expense = [
       ...expenseRows.map((r) => ({ kind: 'expense', id: r._id, at: r.date, name: r.payee || r.category, detail: r.category, amount: r.amount })),
+      ...kharchaRows.map((r) => ({ kind: 'kharcha', at: r.date, name: workerName[r.workerId] || '—', detail: 'Dasti kharcha', amount: r.amount })),
       ...liveAdvances.map((r) => ({ kind: 'advance', id: r._id, at: r.createdAt, name: workerName[r.partyId] || '—', detail: 'Peshgi advance', amount: r.debit.toString() })),
     ].sort((a, b) => new Date(a.at) - new Date(b.at));
 
