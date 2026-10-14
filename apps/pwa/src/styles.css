@@ -2515,3 +2515,466 @@ tfoot td:last-child {
     min-width: 100%;
   }
 }
+
+/* ==========================================================================
+   FIXED BOTTOM STATUS BAR (replaces the floating draggable toolbar)
+   ========================================================================== */
+.status-bar {
+  position: fixed; inset-inline: 0; bottom: 0; z-index: 50;
+  display: flex; align-items: stretch; justify-content: space-around; gap: 0.25rem;
+  background: #0f172a; border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 0.3rem 0.5rem calc(0.3rem + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -4px 14px rgba(15, 23, 42, 0.18);
+}
+.status-btn {
+  flex: 1; max-width: 220px; display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+  min-height: 44px; padding: 0.25rem 0.5rem; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06); color: #e2e8f0; font: inherit; font-size: 0.8rem; font-weight: 700;
+  text-decoration: none; cursor: pointer; white-space: nowrap; overflow: hidden;
+}
+.status-btn span { overflow: hidden; text-overflow: ellipsis; }
+.status-btn:hover, .status-btn.active { background: rgba(234, 88, 12, 0.22); border-color: rgba(234, 88, 12, 0.6); color: #fff; }
+.status-btn.status-sync.synced svg { color: #10b981; }
+.status-btn.status-sync.pending svg { color: #fbbf24; }
+.status-btn.status-sync.offline svg { color: #f87171; }
+.status-btn.spinning svg { animation: status-spin 0.8s linear infinite; }
+@keyframes status-spin { to { transform: rotate(360deg); } }
+main { padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)); }
+@media print { .status-bar { display: none !important; } }
+
+/* ==========================================================================
+   HOME: grouped modules, two columns, compact outlined tiles
+   ========================================================================== */
+.home-hero-sub, .home-section-icon { display: none; }
+.home-group {
+  border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 1.1rem 0.75rem 0.75rem;
+  background: #fff; position: relative; margin-top: 0.6rem;
+}
+.home-group-title {
+  position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%);
+  margin: 0; padding: 0.15rem 0.85rem; background: #fff; white-space: nowrap;
+  border: 1.5px solid #cbd5e1; border-radius: 999px;
+  font-size: 0.86rem; font-weight: 800; color: #1e293b; text-align: center; text-transform: none; letter-spacing: 0;
+}
+.home-module-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; }
+.home-module {
+  display: flex; align-items: center; gap: 0.5rem; min-height: 44px; padding: 0.45rem 0.6rem;
+  border: 1.5px solid #e2e8f0; border-radius: 9px; background: #fff;
+  color: #1e293b; text-decoration: none; font-size: 0.86rem; font-weight: 700;
+}
+.home-module span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-module svg { flex-shrink: 0; }
+.home-module:hover, .home-module:focus-visible { border-color: var(--brand); background: var(--brand-tint); }
+
+/* ==========================================================================
+   KILN BOARD: only the diagram scrolls sideways, never the whole page.
+   Grid/flex children default to min-width:auto, so the 900px diagram used to
+   stretch every ancestor (and the page) wide. min-width:0 lets them shrink.
+   ========================================================================== */
+main > *, .grid > *, .card { min-width: 0; }
+.kiln-scroll { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
+
+/* ---- Icon-only row actions (edit / save / cancel / delete) ---- */
+.row-actions { display: inline-flex; gap: 0.3rem; align-items: center; justify-content: flex-end; }
+button.icon-btn {
+  width: 34px; height: 34px; min-height: 34px; padding: 0; border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1.5px solid #cbd5e1; background: #fff; color: #334155; cursor: pointer;
+}
+button.icon-btn:hover:not(:disabled) { background: #f1f5f9; }
+button.icon-btn-edit { color: #1d4ed8; border-color: #bfdbfe; }
+button.icon-btn-save { color: #fff; background: #15803d; border-color: #15803d; }
+button.icon-btn-save:hover:not(:disabled) { background: #166534; }
+button.icon-btn-cancel { color: #64748b; }
+button.icon-btn-delete { color: #b91c1c; border-color: #fecaca; }
+button.icon-btn-delete:hover:not(:disabled) { background: #fef2f2; }
+td input.cell-input, td select.cell-input { min-height: 34px; padding: 0.2rem 0.4rem; font-size: 0.85rem; width: 100%; min-width: 70px; }
+
+/* ---- Weekly moulding grid ---- */
+.week-grid input { min-height: 36px; padding: 0.2rem 0.35rem; text-align: center; min-width: 64px; }
+.week-grid th, .week-grid td { white-space: nowrap; }
+.week-grid tfoot td { font-weight: 800; }
+
+/* ---- Insights/report graphs: scroll inside their own card, never widen or clip the page ---- */
+.chart-card, .chart-card > *, .chart-header-top > * { min-width: 0; }
+.chart-scroll-wrap { overscroll-behavior-x: contain; }
+
+/* ---- Status bar: always pinned to the bottom, above everything, retractable to a tab ---- */
+.status-bar { z-index: 1000; left: 0; right: 0; bottom: 0; transform: none; }
+button.status-collapse {
+  flex: 0 0 36px; min-height: 44px; padding: 0; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  background: transparent; border: 1px solid rgba(255, 255, 255, 0.14); color: #94a3b8; cursor: pointer;
+}
+button.status-tab {
+  position: fixed; bottom: calc(0.35rem + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%);
+  z-index: 1000; min-height: 34px; height: 34px; width: 64px; padding: 0; border-radius: 999px;
+  display: flex; align-items: center; justify-content: center; gap: 0.25rem; cursor: pointer;
+  background: #0f172a; color: #e2e8f0; border: 1.5px solid rgba(234, 88, 12, 0.6); box-shadow: 0 4px 14px rgba(15, 23, 42, 0.3);
+}
+button.status-tab.pending { border-color: #fbbf24; }
+button.status-tab.offline { border-color: #f87171; }
+.status-tab-count { font-size: 0.72rem; font-weight: 800; color: #fbbf24; }
+
+/* ---- Home group titles: rectangular titled box, not a pill on the border ---- */
+.home-group { padding: 0.75rem; margin-top: 0; }
+.home-group-title {
+  position: static; transform: none; display: block; width: fit-content; max-width: 100%;
+  margin: 0 auto 0.65rem; padding: 0.3rem 1rem; border-radius: 6px; white-space: normal;
+  background: #f8fafc; border: 1.5px solid #cbd5e1;
+}
+
+/* Group title: plain centred text; only the group box outlines title + modules */
+.home-group-title { background: none; border: 0; padding: 0; box-shadow: none; }
+
+/* Group box as two cells: title cell on top, modules cell below */
+.home-group { padding: 0; overflow: hidden; }
+.home-group-title {
+  width: auto; margin: 0; padding: 0.55rem 0.75rem; text-align: center;
+  background: #f8fafc; border: 0; border-bottom: 1.5px solid #cbd5e1; border-radius: 0;
+}
+.home-group .home-module-grid { padding: 0.75rem; }
+
+/* Frozen column: stays put while the table scrolls horizontally */
+.table-wrap th.sticky-col, .table-wrap td.sticky-col {
+  position: sticky; inset-inline-start: 0; z-index: 2; background: #fff;
+  box-shadow: inset -1.5px 0 0 #cbd5e1;
+}
+[dir="rtl"] .table-wrap th.sticky-col, [dir="rtl"] .table-wrap td.sticky-col { box-shadow: inset 1.5px 0 0 #cbd5e1; }
+.table-wrap thead th.sticky-col { z-index: 3; background: #f8fafc; }
+
+/* ==========================================================================
+   APP SHELL: header and status bar frozen; only the content area scrolls
+   ========================================================================== */
+.app-shell {
+  position: fixed; inset: 0; height: 100vh; height: 100dvh;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.app-shell > .sticky-header-wrapper { position: relative; top: auto; flex: 0 0 auto; z-index: 20; }
+.app-shell > main {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden;
+  -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  padding-bottom: 1.25rem;
+}
+.app-shell > .status-bar { position: relative; inset: auto; flex: 0 0 auto; }
+/* Retracted: a small tab at the bottom-left corner */
+button.status-tab {
+  left: calc(0.6rem + env(safe-area-inset-left, 0px)); right: auto; transform: none;
+  bottom: calc(0.6rem + env(safe-area-inset-bottom, 0px)); width: 48px; height: 40px;
+}
+
+/* Header: no outlines on buttons/badges; username shown small under app name */
+.top-user-badge, .top button.ghost, .top button.ghost.logout-btn, .brand-badge, .brand-icon-box { border: 0 !important; box-shadow: none; }
+.brand-stack { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+.brand-user {
+  font-size: 0.7rem; font-weight: 600; color: #94a3b8; font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40vw;
+}
+
+/* Logout: solid red on the dark header for strong contrast */
+.top button.ghost.logout-btn { background: #dc2626; color: #fff; }
+.top button.ghost.logout-btn:hover { background: #b91c1c; }
+
+/* ==========================================================================
+   UNIFORM SECTIONS (matches Home): boxed sections, centred title cell, no ribbons
+   ========================================================================== */
+.stat, .stat:has(.ok), .stat.ok, .stat:has(.warn), .stat.warn, .stat:has(.err), .stat.err, .stat.info {
+  border-inline-start-width: 1.5px !important;
+  border-inline-start-color: inherit;
+}
+.stat { border-inline-start-color: rgba(234, 88, 12, 0.25) !important; }
+.stat:has(.ok), .stat.ok { border-inline-start-color: rgba(16, 185, 129, 0.25) !important; }
+.stat:has(.warn), .stat.warn { border-inline-start-color: rgba(245, 158, 11, 0.25) !important; }
+.stat:has(.err), .stat.err { border-inline-start-color: rgba(239, 68, 68, 0.25) !important; }
+.stat:has([style*="var(--info)"]), .stat.info { border-inline-start-color: rgba(2, 132, 199, 0.25) !important; }
+
+h2 { border-inline-start: 0; padding-inline-start: 0; justify-content: center; text-align: center; }
+
+/* Section title as the top cell of its box */
+.card > h2:first-child, .kpi-group > .kpi-group-title {
+  justify-content: center; text-align: center; font-size: 0.9rem;
+  background: #f8fafc; border-bottom: 1.5px solid #cbd5e1;
+  margin: -1.25rem -1.25rem 0.9rem; padding: 0.6rem 0.75rem;
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.kpi-group > .kpi-group-title { margin: -1rem -1.15rem 0.25rem; border-radius: 14px 14px 0 0; }
+.card.table-wrap > h2:first-child { margin: 0; }
+@media (max-width: 639px) {
+  .card > h2:first-child { margin: -1rem -0.85rem 0.85rem; }
+  .card.table-wrap > h2:first-child { margin: 0; }
+}
+
+/* ==========================================================================
+   SIMPLE TABLES: filled header row, plain white body, thin grid lines
+   ========================================================================== */
+table { border-collapse: collapse; background: #fff; }
+table thead tr:first-child th {
+  background: #1e293b !important; color: #fff !important; font-weight: 700;
+  border: 1px solid #334155 !important; box-shadow: none !important;
+}
+table thead tr.filter-row th { background: #f1f5f9 !important; border: 1px solid #e2e8f0 !important; }
+table tbody tr, table tbody tr:nth-child(even), table tbody tr:nth-child(odd), table tbody tr:hover { background: #fff !important; }
+table tbody td, table tfoot td {
+  background: #fff !important; border: 1px solid #e2e8f0 !important; box-shadow: none !important;
+}
+.table-wrap td.sticky-col { box-shadow: 1.5px 0 0 #cbd5e1 !important; }
+
+/* ==========================================================================
+   INFO CARD FILLS BY MEANING
+   brand/production = orange · positive = green · caution = amber · loss/debt = red
+   money/neutral info = blue · fuel/stock = slate; untagged cards rotate a palette
+   ========================================================================== */
+* > .stat:nth-child(5n+1), .stat.tone-orange { --tone: 234, 88, 12; }
+* > .stat:nth-child(5n+2), .stat.tone-blue { --tone: 2, 132, 199; }
+* > .stat:nth-child(5n+3), .stat.tone-violet { --tone: 124, 58, 237; }
+* > .stat:nth-child(5n+4), .stat.tone-teal { --tone: 13, 148, 136; }
+* > .stat:nth-child(5n+5), .stat.tone-pink { --tone: 219, 39, 119; }
+* > .stat[style*="--brand"], * > .stat[style*="#ea580c"] { --tone: 234, 88, 12; }
+* > .stat[style*="--ok"] { --tone: 16, 185, 129; }
+* > .stat[style*="--warn"] { --tone: 245, 158, 11; }
+* > .stat[style*="--err"] { --tone: 239, 68, 68; }
+* > .stat[style*="--info"] { --tone: 2, 132, 199; }
+* > .stat[style*="#334155"] { --tone: 71, 85, 105; }
+* > .stat:has(strong.ok) { --tone: 16, 185, 129; }
+* > .stat:has(strong.warn) { --tone: 245, 158, 11; }
+* > .stat:has(strong.err) { --tone: 239, 68, 68; }
+.stat.stat {
+  background: rgba(var(--tone, 234, 88, 12), 0.12) !important;
+  border-color: rgba(var(--tone, 234, 88, 12), 0.35) !important;
+}
+.stat.stat:hover { border-color: rgba(var(--tone, 234, 88, 12), 0.8) !important; }
+
+/* Date/time cells: date on top, smaller muted time below */
+.dt-cell { display: inline-flex; flex-direction: column; line-height: 1.2; white-space: nowrap; font-variant-numeric: tabular-nums; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+.dt-date { font-weight: 600; color: var(--ink); }
+.dt-time { font-size: 0.74em; color: #64748b; }
+
+/* ==========================================================================
+   COMPACT TABLES & FORMS
+   ========================================================================== */
+table thead th, table tbody td, table tfoot td { padding: 0.3rem 0.45rem !important; white-space: nowrap; }
+table thead th { font-size: 0.7rem; letter-spacing: 0.03em; }
+table thead tr.filter-row th { padding: 0.2rem 0.3rem !important; }
+.table-col-filter { min-width: 0 !important; width: 100%; min-height: 28px !important; height: 28px; padding: 0.1rem 0.35rem !important; font-size: 0.78rem; }
+th.rownum, td.rownum, th.actions, td.actions { width: 1%; }
+td input.cell-input, td select.cell-input { min-width: 56px; min-height: 30px; }
+.card { padding: 0.85rem 1rem; }
+.card > h2:first-child { margin: -0.85rem -1rem 0.75rem; }
+.card.table-wrap { padding: 0; }
+.card.table-wrap > h2:first-child { margin: 0; }
+.grid { gap: 0.65rem; }
+.grid.two { gap: 0.6rem !important; }
+label { gap: 0.2rem; }
+input, select, textarea { min-height: 40px; }
+@media (max-width: 639px) {
+  .card { padding: 0.7rem 0.7rem; }
+  .card > h2:first-child { margin: -0.7rem -0.7rem 0.65rem; }
+  main { padding-inline: 0.5rem; }
+}
+
+/* Info cards: wrap as flexible rows so a short last row stretches to full width */
+:has(> .stat) { display: flex !important; flex-wrap: wrap; gap: 0.6rem; }
+* > .stat { flex: 1 1 150px; min-width: 0; }
+/* Content never stretches to fill the frozen frame height */
+.grid, main > *, .kpi-section { align-content: start; }
+main > * { flex: 0 0 auto; }
+/* Frozen name columns in every table (marked by useFrozenColumns) */
+table th.sticky-col, table td.sticky-col { position: sticky; inset-inline-start: 0; z-index: 2; box-shadow: 1.5px 0 0 #cbd5e1 !important; }
+[dir="rtl"] table th.sticky-col, [dir="rtl"] table td.sticky-col { box-shadow: -1.5px 0 0 #cbd5e1 !important; }
+table td.sticky-col { background: #fff !important; }
+table thead tr:first-child th.sticky-col { z-index: 3; background: #1e293b !important; }
+table thead tr.filter-row th.sticky-col { z-index: 3; background: #f1f5f9 !important; }
+table tfoot td.sticky-col { background: #f8fafc !important; }
+
+/* ==========================================================================
+   COMPACT INPUTS: shorter boxes, form fields flow 2-4 per row by width
+   ========================================================================== */
+input, select, textarea { min-height: 36px !important; padding: 0.25rem 0.55rem !important; font-size: 0.9rem; }
+input[type="checkbox"], input[type="radio"] { min-height: 0 !important; padding: 0 !important; }
+form .grid.two, .card .grid.two { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important; }
+input[inputmode="decimal"], input[inputmode="numeric"], input[type="number"], input[type="date"], input[type="time"] {
+  max-width: 220px; font-variant-numeric: tabular-nums;
+}
+label { font-size: 0.8rem; }
+/* Inputs fill their own grid cell exactly, never spill into the next one */
+.grid > label, .grid > *, label { min-width: 0; }
+label > input, label > select, label > textarea { width: 100% !important; min-width: 0 !important; box-sizing: border-box; }
+form .grid.two, .card .grid.two { align-items: end; }
+
+/* Info cards: label and value centred */
+.stat, .stat.stat { align-items: center !important; justify-content: center; text-align: center !important; }
+.stat > *, .stat span, .stat strong { text-align: center !important; justify-content: center; }
+
+/* Weekly moulding grid: boxes 40% shorter than the full cell, centred */
+.week-grid input, .week-grid input.cell-input { width: 60% !important; min-width: 48px !important; margin-inline: auto; display: block; }
+
+/* Weekly range: From / To labels over their dates */
+.week-range { display: grid; grid-template-columns: auto auto; column-gap: 0.9rem; row-gap: 0; text-align: center; line-height: 1.2; }
+.week-range span { font-size: 0.68rem; color: #64748b; font-weight: 600; }
+.week-range strong { font-size: 0.82rem; font-variant-numeric: tabular-nums; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+
+/* Zebra rows in every list/table (frozen cells follow the stripe) */
+table tbody tr:nth-child(even) > td { background: #f1f5f9 !important; }
+table tbody tr:nth-child(odd) > td { background: #fff !important; }
+
+/* Week range as a tiny bordered table */
+.week-range { column-gap: 0; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; }
+.week-range > * { padding: 0.1rem 0.55rem; border-inline-end: 1px solid #cbd5e1; }
+.week-range > :nth-child(2n) { border-inline-end: 0; }
+.week-range > span { background: #f1f5f9; border-bottom: 1px solid #cbd5e1; }
+/* Weekly grid boxes 25% longer (60% -> 75% of the cell) */
+.week-grid input, .week-grid input.cell-input { width: 75% !important; min-width: 60px !important; }
+
+/* Kiln board: portrait diagram that fits the screen, no sideways scroll */
+.kiln { min-width: 0 !important; max-width: 460px; margin-inline: auto; }
+.kiln svg { width: 100%; height: auto; max-height: calc(100dvh - 190px); }
+.kiln-scroll { overflow-x: visible; padding-block: 0.5rem; }
+
+/* State summary as info cards in rows and columns */
+.legend { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 0.45rem; margin-top: 0.6rem; }
+.legend-item {
+  display: flex !important; flex-direction: column; align-items: center; justify-content: center; gap: 0.1rem;
+  padding: 0.4rem 0.3rem; border: 1px solid #cbd5e1; border-radius: 9px; background: #f8fafc; text-align: center;
+}
+.legend-item > span { font-size: 0.74rem; font-weight: 700; color: #334155; display: inline-flex; align-items: center; gap: 0.3rem; }
+.legend-item b { font-size: 1.1rem; font-weight: 800; font-variant-numeric: tabular-nums; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+.legend-item .dot { width: 10px; height: 10px; border-radius: 3px; }
+
+/* Kiln: smaller centred chamber numbers */
+.kiln .num { font-size: 12px !important; font-weight: 800; }
+.kiln .load { font-size: 7px !important; font-weight: 700; }
+.kiln { max-width: 380px; }
+
+/* State summary cards tinted by state, dark text for contrast */
+.legend-item:has(.sec-empty) { background: #f1f5f9; border-color: #94a3b8; }
+.legend-item:has(.sec-loading) { background: #dbeafe; border-color: #60a5fa; }
+.legend-item:has(.sec-preheating) { background: #fef3c7; border-color: #f59e0b; }
+.legend-item:has(.sec-firing) { background: #fee2e2; border-color: #ef4444; }
+.legend-item:has(.sec-cooling) { background: #e0e7ff; border-color: #6366f1; }
+.legend-item:has(.sec-unloading) { background: #dcfce7; border-color: #22c55e; }
+.legend-item > span, .legend-item b { color: #0f172a !important; }
+.legend { grid-template-columns: repeat(3, 1fr) !important; }
+@media (min-width: 720px) { .legend { grid-template-columns: repeat(6, 1fr) !important; } }
+
+/* Weekly grid: saved values shown as text; week dropdown */
+.week-cell-saved { font-weight: 700; color: #0f172a; }
+.week-cell-saved sup { font-size: 0.6rem; color: #64748b; margin-inline-start: 2px; }
+.week-cell-edit input { border-color: #2563eb !important; background: #eff6ff; }
+.week-select { min-width: 0; max-width: 240px; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+button.icon-btn svg { width: 17px !important; height: 17px !important; flex: 0 0 auto; display: block; stroke: currentColor; }
+.week-tools button.icon-btn-edit { color: #1d4ed8 !important; background: #fff; }
+
+/* Table titles stay centred in view while the table scrolls sideways */
+.table-wrap > :not(table) { position: sticky; inset-inline-start: 0; z-index: 4; }
+.table-wrap > h2, .table-wrap > div > h2 { text-align: center; justify-content: center; }
+.table-wrap > div:has(> h2) { justify-content: center !important; position: sticky; }
+.table-wrap > div:has(> h2) > h2 { flex: 1 1 auto; }
+
+/* Collapsible lab-test box: collapsed by default, header only */
+details.lab-box { background: #f8fafc; border: 1.5px solid var(--line); border-radius: 10px; padding: 0; }
+details.lab-box > summary {
+  cursor: pointer; list-style: none; padding: 0.55rem 0.85rem; font-size: 0.8rem; font-weight: 800; color: #0f172a;
+  text-transform: uppercase; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+}
+details.lab-box > summary::-webkit-details-marker { display: none; }
+details.lab-box > summary::after { content: '▾'; font-size: 1rem; color: #64748b; transition: transform 0.15s; }
+details.lab-box[open] > summary::after { transform: rotate(180deg); }
+details.lab-box[open] > summary { border-bottom: 1px solid var(--line); }
+details.lab-box > .grid { padding: 0.65rem 0.85rem 0.8rem; }
+
+/* Bold dates where asked (e.g. inventory list) */
+td.dt-bold .dt-date { font-weight: 800; }
+details.lab-box > summary::after { font-size: 2rem; line-height: 1; }
+
+/* Type-to-filter picker */
+.search-select { position: relative; width: 100%; }
+.search-select > input[type="search"] { width: 100%; }
+.search-select > input.has-value { font-weight: 600; color: var(--ink); }
+.search-select-guard { position: absolute; inset-inline-start: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; min-height: 0 !important; padding: 0 !important; border: 0; }
+.search-select-list {
+  position: absolute; z-index: 30; inset-inline: 0; top: calc(100% + 3px); margin: 0; padding: 0.2rem; list-style: none;
+  max-height: 260px; overflow-y: auto; background: #fff; border: 1.5px solid #cbd5e1; border-radius: 9px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+}
+.search-select-list li { padding: 0.45rem 0.6rem; border-radius: 6px; cursor: pointer; font-size: 0.86rem; line-height: 1.3; }
+.search-select-list li.active { background: #fff7ed; }
+.search-select-list li.chosen { font-weight: 700; color: var(--brand-dark); }
+.search-select-list li.empty { color: #94a3b8; cursor: default; }
+.search-select-list { position: static; margin-top: 3px; max-height: 220px; }
+
+/* Report header: title, then one outlined row  From | date | To | date */
+.report-head { text-align: center; padding: 0.75rem 1rem !important; }
+.report-head h1 { margin: 0 0 0.55rem; font-size: 1.2rem; color: #0f172a; }
+.report-range {
+  display: grid; grid-template-columns: auto 1fr auto 1fr; max-width: 460px; margin: 0 auto;
+  border: 1.5px solid #94a3b8; border-radius: 6px; overflow: hidden; font-variant-numeric: tabular-nums;
+}
+.report-range > * { padding: 0.35rem 0.6rem; border-inline-end: 1px solid #94a3b8; }
+.report-range > :last-child { border-inline-end: 0; }
+.report-range > span { background: #f1f5f9; font-size: 0.78rem; font-weight: 700; color: #334155; }
+.report-range > strong { font-size: 0.92rem; color: #0f172a; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+@media print { .report-range { border-color: #000; } .report-range > * { border-color: #000; } }
+
+/* Record payment: unpaid-invoice picker table */
+.pay-picker { position: relative; display: grid; gap: 0.35rem; min-width: 0; }
+.pay-picker-title { font-size: 0.8rem; font-weight: 700; }
+.pay-picker .table-wrap { max-height: 320px; overflow: auto; border: 1px solid #cbd5e1; border-radius: 8px; }
+.pay-picker thead tr:first-child th { position: sticky; top: 0; }
+.pay-picker thead tr.filter-row th { position: sticky; top: 28px; }
+tr.pick-row { cursor: pointer; }
+table tbody tr.pick-row.picked > td { background: #ffedd5 !important; }
+tr.pick-row input[type="radio"] { accent-color: var(--brand-dark); width: 16px; height: 16px; }
+/* Report range as 2 rows x 2 columns:  From | date  /  To | date */
+.report-range { grid-template-columns: auto 1fr; max-width: 300px; }
+.report-range > * { white-space: nowrap; }
+.report-range > :nth-child(2n) { border-inline-end: 0; }
+.report-range > :nth-child(-n+2) { border-bottom: 1px solid #94a3b8; }
+
+/* Language toggle in the header, left of logout */
+.top button.lang-btn {
+  min-height: 38px; height: 38px; min-width: 46px; padding: 0 0.6rem; border-radius: 8px; border: 0;
+  background: #f8fafc; color: #0f172a; font-weight: 800; font-size: 0.85rem; cursor: pointer;
+}
+.top button.lang-btn:hover { background: #fff; }
+.app-shell > main { padding-bottom: 1rem; }
+.pay-picker-title { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+
+/* UR | EN switch in the header */
+.lang-switch { display: inline-flex; border-radius: 8px; overflow: hidden; background: rgba(255, 255, 255, 0.1); }
+.top .lang-switch button {
+  min-height: 34px; height: 34px; min-width: 38px; padding: 0 0.55rem; border: 0; border-radius: 0; cursor: pointer;
+  background: transparent; color: #cbd5e1; font: 800 0.8rem 'Plus Jakarta Sans', system-ui, sans-serif; letter-spacing: 0.04em;
+}
+.top .lang-switch button.on { background: #f8fafc; color: #0f172a; }
+.top button.lang-btn { font: 800 0.82rem 'Plus Jakarta Sans', system-ui, sans-serif; letter-spacing: 0.04em; min-width: 42px; }
+/* UR/EN toggle: same 38x38 box as the logout button */
+.top button.lang-btn { width: 38px; min-width: 38px; height: 38px; min-height: 38px; padding: 0; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: 8px; }
+.top button.lang-btn { height: 38px !important; min-height: 38px !important; width: 38px !important; min-width: 38px !important; padding: 0 !important; font-size: 0.82rem !important; line-height: 1 !important; }
+
+/* ==========================================================================
+   SECTION TITLES (all forms, lists, sections): centred, bold, 15% larger than section text
+   section text is ~0.9rem, so titles are 0.9 x 1.15 = 1.035rem
+   ========================================================================== */
+h2, h3.kpi-group-title, .kpi-group > .kpi-group-title, .card > h2:first-child, .table-wrap > h2,
+.table-wrap > div > h2, .home-group-title, .pay-picker-title > span, details.lab-box > summary {
+  font-size: 1.035rem !important; font-weight: 800 !important; text-align: center !important;
+  justify-content: center !important; text-transform: none !important; letter-spacing: 0 !important;
+  color: #0f172a !important;
+}
+h2, .kpi-group-title { width: 100%; }
+.pay-picker-title { justify-content: center !important; position: relative; }
+.pay-picker-title > button { position: absolute; inset-inline-end: 0; }
+.table-wrap > div:has(> h2) { position: relative; }
+.table-wrap > div:has(> h2) > :not(h2) { position: absolute; inset-inline-end: 0.75rem; }
+.kpi-group > .kpi-group-title, .card > h2:first-child { width: auto !important; }
+
+/* ==========================================================================
+   LISTS: scroll inside their own box; title (centred) and header rows stay visible
+   ========================================================================== */
+.card.table-wrap { max-height: 72vh; max-height: 72dvh; overflow: auto; }
+.card.table-wrap > :not(table) {
+  position: sticky !important; top: 0; inset-inline-start: 0; z-index: 6;
+  background: #fff; margin: 0 !important;
+}
+.card.table-wrap > h2, .card.table-wrap > div:has(> h2) { padding: 0.6rem 0.75rem !important; border-bottom: 1px solid #e2e8f0; }
+.card.table-wrap > table > thead > tr > th { position: sticky; z-index: 4; }
+.card.table-wrap > table > thead > tr > th.sticky-col { z-index: 5; }

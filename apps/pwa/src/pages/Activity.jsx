@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useT } from '../i18n.js';
 import { get, fmtDateTime } from '../api.js';
+import DateTime from '../components/DateTime.jsx';
 
 const KIND_LABEL_KEY = {
   moulding: 'moulding', load: 'loadSection', firing: 'firing', unload: 'nikasiTab',
@@ -113,7 +114,7 @@ export default function Activity() {
             {filtered.map((r, i) => (
               <tr key={i}>
                 <td className="rownum">{i + 1}</td>
-                <td style={{ whiteSpace: 'nowrap' }}>{fmtDateTime(r.at)}</td>
+                <td style={{ whiteSpace: 'nowrap' }}><DateTime value={r.at} /></td>
                 <td>{t[KIND_LABEL_KEY[r.kind]] || r.kind}</td>
                 <td>{r.summary}</td>
               </tr>

@@ -38,7 +38,7 @@ export async function postEntry(db, session, user, entry) {
     reason: entry.reason ?? null,
     clientUuid: entry.clientUuid,
     createdBy: user.sub,
-    createdAt: new Date(),
+    createdAt: entry.at ?? new Date(),
   };
   const r = await db.collection('ledgerEntries').insertOne(doc, { session });
   return { _id: r.insertedId, ...doc };

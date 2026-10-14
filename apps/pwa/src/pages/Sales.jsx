@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useT } from '../i18n.js';
 import { get, post, uuid, fmtDateTime } from '../api.js';
+import DateTime from '../components/DateTime.jsx';
+import SearchSelect from '../components/SearchSelect.jsx';
 import { useTypes, typeLabel } from '../useTypes.js';
-import DeleteButton from '../components/DeleteButton.jsx';
+import RowActions, { useRowEdit } from '../components/RowActions.jsx';
 import { useLang } from '../i18n.js';
 
 export default function Sales() {
@@ -15,14 +17,19 @@ export default function Sales() {
   const [payments, setPayments] = useState([]);
   const [receivables, setReceivables] = useState(null);
   const [cf, setCf] = useState({ name: '', type: 'individual' });
-  const [invf, setInvf] = useState({ customerId: '', grade: 'awwal', qty: '', taxPct: '0' });
-  const [payf, setPayf] = useState({ invoiceId: '', amount: '', mode: 'cash' });
+  const [invf, setInvf] = useState({ customerId: '', grade: 'awwal', qty: '', taxPct: '0', date: new Date().toISOString().slice(0, 10) });
+  const [payf, setPayf] = useState({ invoiceId: '', amount: '', mode: 'cash', date: new Date().toISOString().slice(0, 10) });
   const [msg, setMsg] = useState({ text: '', bad: false });
+  const editor = useRowEdit();
   const [activeFormTab, setActiveFormTab] = useState('invoice');
   const [filters, setFilters] = useState({});
   const updateFilter = (k, v) => setFilters((prev) => ({ ...prev, [k]: v }));
   const clearFilters = () => setFilters({});
   const hasActiveFilters = Object.values(filters).some(Boolean);
+  // Unpaid-invoice picker on the payment tab: its own column filters
+  const [payFilters, setPayFilters] = useState({});
+  const setPayFilter = (k, v) => setPayFilters((prev) => ({ ...prev, [k]: v }));
+  const pickInvoice = (inv) => setPayf((pf) => ({ ...pf, invoiceId: inv._id, amount: inv.balance ?? inv.amount }));
 
   const load = () => {
     get('/customers').then(setCustomers).catch(() => {});
@@ -73,7 +80,7 @@ export default function Sales() {
         <div className="kpi-section">
           <div className="kpi-group">
             <h3 className="kpi-group-title">
-              📊 {t.groupReceivablesTotal}
+              {t.groupReceivablesTotal}
             </h3>
             <div className="kpi-grid">
               <div className="stat" style={{ borderInlineStartColor: Number(receivables.total) > 0 ? 'var(--warn-dark)' : 'var(--ok-dark)' }}>
@@ -87,7 +94,7 @@ export default function Sales() {
 
           <div className="kpi-group">
             <h3 className="kpi-group-title">
-              ⏳ {t.groupAging}
+              {t.groupAging}
             </h3>
             <div className="kpi-grid">
               {Object.entries(receivables.buckets).map(([bucket, amt]) => (
@@ -115,21 +122,21 @@ export default function Sales() {
             className={activeFormTab === 'invoice' ? 'primary' : 'ghost'}
             onClick={() => setActiveFormTab('invoice')}
           >
-            🧾 {t.newInvoice}
+            {t.newInvoice}
           </button>
           <button
             type="button"
             className={activeFormTab === 'payment' ? 'primary' : 'ghost'}
             onClick={() => setActiveFormTab('payment')}
           >
-            💵 {t.recordPayment}
+            {t.recordPayment}
           </button>
           <button
             type="button"
             className={activeFormTab === 'customer' ? 'primary' : 'ghost'}
             onClick={() => setActiveFormTab('customer')}
           >
-            👤 {t.newCustomer}
+            {t.newCustomer}
           </button>
         </div>
 
@@ -138,10 +145,15 @@ export default function Sales() {
             <div className="grid two" style={{ gap: '0.85rem' }}>
               <label>
                 {t.customer}
-                <select required value={invf.customerId} onChange={(e) => setInvf({ ...invf, customerId: e.target.value })}>
-                  <option value="" disabled>— Select Customer —</option>
-                  {customers.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
-                </select>
+                <SearchSelect
+                  required ariaLabel={t.customer} placeholder={t.typeToSearch} value={invf.customerId}
+                  onChange={(v) => setInvf({ ...invf, customerId: v })}
+                  options={customers.map((c) => ({ value: c._id, label: c.name, search: `${c.phone || ''} ${c.type || ''}` }))}
+                />
+              </label>
+              <label>
+                {t.entryDate}
+                <input type="date" required max={new Date().toISOString().slice(0, 10)} value={invf.date} onChange={(e) => setInvf({ ...invf, date: e.target.value })} />
               </label>
               <label>
                 {t.grade}
@@ -152,8 +164,8 @@ export default function Sales() {
                 </select>
               </label>
               <label>
-                {t.qty}
-                <input required inputMode="numeric" placeholder="e.g. 5000" value={invf.qty} onChange={(e) => setInvf({ ...invf, qty: e.target.value })} />
+                {t.quantity}
+                <input required inputMode="numeric" placeholder={t.bricksUnitHint} value={invf.qty} onChange={(e) => setInvf({ ...invf, qty: e.target.value })} />
               </label>
               <label>
                 {t.taxPct} (%)
@@ -161,7 +173,7 @@ export default function Sales() {
               </label>
             </div>
             <button className="primary" style={{ marginTop: '0.35rem' }}>
-              ➕ Create {t.newInvoice}
+              Create {t.newInvoice}
             </button>
           </form>
         )}
@@ -169,20 +181,74 @@ export default function Sales() {
         {activeFormTab === 'payment' && (
           <form className="grid" onSubmit={addPayment}>
             <div className="grid two" style={{ gap: '0.85rem' }}>
-              <label style={{ gridColumn: '1 / -1' }}>
-                {t.invoice}
-                <select required value={payf.invoiceId} onChange={(e) => setPayf({ ...payf, invoiceId: e.target.value })}>
-                  <option value="" disabled>— Select Unpaid Invoice —</option>
-                  {invoices.filter((i) => i.status !== 'paid').map((i) => (
-                    <option key={i._id} value={i._id}>
-                      {customerName(i.customerId)} — {i.grade} ({i.qty} bricks) — Due: {i.amount}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="pay-picker" style={{ gridColumn: '1 / -1' }}>
+                <div className="pay-picker-title">
+                  <span>{t.invoice} — {t.unpaidInvoices}</span>
+                  {Object.values(payFilters).some(Boolean) && (
+                    <button type="button" className="clear-filter-btn" onClick={() => setPayFilters({})}>✕ {t.clearAll}</button>
+                  )}
+                </div>
+                {/* keeps "required" validation: a row must be picked */}
+                <input className="search-select-guard" tabIndex={-1} aria-hidden="true" required value={payf.invoiceId} onChange={() => {}} />
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th className="rownum" />
+                        <th className="sticky-col">{t.customer}</th>
+                        <th>{t.dateTime}</th>
+                        <th>{t.grade}</th>
+                        <th>{t.qty}</th>
+                        <th>{t.total}</th>
+                        <th>{t.paid}</th>
+                        <th>{t.balanceDue}</th>
+                      </tr>
+                      <tr className="filter-row">
+                        <th className="rownum" />
+                        {['customer', 'date', 'grade', 'qty', 'total', 'paid', 'balance'].map((k) => (
+                          <th key={k}>
+                            <input type="search" className="table-col-filter" aria-label={k} value={payFilters[k] || ''} onChange={(e) => setPayFilter(k, e.target.value)} />
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        const has = (v, q) => !q || String(v ?? '').toLowerCase().includes(q.toLowerCase());
+                        const rows = invoices.filter((i) => i.status !== 'paid').filter((i) => has(customerName(i.customerId), payFilters.customer)
+                          && has(fmtDateTime(i.date), payFilters.date) && has(`${i.grade} ${t[i.grade] || ''}`, payFilters.grade)
+                          && has(i.qty, payFilters.qty) && has(i.total ?? i.amount, payFilters.total)
+                          && has(i.paid, payFilters.paid) && has(i.balance, payFilters.balance));
+                        if (!rows.length) return <tr><td colSpan={8} className="muted">{t.noEntries}</td></tr>;
+                        return rows.map((i) => {
+                          const on = payf.invoiceId === i._id;
+                          return (
+                            <tr key={i._id} className={`pick-row${on ? ' picked' : ''}`} onClick={() => pickInvoice(i)} aria-selected={on}>
+                              <td className="rownum">
+                                <input type="radio" name="payInvoice" checked={on} onChange={() => pickInvoice(i)} aria-label={customerName(i.customerId)} />
+                              </td>
+                              <td><strong>{customerName(i.customerId)}</strong></td>
+                              <td><DateTime value={i.date} /></td>
+                              <td>{t[i.grade] || i.grade}</td>
+                              <td>{Number(i.qty).toLocaleString()}</td>
+                              <td>{Number(i.total ?? i.amount).toLocaleString()}</td>
+                              <td>{Number(i.paid || 0).toLocaleString()}</td>
+                              <td><strong className="warn">{Number(i.balance ?? i.amount).toLocaleString()}</strong></td>
+                            </tr>
+                          );
+                        });
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
               <label>
                 {t.amount}
                 <input required inputMode="decimal" placeholder="Payment amount" value={payf.amount} onChange={(e) => setPayf({ ...payf, amount: e.target.value })} />
+              </label>
+              <label>
+                {t.entryDate}
+                <input type="date" required max={new Date().toISOString().slice(0, 10)} value={payf.date} onChange={(e) => setPayf({ ...payf, date: e.target.value })} />
               </label>
               <label>
                 {t.mode}
@@ -192,7 +258,7 @@ export default function Sales() {
               </label>
             </div>
             <button className="primary" style={{ marginTop: '0.35rem' }}>
-              💾 {t.recordPayment}
+              {t.recordPayment}
             </button>
           </form>
         )}
@@ -212,7 +278,7 @@ export default function Sales() {
               </label>
             </div>
             <button className="primary" style={{ marginTop: '0.35rem' }}>
-              ➕ {t.add} {t.customer}
+              {t.add} {t.customer}
             </button>
           </form>
         )}
@@ -223,7 +289,7 @@ export default function Sales() {
       {/* Invoices List with Column Outlines and Quick Filters */}
       <div className="card table-wrap">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.65rem 0.85rem' }}>
-          <h2 style={{ margin: 0, border: 'none', padding: 0 }}>🧾 {t.sales} / Invoices ({invoices.filter((i) => {
+          <h2 style={{ margin: 0, border: 'none', padding: 0 }}>{t.sales} / Invoices ({invoices.filter((i) => {
             if (filters.date && !String(fmtDateTime(i.date)).toLowerCase().includes(filters.date.toLowerCase())) return false;
             if (filters.customer && !String(customerName(i.customerId)).toLowerCase().includes(filters.customer.toLowerCase())) return false;
             if (filters.grade && !String(t[i.grade] || i.grade).toLowerCase().includes(filters.grade.toLowerCase())) return false;
@@ -243,12 +309,12 @@ export default function Sales() {
             <tr>
               <th className="rownum">#</th>
               <th>{t.dateTime}</th>
-              <th>{t.customer}</th>
+              <th className="sticky-col">{t.customer}</th>
               <th>{t.grade}</th>
               <th>{t.qty}</th>
               <th>{t.amount}</th>
               <th>{t.status}</th>
-              <th className="actions" />
+              <th className="actions">{t.action}</th>
             </tr>
             <tr className="filter-row">
               <th className="rownum" />
@@ -272,33 +338,49 @@ export default function Sales() {
                 if (filters.status && !String(i.status).toLowerCase().includes(filters.status.toLowerCase())) return false;
                 return true;
               })
-              .map((i, idx) => (
+              .map((i, idx) => {
+                const editing = editor.isEditing(i._id);
+                return (
                 <tr key={i._id}>
                   <td className="rownum">{idx + 1}</td>
-                  <td>{fmtDateTime(i.date)}</td>
+                  <td><DateTime value={i.date} /></td>
                   <td><strong>{customerName(i.customerId)}</strong></td>
                   <td>
                     <span className="badge" style={{ background: '#f1f5f9', color: '#334155', border: '1px solid var(--line)' }}>
                       {t[i.grade] || i.grade}
                     </span>
                   </td>
-                  <td>{Number(i.qty).toLocaleString()}</td>
-                  <td><strong className="ok">{Number(i.amount).toLocaleString()}</strong></td>
+                  <td>{editing ? <input inputMode="numeric" className="cell-input" {...editor.field('qty')} /> : Number(i.qty).toLocaleString()}</td>
                   <td>
-                    <span className={`badge ${i.status === 'paid' ? 'green' : 'yellow'}`}>
-                      {i.status === 'paid' ? `✓ ${t.paid}` : `⏳ ${t.open}`}
-                    </span>
+                    {editing
+                      ? <input inputMode="decimal" className="cell-input" title={t.rate} {...editor.field('rate')} />
+                      : <strong className="ok">{Number(i.amount).toLocaleString()}</strong>}
+                  </td>
+                  <td>
+                    {i.status === 'paid' ? (
+                      <span className="badge green">✓ {t.paid}</span>
+                    ) : Number(i.paid) > 0 ? (
+                      <span className="badge yellow" title={`${t.paid}: ${Number(i.paid).toLocaleString()}`}>
+                        {t.partPaid} — {t.balanceDue}: {Number(i.balance).toLocaleString()}
+                      </span>
+                    ) : (
+                      <span className="badge yellow">⏳ {t.open}</span>
+                    )}
                   </td>
                   <td className="actions">
-                    <DeleteButton
-                      path={`/invoices/${i._id}`}
+                    <RowActions
+                      editor={editor} id={i._id} path={`/invoices/${i._id}`}
                       name={`${customerName(i.customerId)} — ${Number(i.amount).toLocaleString()}`}
-                      onDone={afterDelete}
+                      initial={{ qty: String(i.qty), rate: String(i.rate) }}
+                      toPayload={(d) => ({ qty: Number(d.qty), rate: d.rate })}
+                      onSaved={() => { setMsg({ text: t.savedOk, bad: false }); load(); }}
+                      onDeleted={afterDelete}
                       onError={onDelError}
                     />
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             {!invoices.length && (
               <tr>
                 <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted)' }}>

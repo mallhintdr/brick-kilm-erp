@@ -12,7 +12,7 @@ const teamOid = (s) => { try { return new ObjectId(s); } catch { return null; } 
 
 // Splits a piece-work gross amount equally across a team's members and posts
 // one earnings-ledger credit per worker, exactly like the seed simulation does.
-async function creditTeam(db, session, user, teamId, grossRs, type, sourceRef, clientUuidBase) {
+export async function creditTeam(db, session, user, teamId, grossRs, type, sourceRef, clientUuidBase, at) {
   const team = await db.collection('teams').findOne({ _id: teamOid(teamId), ...scope(user) }, { session });
   if (!team) throw httpError(404, 'Team not found');
   const members = team.memberIds || [];
@@ -22,11 +22,33 @@ async function creditTeam(db, session, user, teamId, grossRs, type, sourceRef, c
   for (let i = 0; i < members.length; i++) {
     out.push(await postEntry(db, session, user, {
       partyType: 'worker', partyId: members[i], account: 'earnings', type,
-      debit: share, sourceRef, clientUuid: `${clientUuidBase}-${i}`,
+      debit: share, sourceRef, clientUuid: `${clientUuidBase}-${i}`, at,
     }));
   }
   return out;
 }
+
+// A date-only work day (midnight UTC) is pinned to midday UTC so it stays on the same
+// calendar day in Pakistan time; no date means "now".
+// One moulding entry per team per work day: further output is an edit of that entry, not a new one.
+export async function assertTeamDayFree(db, session, user, teamId, at, exceptId = null) {
+  const day = new Date(at); const start = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate()));
+  const end = new Date(start.getTime() + 24 * 3600 * 1000);
+  const q = { ...scope(user), teamId, date: { $gte: start, $lt: end } };
+  if (exceptId) q._id = { $ne: exceptId };
+  if (await db.collection('mouldingBatches').findOne(q, { session })) {
+    throw httpError(409, 'This team already has a moulding entry for this day; edit that entry instead');
+  }
+}
+
+// When an entry happened: today's entries keep the real time; a back-dated one sits at midday of its day.
+export const entryAt = (d) => {
+  if (!d) return new Date();
+  const day = new Date(d).toISOString().slice(0, 10);
+  return day === new Date().toISOString().slice(0, 10) ? new Date() : workDateTime(d);
+};
+
+export const workDateTime = (d) => (d ? new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 12)) : new Date());
 
 // Shared by /inventory/summary and the stock guards below, so the number a guard
 // checks against is always the exact number the Inventory screen shows.
@@ -139,17 +161,26 @@ export function registerProductionRoutes(app, db) {
     if (b.kharaba > b.count) throw httpError(422, 'Kharaba cannot exceed the moulded count');
     const netCount = b.count - b.kharaba;
     const ledgerRef = `moulding:${b.clientUuid}`; // lets a later delete find and reverse the wage credits
+    const workAt = workDateTime(b.date);
     await withTransaction(db, async (session) => {
-      await db.collection('mouldingBatches').insertOne({ ...scope(req.user), teamId: b.teamId, count: b.count, kharaba: b.kharaba, netCount, date: new Date(), status: 'drying', ledgerRef }, { session });
+      await assertTeamDayFree(db, session, req.user, b.teamId, workAt);
+      await db.collection('mouldingBatches').insertOne({ ...scope(req.user), teamId: b.teamId, count: b.count, kharaba: b.kharaba, netCount, date: workAt, status: 'drying', ledgerRef }, { session });
       const rate = await getSetting(db, req.user, 'ratePathera', SETTING_DEFAULTS, session);
       const gross = ((netCount / 1000) * Number(rate)).toFixed(2);
-      await creditTeam(db, session, req.user, b.teamId, gross, 'moulding_credit', ledgerRef, b.clientUuid);
+      // Wages are dated to the work day too, so the weekly kharchi run puts them in the right week.
+      await creditTeam(db, session, req.user, b.teamId, gross, 'moulding_credit', ledgerRef, b.clientUuid, workAt);
       await audit(db, session, req.user, 'moulding.create', b);
     });
     res.status(201).json({ ok: true, netCount });
   }));
 
   app.get('/moulding', auth(), wrap(async (req, res) => {
+    // ?from=YYYY-MM-DD&to=YYYY-MM-DD returns every batch in that range (used by the weekly grid)
+    const { from, to } = req.query;
+    if (from && to && /^\d{4}-\d{2}-\d{2}$/.test(from) && /^\d{4}-\d{2}-\d{2}$/.test(to)) {
+      const range = { $gte: new Date(`${from}T00:00:00Z`), $lte: new Date(`${to}T23:59:59.999Z`) };
+      return res.json(await db.collection('mouldingBatches').find({ ...scope(req.user), date: range }).sort({ date: 1 }).toArray());
+    }
     res.json(await db.collection('mouldingBatches').find(scope(req.user)).sort({ date: -1 }).limit(200).toArray());
   }));
 
@@ -188,11 +219,12 @@ export function registerProductionRoutes(app, db) {
     const freight = b.freight ?? '0';
     const landedTotal = (b.qty * Number(b.rate) + Number(freight)).toFixed(2);
     const landedUnitCost = (Number(landedTotal) / b.qty).toFixed(2);
+    const at = entryAt(b.date);
     await withTransaction(db, async (session) => {
-      const exp = await db.collection('expenses').insertOne({ ...scope(req.user), category: b.item, amount: landedTotal, payee: b.supplierName, date: new Date() }, { session });
+      const exp = await db.collection('expenses').insertOne({ ...scope(req.user), category: b.item, amount: landedTotal, payee: b.supplierName, date: at }, { session });
       await db.collection('grns').insertOne({
         ...scope(req.user), item: b.item, supplierName: b.supplierName, vehicleNo: b.vehicleNo,
-        qty: b.qty, rate: b.rate, freight, landedTotal, landedUnitCost, labFields: b.labFields ?? {}, date: new Date(), expenseId: exp.insertedId,
+        qty: b.qty, rate: b.rate, freight, landedTotal, landedUnitCost, labFields: b.labFields ?? {}, date: at, expenseId: exp.insertedId,
       }, { session });
       await audit(db, session, req.user, 'grn.create', b);
     });
@@ -263,7 +295,7 @@ export function registerProductionRoutes(app, db) {
       const tax = (Number(amount) * (b.taxPct / 100)).toFixed(2);
       const doc = {
         ...scope(req.user), customerId: b.customerId, grade: b.grade, qty: b.qty, rate: String(rate),
-        amount, tax, status: 'open', date: new Date(), clientUuid: b.clientUuid,
+        amount, tax, status: 'open', date: entryAt(b.date), clientUuid: b.clientUuid,
       };
       const r = await db.collection('invoices').insertOne(doc, { session });
       await audit(db, session, req.user, 'invoice.create', { id: r.insertedId, ...b });
@@ -273,7 +305,18 @@ export function registerProductionRoutes(app, db) {
   }));
 
   app.get('/invoices', auth(), wrap(async (req, res) => {
-    res.json(await db.collection('invoices').find(scope(req.user)).sort({ date: -1 }).limit(200).toArray());
+    const invoices = await db.collection('invoices').find(scope(req.user)).sort({ date: -1 }).limit(200).toArray();
+    // paid so far and the remaining balance, so part-paid invoices show what is still owed
+    const paidRows = await db.collection('payments').aggregate([
+      { $match: { ...scope(req.user), invoiceId: { $in: invoices.map((i) => String(i._id)) } } },
+      { $group: { _id: '$invoiceId', total: { $sum: { $toDouble: '$amount' } } } },
+    ]).toArray();
+    const paidBy = Object.fromEntries(paidRows.map((r) => [r._id, r.total]));
+    res.json(invoices.map((i) => {
+      const total = Number(i.amount) + Number(i.tax || 0);
+      const paid = paidBy[String(i._id)] ?? 0;
+      return { ...i, total: total.toFixed(2), paid: paid.toFixed(2), balance: Math.max(0, total - paid).toFixed(2) };
+    }));
   }));
 
   app.post('/payments', auth('owner', 'munshi', 'accountant'), wrap(async (req, res) => {
@@ -282,13 +325,17 @@ export function registerProductionRoutes(app, db) {
     const result = await withTransaction(db, async (session) => {
       const invoice = await db.collection('invoices').findOne({ _id: oid(b.invoiceId), ...scope(req.user) }, { session });
       if (!invoice) throw httpError(404, 'Invoice not found');
+      const at = entryAt(b.date);
+      if (at.toISOString().slice(0, 10) < new Date(invoice.date).toISOString().slice(0, 10)) {
+        throw httpError(422, 'Payment date cannot be before the invoice date');
+      }
       const [paidRow] = await db.collection('payments').aggregate([
         { $match: { ...scope(req.user), invoiceId: b.invoiceId } },
         { $group: { _id: null, total: { $sum: { $toDouble: '$amount' } } } },
       ], { session }).toArray();
       const owed = Number(invoice.amount) + Number(invoice.tax) - (paidRow?.total ?? 0);
       if (toPaisa(b.amount) > toPaisa(owed.toFixed(2))) throw httpError(422, `Payment exceeds amount owed (Rs ${owed.toFixed(2)})`);
-      const doc = { ...scope(req.user), invoiceId: b.invoiceId, direction: 'in', partyId: invoice.customerId, amount: b.amount, mode: b.mode, date: new Date(), clientUuid: b.clientUuid };
+      const doc = { ...scope(req.user), invoiceId: b.invoiceId, direction: 'in', partyId: invoice.customerId, amount: b.amount, mode: b.mode, date: at, clientUuid: b.clientUuid };
       const r = await db.collection('payments').insertOne(doc, { session });
       const newPaid = (paidRow?.total ?? 0) + Number(b.amount);
       if (newPaid >= Number(invoice.amount) + Number(invoice.tax)) {
@@ -404,29 +451,43 @@ export function registerProductionRoutes(app, db) {
     const dayStart = new Date(`${dateStr}T00:00:00.000Z`);
     const dayEnd = new Date(`${dateStr}T23:59:59.999Z`);
 
-    const sumBefore = async (coll, dateField, extraMatch = {}) => {
+    // ledger entries have no 'amount'; advances are summed from their debit
+    const sumBefore = async (coll, dateField, extraMatch = {}, field = '$amount') => {
       const [r] = await db.collection(coll).aggregate([
         { $match: { ...s, ...extraMatch, [dateField]: { $lt: dayStart } } },
-        { $group: { _id: null, total: { $sum: { $toDouble: '$amount' } } } },
+        { $group: { _id: null, total: { $sum: { $toDouble: field } } } },
       ]).toArray();
       return r?.total ?? 0;
     };
 
-    const [inBefore, expBefore, advBefore] = await Promise.all([
+    const sumCreditBefore = async (match) => {
+      const [r] = await db.collection('ledgerEntries').aggregate([
+        { $match: { ...s, ...match, createdAt: { $lt: dayStart } } },
+        { $group: { _id: null, total: { $sum: { $toDouble: '$credit' } } } },
+      ]).toArray();
+      return r?.total ?? 0;
+    };
+    const [inBefore, expBefore, advBefore, advRevBefore] = await Promise.all([
       sumBefore('payments', 'date'),
       sumBefore('expenses', 'date'),
-      sumBefore('ledgerEntries', 'createdAt', { account: 'peshgi', type: 'advance' }),
+      sumBefore('ledgerEntries', 'createdAt', { account: 'peshgi', type: 'advance' }, '$debit'),
+      sumCreditBefore({ account: 'peshgi', type: 'advance_reversal' }),
     ]);
-    const openingCash = inBefore - expBefore - advBefore;
+    const openingCash = inBefore - expBefore - advBefore + advRevBefore;
 
     const [incomeRows, expenseRows, advanceRows] = await Promise.all([
       db.collection('payments').find({ ...s, date: { $gte: dayStart, $lte: dayEnd } }).sort({ date: 1 }).toArray(),
       db.collection('expenses').find({ ...s, date: { $gte: dayStart, $lte: dayEnd } }).sort({ date: 1 }).toArray(),
       db.collection('ledgerEntries').find({ ...s, account: 'peshgi', type: 'advance', createdAt: { $gte: dayStart, $lte: dayEnd } }).sort({ createdAt: 1 }).toArray(),
     ]);
+    // a corrected advance is replaced by its newer entry; hide the reversed original
+    const reversed = new Set((await db.collection('ledgerEntries').find(
+      { ...s, account: 'peshgi', type: 'advance_reversal', reversesId: { $in: advanceRows.map((r) => r._id) } },
+    ).toArray()).map((r) => String(r.reversesId)));
+    const liveAdvances = advanceRows.filter((r) => !reversed.has(String(r._id)));
 
     const customerIds = [...new Set(incomeRows.map((r) => r.partyId))].map(oid);
-    const workerIds = [...new Set(advanceRows.map((r) => r.partyId))].map(oid);
+    const workerIds = [...new Set(liveAdvances.map((r) => r.partyId))].map(oid);
     const [customers, workers] = await Promise.all([
       customerIds.length ? db.collection('customers').find({ _id: { $in: customerIds } }).toArray() : [],
       workerIds.length ? db.collection('workers').find({ _id: { $in: workerIds } }).toArray() : [],
@@ -434,10 +495,10 @@ export function registerProductionRoutes(app, db) {
     const customerName = Object.fromEntries(customers.map((c) => [String(c._id), c.name]));
     const workerName = Object.fromEntries(workers.map((w) => [String(w._id), w.name]));
 
-    const income = incomeRows.map((r) => ({ at: r.date, name: customerName[r.partyId] || '—', detail: `Payment (${r.mode})`, amount: r.amount }));
+    const income = incomeRows.map((r) => ({ kind: 'payment', id: r._id, at: r.date, name: customerName[r.partyId] || '—', detail: `Payment (${r.mode})`, amount: r.amount }));
     const expense = [
-      ...expenseRows.map((r) => ({ at: r.date, name: r.payee || r.category, detail: r.category, amount: r.amount })),
-      ...advanceRows.map((r) => ({ at: r.createdAt, name: workerName[r.partyId] || '—', detail: 'Peshgi advance', amount: r.debit.toString() })),
+      ...expenseRows.map((r) => ({ kind: 'expense', id: r._id, at: r.date, name: r.payee || r.category, detail: r.category, amount: r.amount })),
+      ...liveAdvances.map((r) => ({ kind: 'advance', id: r._id, at: r.createdAt, name: workerName[r.partyId] || '—', detail: 'Peshgi advance', amount: r.debit.toString() })),
     ].sort((a, b) => new Date(a.at) - new Date(b.at));
 
     const totalIn = income.reduce((a, r) => a + Number(r.amount), 0);

@@ -12,11 +12,12 @@ import { withTransaction } from './db.js';
 import {
   dec, oid, scope, audit, getSetting, postEntry, reverseEntry, balance, httpError, assertType,
 } from './core.js';
-import { registerProductionRoutes } from './production.js';
+import { registerProductionRoutes, entryAt } from './production.js';
 import { registerTypeRoutes } from './types.js';
 import { registerDeleteRoutes } from './deletes.js';
 import { registerKharchiRoutes } from './kharchi.js';
 import { registerUserRoutes, requirePerm } from './users.js';
+import { registerEditRoutes } from './edits.js';
 
 const SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 
@@ -24,20 +25,34 @@ const SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 // Unset = allow any origin, which is fine for local dev but must be set before a public launch.
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS?.split(',').map((s) => s.trim());
 
+// Session length. Active users never hit it: any authenticated request made after
+// RENEW_AFTER_S gets a fresh token back in the X-Refresh-Token header (sliding session).
+const TOKEN_TTL = process.env.TOKEN_TTL || '7d';
+const RENEW_AFTER_S = 60 * 60;
+const signToken = (claims) => jwt.sign(claims, SECRET, { expiresIn: TOKEN_TTL });
+
+// Only failed attempts count, keyed per IP + username, so one person mistyping a
+// password can't lock out everyone else at the kiln who shares the same mobile hotspot.
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false,
-  message: { error: 'Too many login attempts; try again later' },
+  windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false,
+  skipSuccessfulRequests: true,
+  keyGenerator: (req) => `${req.ip}|${String(req.body?.username || '').trim().toLowerCase()}`,
+  message: { error: 'Too many failed login attempts; try again in 15 minutes' },
 });
 
 const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res)).catch(next);
 
 export function createApp(db) {
   const app = express();
-  app.use(cors());
-  app.options('*', cors());
+  // Behind a reverse proxy (nginx/Caddy), req.ip is the proxy's address unless Express
+  // is told to trust it — which made every user share one login rate-limit bucket.
+  app.set('trust proxy', Number(process.env.TRUST_PROXY ?? 1));
+  const corsOpts = { exposedHeaders: ['X-Refresh-Token'] };
+  app.use(cors(corsOpts));
+  app.options('*', cors(corsOpts));
   app.use(express.json());
 
-  const auth = (...roles) => (req, _res, next) => {
+  const auth = (...roles) => (req, res, next) => {
     try {
       const token = (req.headers.authorization || '').replace('Bearer ', '');
       req.user = jwt.verify(token, SECRET);
@@ -45,6 +60,10 @@ export function createApp(db) {
       return next(httpError(401, 'Unauthorized'));
     }
     if (roles.length && !roles.includes(req.user.role)) return next(httpError(403, 'Forbidden'));
+    if (Date.now() / 1000 - req.user.iat > RENEW_AFTER_S) {
+      const { sub, role, tenantId, kilnId } = req.user;
+      res.set('X-Refresh-Token', signToken({ sub, role, tenantId, kilnId }));
+    }
     next();
   };
   app.locals.auth = auth;
@@ -77,11 +96,9 @@ export function createApp(db) {
       user = matches[0];
     }
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) throw httpError(401, 'Invalid credentials');
-    const token = jwt.sign(
-      { sub: String(user._id), role: user.role, tenantId: user.tenantId, kilnId: user.kilnId },
-      SECRET, { expiresIn: '12h' },
-    );
-    res.json({ token, role: user.role });
+    const token = signToken({ sub: String(user._id), role: user.role, tenantId: user.tenantId, kilnId: user.kilnId });
+    const tenant = await db.collection('tenants').findOne({ _id: oid(user.tenantId) });
+    res.json({ token, role: user.role, username: user.username, kilnCode: tenant?.code ?? null });
   }));
 
   // ---- Settings (owner-editable, versioned, audit-logged) ----
@@ -170,7 +187,7 @@ export function createApp(db) {
       }
       const entry = await postEntry(db, session, req.user, {
         partyType: 'worker', partyId: a.workerId, account: 'peshgi', type: 'advance',
-        debit: a.amount, reason: a.overrideReason, clientUuid: a.clientUuid,
+        debit: a.amount, reason: a.overrideReason, clientUuid: a.clientUuid, at: entryAt(a.date),
       });
       await audit(db, session, req.user, overridden ? 'advance.override' : 'advance.create', { workerId: a.workerId, amount: a.amount, reason: a.overrideReason });
       return entry;
@@ -183,7 +200,7 @@ export function createApp(db) {
     const entry = await withTransaction(db, async (session) => {
       const e = await postEntry(db, session, req.user, {
         partyType: 'worker', partyId: r.workerId, account: 'peshgi', type: 'recovery',
-        credit: r.amount, clientUuid: r.clientUuid,
+        credit: r.amount, clientUuid: r.clientUuid, at: entryAt(r.date),
       });
       await audit(db, session, req.user, 'recovery.create', r);
       return e;
@@ -334,6 +351,7 @@ export function createApp(db) {
   registerDeleteRoutes(app, db);
   registerKharchiRoutes(app, db);
   registerUserRoutes(app, db);
+  registerEditRoutes(app, db);
 
   app.use((err, _req, res, _next) => {
     if (err instanceof ZodError) return res.status(400).json({ error: 'Validation failed', issues: err.issues });

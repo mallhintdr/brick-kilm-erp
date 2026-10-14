@@ -119,7 +119,7 @@ export default function Users() {
 
       <div className="card table-wrap">
         <table>
-          <thead><tr><th className="rownum">#</th><th>{t.username}</th><th>{t.roleLabel}</th><th className="actions" /></tr></thead>
+          <thead><tr><th className="rownum">#</th><th className="sticky-col">{t.username}</th><th>{t.roleLabel}</th><th className="actions">{t.action}</th></tr></thead>
           <tbody>
             {users.map((u, i) => (
               <tr key={u._id}>

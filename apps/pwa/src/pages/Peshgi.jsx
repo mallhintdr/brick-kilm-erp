@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useT } from '../i18n.js';
 import { Link } from 'react-router-dom';
 import { get, post, uuid, getRole, fmtDateTime } from '../api.js';
+import DateTime from '../components/DateTime.jsx';
+import SearchSelect from '../components/SearchSelect.jsx';
 
 export default function Peshgi() {
   const t = useT();
@@ -9,6 +11,7 @@ export default function Peshgi() {
   const [workerId, setWorkerId] = useState('');
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
+  const [entryDate, setEntryDate] = useState(new Date().toISOString().slice(0, 10));
   const [balance, setBalance] = useState(null);
   const [entries, setEntries] = useState([]);
   const [msg, setMsg] = useState({ text: '', bad: false });
@@ -33,7 +36,7 @@ export default function Peshgi() {
     setMsg({ text: '', bad: false });
     setSubmitting(true);
     try {
-      const body = { workerId, amount, clientUuid: uuid() };
+      const body = { workerId, amount, date: entryDate, clientUuid: uuid() };
       if (path === '/advances' && reason) body.overrideReason = reason;
       const r = await post(path, body);
       setMsg({ text: r.queued ? t.queued : t.savedOk, bad: false });
@@ -52,16 +55,19 @@ export default function Peshgi() {
     <div className="grid">
       {/* Advance / Recovery Action Card */}
       <div className="card grid">
-        <h2>💰 {t.peshgi} — Advance & Recovery Engine</h2>
+        <h2>{t.peshgi} — Advance & Recovery Engine</h2>
 
         <div className="grid two" style={{ gap: '0.9rem' }}>
           <label style={{ gridColumn: '1 / -1' }}>
             {t.worker}
-            <select value={workerId} onChange={(e) => setWorkerId(e.target.value)}>
-              {workers.map((w) => (
-                <option key={w._id} value={w._id}>{w.name}</option>
-              ))}
-            </select>
+            <SearchSelect
+              ariaLabel={t.worker} placeholder={t.typeToSearch} value={workerId} onChange={setWorkerId}
+              options={workers.map((w) => ({
+                value: w._id,
+                label: w.fatherName ? `${w.name} — ${w.fatherName}` : w.name,
+                search: `${w.cnic || ''} ${w.category || ''} ${w.phone || ''}`,
+              }))}
+            />
           </label>
         </div>
 
@@ -84,6 +90,10 @@ export default function Peshgi() {
         </div>
 
         <div className="grid two" style={{ gap: '0.9rem' }}>
+          <label>
+            {t.entryDate}
+            <input type="date" required max={new Date().toISOString().slice(0, 10)} value={entryDate} onChange={(e) => setEntryDate(e.target.value)} />
+          </label>
           <label>
             {t.amount} (Rs)
             <input
@@ -130,7 +140,7 @@ export default function Peshgi() {
       {/* Ledger History Table with Column Outlines and Quick Filters */}
       <div className="card table-wrap">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.65rem 0.85rem' }}>
-          <h2 style={{ margin: 0, border: 'none', padding: 0 }}>📖 {t.ledgerHistory} ({entries.filter((e) => {
+          <h2 style={{ margin: 0, border: 'none', padding: 0 }}>{t.ledgerHistory} ({entries.filter((e) => {
             if (filters.date && !String(fmtDateTime(e.createdAt)).toLowerCase().includes(filters.date.toLowerCase())) return false;
             if (filters.account && !String(e.account === 'peshgi' ? t.peshgi : t.earnings).toLowerCase().includes(filters.account.toLowerCase())) return false;
             if (filters.type && !String(e.type).toLowerCase().includes(filters.type.toLowerCase())) return false;
@@ -148,7 +158,7 @@ export default function Peshgi() {
             <tr>
               <th className="rownum">#</th>
               <th>{t.dateTime}</th>
-              <th>{t.account}</th>
+              <th className="sticky-col">{t.account}</th>
               <th>{t.type}</th>
               <th>{t.amount}</th>
             </tr>
@@ -172,7 +182,7 @@ export default function Peshgi() {
               .map((e, i) => (
                 <tr key={e._id}>
                   <td className="rownum">{i + 1}</td>
-                  <td>{fmtDateTime(e.createdAt)}</td>
+                  <td><DateTime value={e.createdAt} /></td>
                   <td><strong>{e.account === 'peshgi' ? t.peshgi : t.earnings}</strong></td>
                   <td>
                     <span className="badge" style={{ background: '#f1f5f9', color: '#475569' }}>

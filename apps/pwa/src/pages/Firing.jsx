@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useT } from '../i18n.js';
 import { get, post, uuid, fmtDateTime } from '../api.js';
-import DeleteButton from '../components/DeleteButton.jsx';
+import DateTime from '../components/DateTime.jsx';
+import RowActions, { useRowEdit } from '../components/RowActions.jsx';
 
 export default function Firing() {
   const t = useT();
+  const editor = useRowEdit();
   const [teams, setTeams] = useState([]);
   const [list, setList] = useState([]);
   const [f, setF] = useState({ teamId: '', shift: 'day', coalKg: '', tempC: '', fanOn: true, genHours: '0' });
@@ -65,7 +67,7 @@ export default function Firing() {
 
       {/* Firing Entry Form */}
       <form className="card grid" onSubmit={submit}>
-        <h2>🔥 {t.firing} — Shift & Temperature Log</h2>
+        <h2>{t.firing} — Shift & Temperature Log</h2>
 
         <div className="grid two" style={{ gap: '0.9rem' }}>
           <label>
@@ -119,7 +121,7 @@ export default function Firing() {
       {/* Firing History Table with Column Outlines and Quick Filters */}
       <div className="card table-wrap">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.65rem 0.85rem' }}>
-          <h2 style={{ margin: 0, border: 'none', padding: 0 }}>📋 Firing Logs ({list.filter((f2) => {
+          <h2 style={{ margin: 0, border: 'none', padding: 0 }}>Firing Logs ({list.filter((f2) => {
             if (filters.date && !String(fmtDateTime(f2.date)).toLowerCase().includes(filters.date.toLowerCase())) return false;
             if (filters.shift && !String(f2.shift).toLowerCase().includes(filters.shift.toLowerCase())) return false;
             if (filters.coalKg && !String(f2.coalKg).toLowerCase().includes(filters.coalKg.toLowerCase())) return false;
@@ -142,7 +144,7 @@ export default function Firing() {
               <th>{t.coalKg}</th>
               <th>{t.tempC}</th>
               <th>{t.fanOn}</th>
-              <th className="actions" />
+              <th className="actions">{t.action}</th>
             </tr>
             <tr className="filter-row">
               <th className="rownum" />
@@ -164,32 +166,49 @@ export default function Firing() {
                 if (filters.fanOn && !String(f2.fanOn ? 'on' : 'off').toLowerCase().includes(filters.fanOn.toLowerCase())) return false;
                 return true;
               })
-              .map((f2, i) => (
+              .map((f2, i) => {
+                const editing = editor.isEditing(f2._id);
+                return (
                 <tr key={f2._id}>
                   <td className="rownum">{i + 1}</td>
-                  <td>{fmtDateTime(f2.date)}</td>
+                  <td><DateTime value={f2.date} /></td>
                   <td>
-                    <span className="badge" style={{ background: '#f1f5f9', color: '#1e293b' }}>
-                      {f2.shift === 'day' ? `☀️ ${t.day}` : `🌙 ${t.night}`}
-                    </span>
+                    {editing ? (
+                      <select className="cell-input" {...editor.field('shift')}>
+                        <option value="day">{t.day}</option>
+                        <option value="night">{t.night}</option>
+                      </select>
+                    ) : (
+                      <span className="badge" style={{ background: '#f1f5f9', color: '#1e293b' }}>
+                        {f2.shift === 'day' ? `☀️ ${t.day}` : `🌙 ${t.night}`}
+                      </span>
+                    )}
                   </td>
-                  <td><strong>{Number(f2.coalKg).toLocaleString()} kg</strong></td>
-                  <td><strong>{f2.tempC} °C</strong></td>
+                  <td>{editing ? <input inputMode="numeric" className="cell-input" {...editor.field('coalKg')} /> : <strong>{Number(f2.coalKg).toLocaleString()} kg</strong>}</td>
+                  <td>{editing ? <input inputMode="numeric" className="cell-input" {...editor.field('tempC')} /> : <strong>{f2.tempC} °C</strong>}</td>
                   <td>
-                    <span className={`badge ${f2.fanOn ? 'green' : 'red'}`}>
-                      {f2.fanOn ? '✓ On' : '✗ Off'}
-                    </span>
+                    {editing ? (
+                      <select className="cell-input" {...editor.field('fanOn')}>
+                        <option value="true">On</option>
+                        <option value="false">Off</option>
+                      </select>
+                    ) : (
+                      <span className={`badge ${f2.fanOn ? 'green' : 'red'}`}>{f2.fanOn ? '✓ On' : '✗ Off'}</span>
+                    )}
                   </td>
                   <td className="actions">
-                    <DeleteButton
-                      path={`/firing-logs/${f2._id}`}
-                      name={fmtDateTime(f2.date)}
-                      onDone={(r) => { setMsg({ text: r.legacyNoLedgerLink ? `${t.deleted} — ${t.legacyNote}` : t.deleted, bad: false }); load(); }}
+                    <RowActions
+                      editor={editor} id={f2._id} path={`/firing-logs/${f2._id}`} name={fmtDateTime(f2.date)}
+                      initial={{ shift: f2.shift, coalKg: String(f2.coalKg), tempC: String(f2.tempC), fanOn: String(!!f2.fanOn) }}
+                      toPayload={(d) => ({ shift: d.shift, coalKg: Number(d.coalKg), tempC: Number(d.tempC), fanOn: d.fanOn === 'true' })}
+                      onSaved={() => { setMsg({ text: t.savedOk, bad: false }); load(); }}
+                      onDeleted={(r) => { setMsg({ text: r?.legacyNoLedgerLink ? `${t.deleted} — ${t.legacyNote}` : t.deleted, bad: false }); load(); }}
                       onError={(m) => setMsg({ text: m, bad: true })}
                     />
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             {!list.length && (
               <tr>
                 <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted)' }}>

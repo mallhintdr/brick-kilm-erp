@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useT } from '../i18n.js';
 import { get, fmtDateTime } from '../api.js';
+import DateTime from '../components/DateTime.jsx';
 
 export default function AuditLogs() {
   const t = useT();
@@ -67,7 +68,7 @@ export default function AuditLogs() {
 
       <div className="card table-wrap">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.65rem 0.85rem' }}>
-          <h2 style={{ margin: 0, border: 'none', padding: 0 }}>🛡️ {t.auditLogs} ({data.entries.filter((e) => {
+          <h2 style={{ margin: 0, border: 'none', padding: 0 }}>{t.auditLogs} ({data.entries.filter((e) => {
             if (colFilters.at && !String(fmtDateTime(e.at)).toLowerCase().includes(colFilters.at.toLowerCase())) return false;
             if (colFilters.actor && !String(e.actor || '').toLowerCase().includes(colFilters.actor.toLowerCase())) return false;
             if (colFilters.action && !String(e.action || '').toLowerCase().includes(colFilters.action.toLowerCase())) return false;
@@ -85,7 +86,7 @@ export default function AuditLogs() {
             <tr>
               <th className="rownum">#</th>
               <th>{t.dateTime}</th>
-              <th>{t.name}</th>
+              <th className="sticky-col">{t.name}</th>
               <th>{t.type}</th>
               <th>{t.details}</th>
             </tr>
@@ -109,7 +110,7 @@ export default function AuditLogs() {
               .map((e, i) => (
                 <tr key={e._id}>
                   <td className="rownum">{i + 1}</td>
-                  <td>{fmtDateTime(e.at)}</td>
+                  <td><DateTime value={e.at} /></td>
                   <td><strong>{e.actor}</strong></td>
                   <td><span className="badge" style={{ background: '#f1f5f9', color: '#1e293b' }}>{e.action}</span></td>
                   <td>{summarize(e.data)}</td>

@@ -163,7 +163,7 @@ export default function Insights() {
         {/* Group 1: Production & Quality Metrics */}
         <div className="kpi-group">
           <h3 className="kpi-group-title">
-            🧱 {t.groupProd}
+            {t.groupProd}
           </h3>
           <div className="kpi-grid">
             <div className="stat" style={{ borderInlineStartColor: 'var(--brand-dark)' }}>
@@ -188,7 +188,7 @@ export default function Insights() {
         {/* Group 2: Financial Performance & Cash Flow (No Rs prefix on dashboard) */}
         <div className="kpi-group">
           <h3 className="kpi-group-title">
-            💰 {t.groupFinance}
+            {t.groupFinance}
           </h3>
           <div className="kpi-grid">
             <div className="stat" style={{ borderInlineStartColor: 'var(--info)' }}>
@@ -215,7 +215,7 @@ export default function Insights() {
         {/* Group 3: Operations & Compliance Monitoring */}
         <div className="kpi-group">
           <h3 className="kpi-group-title">
-            ⚖️ {t.groupRisk}
+            {t.groupRisk}
           </h3>
           <div className="kpi-grid">
             <div className="stat" style={{ borderInlineStartColor: 'var(--warn-dark)' }}>
@@ -233,7 +233,7 @@ export default function Insights() {
       {/* Bonded Labour Alert Table */}
       {bondedRisk.length > 0 && (
         <div className="card">
-          <h2>⚠️ {t.bondedLabourRisk}</h2>
+          <h2>{t.bondedLabourRisk}</h2>
           <p role="status" className="warn" style={{ marginBottom: '0.85rem' }}>
             {t.bondedLabourRiskNote}
           </p>
@@ -242,7 +242,7 @@ export default function Insights() {
               <thead>
                 <tr>
                   <th className="rownum">#</th>
-                  <th>{t.name}</th>
+                  <th className="sticky-col">{t.name}</th>
                   <th style={{ textAlign: 'end' }}>{t.outstanding}</th>
                   <th style={{ textAlign: 'end' }}>{t.daysSinceRecovery}</th>
                 </tr>

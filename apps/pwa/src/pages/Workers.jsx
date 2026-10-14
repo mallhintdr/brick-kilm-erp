@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useT } from '../i18n.js';
-import { get, post, uuid } from '../api.js';
+import { get, post, uuid, getRole } from '../api.js';
 import { useTypes, typeLabel } from '../useTypes.js';
-import DeleteButton from '../components/DeleteButton.jsx';
+import RowActions, { useRowEdit } from '../components/RowActions.jsx';
 import { useLang } from '../i18n.js';
 
-const blank = { name: '', cnic: '', dob: '', category: 'pathera', eobiNo: '', pessiNo: '' };
+const blank = { name: '', fatherName: '', cnic: '', dob: '', category: 'pathera', eobiNo: '', pessiNo: '' };
 
 export default function Workers() {
   const t = useT();
@@ -15,6 +15,9 @@ export default function Workers() {
   const [f, setF] = useState(blank);
   const [msg, setMsg] = useState({ text: '', bad: false });
   const [submitting, setSubmitting] = useState(false);
+  const editor = useRowEdit();
+  // Server enforces the per-user permission matrix; this just hides the icon where it would 403.
+  const canEditWorkers = ['owner', 'munshi'].includes(getRole());
 
   const load = () => get('/workers').then(setList).catch(() => {});
   useEffect(() => { load(); }, []);
@@ -48,6 +51,7 @@ export default function Workers() {
 
   const filteredList = list.filter((w) => {
     if (filters.name && !String(w.name || '').toLowerCase().includes(filters.name.toLowerCase())) return false;
+    if (filters.fatherName && !String(w.fatherName || '').toLowerCase().includes(filters.fatherName.toLowerCase())) return false;
     if (filters.category && !String(cats.label(w.category) || w.category || '').toLowerCase().includes(filters.category.toLowerCase())) return false;
     if (filters.contract && !String(w.contractSigned ? t.signed : 'pending').toLowerCase().includes(filters.contract.toLowerCase())) return false;
     if (filters.eobiNo && !String(w.eobiNo || '').toLowerCase().includes(filters.eobiNo.toLowerCase())) return false;
@@ -61,7 +65,7 @@ export default function Workers() {
       <div className="kpi-section">
         <div className="kpi-group">
           <h3 className="kpi-group-title">
-            👷 Workforce Registry & Legal Compliance (مزدور اور قانونی رجسٹریشن)
+            Workforce Registry & Legal Compliance (مزدور اور قانونی رجسٹریشن)
           </h3>
           <div className="kpi-grid">
             <div className="stat" style={{ borderInlineStartColor: 'var(--brand-dark)' }}>
@@ -89,6 +93,10 @@ export default function Workers() {
           <label>
             {t.name}
             <input required placeholder="Worker full name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+          </label>
+          <label>
+            {t.fatherName}
+            <input required minLength={2} value={f.fatherName} onChange={(e) => setF({ ...f, fatherName: e.target.value })} />
           </label>
           <label>
             {t.cnic}
@@ -137,21 +145,30 @@ export default function Workers() {
           <thead>
             <tr>
               <th className="rownum">#</th>
-              <th>{t.name}</th>
+              <th className="sticky-col">{t.name}</th>
+              <th>{t.fatherName}</th>
               <th>{t.category}</th>
               <th>{t.contract}</th>
               <th>{t.eobiNo}</th>
               <th>{t.pessiNo}</th>
-              <th className="actions" />
+              <th className="actions">{t.action}</th>
             </tr>
             <tr className="filter-row">
               <th className="rownum" />
-              <th>
+              <th className="sticky-col">
                 <input
                   type="search"
                   className="table-col-filter"
                   value={filters.name || ''}
                   onChange={(e) => updateFilter('name', e.target.value)}
+                />
+              </th>
+              <th>
+                <input
+                  type="search"
+                  className="table-col-filter"
+                  value={filters.fatherName || ''}
+                  onChange={(e) => updateFilter('fatherName', e.target.value)}
                 />
               </th>
               <th>
@@ -190,14 +207,23 @@ export default function Workers() {
             </tr>
           </thead>
           <tbody>
-            {filteredList.map((w, i) => (
+            {filteredList.map((w, i) => {
+              const editing = editor.isEditing(w._id);
+              return (
               <tr key={w._id}>
                 <td className="rownum">{i + 1}</td>
-                <td><strong style={{ color: 'var(--ink)' }}>{w.name}</strong></td>
+                <td className="sticky-col">{editing ? <input className="cell-input" {...editor.field('name')} /> : <strong style={{ color: 'var(--ink)' }}>{w.name}</strong>}</td>
+                <td>{editing ? <input className="cell-input" {...editor.field('fatherName')} /> : (w.fatherName || <span className="muted">—</span>)}</td>
                 <td>
-                  <span className="badge" style={{ background: 'var(--brand-tint)', color: 'var(--brand-dark)', border: '1.5px solid var(--brand-dark)' }}>
-                    {cats.label(w.category)}
-                  </span>
+                  {editing ? (
+                    <select className="cell-input" {...editor.field('category')}>
+                      {cats.active.map((c) => <option key={c.key} value={c.key}>{typeLabel(c, lang)}</option>)}
+                    </select>
+                  ) : (
+                    <span className="badge" style={{ background: 'var(--brand-tint)', color: 'var(--brand-dark)', border: '1.5px solid var(--brand-dark)' }}>
+                      {cats.label(w.category)}
+                    </span>
+                  )}
                 </td>
                 <td>
                   {w.contractSigned ? (
@@ -208,18 +234,22 @@ export default function Workers() {
                     </button>
                   )}
                 </td>
-                <td>{w.eobiNo || <span className="muted">—</span>}</td>
-                <td>{w.pessiNo || <span className="muted">—</span>}</td>
+                <td>{editing ? <input className="cell-input" {...editor.field('eobiNo')} /> : (w.eobiNo || <span className="muted">—</span>)}</td>
+                <td>{editing ? <input className="cell-input" {...editor.field('pessiNo')} /> : (w.pessiNo || <span className="muted">—</span>)}</td>
                 <td className="actions">
-                  <DeleteButton
-                    path={`/workers/${w._id}`}
-                    name={w.name}
-                    onDone={() => { setMsg({ text: t.deleted, bad: false }); load(); }}
+                  <RowActions
+                    editor={editor} id={w._id} path={`/workers/${w._id}`} name={w.name}
+                    initial={{ name: w.name, fatherName: w.fatherName || '', category: w.category, eobiNo: w.eobiNo || '', pessiNo: w.pessiNo || '' }}
+                    toPayload={(d) => Object.fromEntries(Object.entries(d).filter(([k, v]) => v !== '' || k === 'eobiNo' || k === 'pessiNo'))}
+                    canEdit={canEditWorkers}
+                    onSaved={() => { setMsg({ text: t.savedOk, bad: false }); load(); }}
+                    onDeleted={() => { setMsg({ text: t.deleted, bad: false }); load(); }}
                     onError={(m) => setMsg({ text: m, bad: true })}
                   />
                 </td>
               </tr>
-            ))}
+              );
+            })}
             {!filteredList.length && (
               <tr>
                 <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted)' }}>

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { useFrozenColumns } from './useFrozenColumns.js';
+import { NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { LangContext, useT, useLang } from './i18n.js';
-import { clearSession, flushOutbox, getRole, getToken, getUsername, onOutboxChange, outboxCount } from './api.js';
+import { clearSession, flushOutbox, getKilnCode, getRole, getToken, getUsername } from './api.js';
 import Login from './pages/Login.jsx';
 import Workers from './pages/Workers.jsx';
 import Peshgi from './pages/Peshgi.jsx';
@@ -106,7 +107,7 @@ const ICONS = {
   ),
 };
 
-function Icon({ name, size = 18, color }) {
+function Icon({ name, size = 18, color, stroke = 2.2 }) {
   const glyph = ICONS[name] || ICONS.more;
   return (
     <svg
@@ -115,7 +116,7 @@ function Icon({ name, size = 18, color }) {
       height={size}
       fill="none"
       stroke={color || 'currentColor'}
-      strokeWidth="2.2"
+      strokeWidth={stroke}
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
@@ -151,245 +152,30 @@ const ROW_2_LINKS = [
 const visibleLinks = (links) => links.filter((l) => !l.roles || l.roles.includes(getRole()));
 const ALL_LINKS = [...ROW_1_LINKS, ...ROW_2_LINKS];
 
-function FloatingToolbar() {
-  const t = useT();
-  const { lang, setLang } = useLang();
-  const location = useLocation();
-  const isHomePage = location.pathname === '/' || location.pathname === '/home';
-
-  const [count, setCount] = useState(0);
-  const [online, setOnline] = useState(navigator.onLine);
-  const [isSyncing, setIsSyncing] = useState(false);
-
+// Offline entries queue in the outbox; push them whenever the connection is back and every 30s.
+// Runs silently (the status bar that showed it was removed).
+function useBackgroundSync() {
   useEffect(() => {
-    const refresh = () => outboxCount().then(setCount);
-    const sync = () => {
-      setIsSyncing(true);
-      flushOutbox().then(() => {
-        refresh();
-        setTimeout(() => setIsSyncing(false), 500);
-      }).catch(() => setIsSyncing(false));
-    };
-    refresh();
-    const off = onOutboxChange(refresh);
-    const up = () => { setOnline(true); sync(); };
-    const down = () => setOnline(false);
-    window.addEventListener('online', up);
-    window.addEventListener('offline', down);
+    const sync = () => { if (navigator.onLine) flushOutbox().catch(() => {}); };
+    sync();
+    window.addEventListener('online', sync);
     const timer = setInterval(sync, 30000);
-    return () => {
-      off();
-      clearInterval(timer);
-      window.removeEventListener('online', up);
-      window.removeEventListener('offline', down);
-    };
+    return () => { clearInterval(timer); window.removeEventListener('online', sync); };
   }, []);
-
-  const handleManualSync = () => {
-    setIsSyncing(true);
-    flushOutbox().then(() => {
-      outboxCount().then(setCount);
-      setTimeout(() => setIsSyncing(false), 600);
-    }).catch(() => setIsSyncing(false));
-  };
-
-  const [isRetracted, setIsRetracted] = useState(() => {
-    try {
-      return localStorage.getItem('kiln_toolbar_retracted') === 'true';
-    } catch {
-      return false;
-    }
-  });
-
-  // Vertical position along the right channel (in px from top of viewport)
-  const [topPx, setTopPx] = useState(() => {
-    try {
-      const saved = localStorage.getItem('kiln_toolbar_top_px');
-      return saved ? parseFloat(saved) : (typeof window !== 'undefined' ? window.innerHeight / 2 : 350);
-    } catch {
-      return 350;
-    }
-  });
-
-  const toolbarRef = useRef(null);
-  const isDraggingRef = useRef(false);
-  const dragStartYRef = useRef(0);
-  const dragStartTopPxRef = useRef(350);
-  const hasMovedRef = useRef(false);
-
-  const [isDragging, setIsDragging] = useState(false);
-
-  // Dynamically clamp topPx so toolbar is always completely inside the viewport
-  const clampPosition = (desiredTopPx, retractedState = isRetracted) => {
-    const windowH = typeof window !== 'undefined' ? window.innerHeight : 800;
-    // Top header is ~52px tall; add safety margin so toolbar never touches header
-    const headerSafeMargin = 64; 
-    const bottomSafeMargin = 16;
-    
-    // When expanded, toolbar has 4 buttons (each 36px + gaps + padding ~185px). When retracted, ~40px.
-    const toolbarH = toolbarRef.current && toolbarRef.current.offsetHeight > 30
-      ? toolbarRef.current.offsetHeight
-      : (retractedState ? 40 : 185);
-    const halfH = toolbarH / 2;
-
-    const minCenterY = headerSafeMargin + halfH;
-    const maxCenterY = Math.max(minCenterY, windowH - bottomSafeMargin - halfH);
-
-    return Math.min(maxCenterY, Math.max(minCenterY, desiredTopPx));
-  };
-
-  // Keep inside viewport whenever window resizes or retract state changes
-  useEffect(() => {
-    const handleAdjust = () => {
-      setTopPx((curr) => clampPosition(curr));
-    };
-    handleAdjust();
-    window.addEventListener('resize', handleAdjust);
-    return () => window.removeEventListener('resize', handleAdjust);
-  }, [isRetracted]);
-
-  const handlePointerDown = (e) => {
-    isDraggingRef.current = true;
-    setIsDragging(true);
-    dragStartYRef.current = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
-    dragStartTopPxRef.current = topPx;
-    hasMovedRef.current = false;
-
-    const onPointerMove = (ev) => {
-      if (!isDraggingRef.current) return;
-      const clientY = ev.clientY || (ev.touches && ev.touches[0] ? ev.touches[0].clientY : 0);
-      const deltaY = clientY - dragStartYRef.current;
-      if (Math.abs(deltaY) > 4) {
-        hasMovedRef.current = true;
-      }
-      const rawTop = dragStartTopPxRef.current + deltaY;
-      const safeTop = clampPosition(rawTop);
-      setTopPx(safeTop);
-    };
-
-    const onPointerUp = () => {
-      if (isDraggingRef.current) {
-        isDraggingRef.current = false;
-        setIsDragging(false);
-        try {
-          localStorage.setItem('kiln_toolbar_top_px', String(topPx));
-        } catch {
-          // ignore
-        }
-      }
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
-      window.removeEventListener('touchmove', onPointerMove);
-      window.removeEventListener('touchend', onPointerUp);
-    };
-
-    window.addEventListener('pointermove', onPointerMove, { passive: true });
-    window.addEventListener('pointerup', onPointerUp);
-    window.addEventListener('touchmove', onPointerMove, { passive: true });
-    window.addEventListener('touchend', onPointerUp);
-  };
-
-  const handleToggleClick = (e) => {
-    // If it was dragged, do not toggle retract
-    if (hasMovedRef.current) {
-      e.preventDefault();
-      e.stopPropagation();
-      return;
-    }
-    setIsRetracted((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem('kiln_toolbar_retracted', String(next));
-      } catch {
-        // ignore
-      }
-      // Instantly adjust position so the newly expanded toolbar smoothly repositions inside view
-      setTopPx((curr) => clampPosition(curr, next));
-      return next;
-    });
-  };
-
-  const syncStatusCls = !online ? 'offline' : count ? 'pending' : 'synced';
-  const syncColor = !online ? '#f87171' : count ? '#fbbf24' : '#10b981';
-
-  return (
-    <aside
-      ref={toolbarRef}
-      className={`floating-action-toolbar${isRetracted ? ' retracted' : ''}${isDragging ? ' dragging' : ''}`}
-      style={{ top: `${topPx}px` }}
-      aria-label="Quick Actions Toolbar"
-    >
-      <div className="floating-toolbar-container">
-        {/* Retract / Expand Toggle Button - Always on Right Channel, vertically floatable */}
-        <button
-          type="button"
-          className="toolbar-circle-btn toggle-retract-btn"
-          title={isRetracted ? (lang === 'ur' ? 'ٹول بار کھولیں (پکڑ کر اوپر نیچے کریں)' : 'Expand Toolbar (Drag up/down to move)') : (lang === 'ur' ? 'ٹول بار بند کریں' : 'Retract Toolbar')}
-          aria-label={isRetracted ? 'Expand Toolbar' : 'Retract Toolbar'}
-          onPointerDown={handlePointerDown}
-          onClick={handleToggleClick}
-        >
-          <Icon
-            name={isRetracted ? 'chevronLeft' : 'chevronRight'}
-            color="#f97316"
-            size={isRetracted ? 14 : 16}
-          />
-          <span className="toolbar-tooltip">
-            {isRetracted ? (lang === 'ur' ? 'ٹول بار کھولیں' : 'Expand Toolbar') : (lang === 'ur' ? 'ٹول بار بند کریں' : 'Retract Toolbar')}
-          </span>
-        </button>
-
-        {/* Retractable Buttons Wrapper */}
-        <div className="toolbar-buttons-collapsible">
-          {/* Circular Home Action Button */}
-          <NavLink
-            to="/home"
-            className={`toolbar-circle-btn home-circle-btn${isHomePage ? ' active' : ''}`}
-            title={t.home}
-            aria-label={t.home}
-          >
-            <Icon name="home" color={isHomePage ? '#ffffff' : '#ea580c'} size={18} />
-            <span className="toolbar-tooltip">{t.home}</span>
-          </NavLink>
-
-          {/* Circular Sync Action Button with White Fill & Centered Icon */}
-          <button
-            type="button"
-            className={`toolbar-circle-btn sync-circle-btn ${syncStatusCls}${isSyncing ? ' spinning' : ''}`}
-            title={!online ? t.offline : count ? `${t.pending}: ${count}` : t.synced}
-            aria-label={!online ? t.offline : count ? `${t.pending}: ${count}` : t.synced}
-            onClick={handleManualSync}
-          >
-            <Icon name="sync" color={syncColor} size={18} />
-            {count > 0 && <span className="toolbar-count-badge">{count}</span>}
-            <span className="toolbar-tooltip">{!online ? t.offline : count ? `${t.pending}: ${count}` : t.synced}</span>
-          </button>
-
-          {/* Circular Language Toggle Action Button with Centered Language Code */}
-          <button
-            type="button"
-            className="toolbar-circle-btn lang-circle-btn"
-            title={`Switch to ${lang === 'ur' ? 'English' : 'اردو'}`}
-            aria-label={`Switch to ${lang === 'ur' ? 'English' : 'اردو'}`}
-            onClick={() => setLang(lang === 'ur' ? 'en' : 'ur')}
-          >
-            <span className="lang-center-text">{lang === 'ur' ? 'EN' : 'UR'}</span>
-            <span className="toolbar-tooltip">{lang === 'ur' ? 'Switch to English' : 'اردو میں تبدیل کریں'}</span>
-          </button>
-        </div>
-      </div>
-    </aside>
-  );
 }
 
 function Shell({ children }) {
   const t = useT();
+  const mainRef = useRef(null);
+  useFrozenColumns(mainRef);
+  useBackgroundSync();
+  const { lang, setLang } = useLang();
   const nav = useNavigate();
-  const role = getRole();
   const username = getUsername();
+  const kilnCode = getKilnCode();
 
   return (
-    <>
+    <div className="app-shell">
       <a href="#main" className="skip-link">{t.skipToContent}</a>
       <div className="sticky-header-wrapper">
         <header className="top">
@@ -398,19 +184,22 @@ function Shell({ children }) {
             <div className="brand-icon-box" aria-hidden="true">
               <Icon name="kilnLogo" color="#ffffff" size={22} />
             </div>
-            <strong className="brand-text">{t.appName}</strong>
+            <span className="brand-stack">
+              <strong className="brand-text">{t.appName}</strong>
+              <small className="brand-user">{kilnCode ? `${username} • ${kilnCode}` : username}</small>
+            </span>
           </NavLink>
 
           <span className="grow" />
 
-          {/* Header Actions: Only Name, Role, and Logout */}
           <div className="top-actions">
-            {/* SAD208 displayed directly over Owner */}
-            <div className="top-user-badge" title={`Kiln SAD208 • ${username || 'Owner'}`}>
-              <span className="user-kiln-code">SAD208</span>
-              <span className="user-role-label">{role || 'Owner'}</span>
-            </div>
-
+            {/* single toggle: shows the language it switches to */}
+            <button
+              type="button" className="lang-btn" onClick={() => setLang(lang === 'ur' ? 'en' : 'ur')}
+              title={lang === 'ur' ? 'English' : 'اردو'} aria-label={lang === 'ur' ? 'Switch to English' : 'اردو میں بدلیں'}
+            >
+              {lang === 'ur' ? 'EN' : 'UR'}
+            </button>
             <button
               type="button"
               className="ghost logout-btn"
@@ -418,18 +207,21 @@ function Shell({ children }) {
               aria-label={t.logout}
               onClick={() => { clearSession(); nav('/login'); }}
             >
-              <Icon name="logout" color="#f87171" size={18} />
+              <Icon name="logout" color="#ffffff" size={18} stroke={2.75} />
             </button>
           </div>
         </header>
       </div>
 
-      <main id="main" tabIndex={-1}>{children}</main>
+      <main id="main" ref={mainRef} tabIndex={-1}>{children}</main>
 
-      {/* Stylish Right-Center Floating Circular Toolbar */}
-      <FloatingToolbar />
-    </>
+    </div>
   );
+}
+
+function RequireAuth({ children, shell = false }) {
+  if (!getToken()) return <Navigate to="/login" replace />;
+  return shell ? <Shell>{children}</Shell> : children;
 }
 
 export default function App() {
@@ -441,8 +233,11 @@ export default function App() {
     document.documentElement.dir = lang === 'ur' ? 'rtl' : 'ltr';
   }, [lang]);
 
-  const guard = (el) => (getToken() ? <Shell>{el}</Shell> : <Navigate to="/login" replace />);
-  const bare = (el) => (getToken() ? el : <Navigate to="/login" replace />);
+  // The token check must happen when the route renders, not when App last rendered:
+  // App doesn't re-render on login, so a check baked into these elements stayed stale
+  // and bounced a freshly logged-in user back to /login until a hard refresh.
+  const guard = (el) => <RequireAuth shell>{el}</RequireAuth>;
+  const bare = (el) => <RequireAuth>{el}</RequireAuth>;
 
   const homeLinks = ALL_LINKS.map((l) => ({
     ...l,

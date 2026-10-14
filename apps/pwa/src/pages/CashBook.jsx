@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useT } from '../i18n.js';
-import { get, fmtDate, fmtDateTime } from '../api.js';
+import { get, fmtDate, fmtDateTime, getRole } from '../api.js';
+import DateTime from '../components/DateTime.jsx';
+import RowActions, { useRowEdit } from '../components/RowActions.jsx';
+
+const EDIT_PATH = { payment: 'payments', expense: 'expenses', advance: 'advances' };
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -11,10 +15,35 @@ export default function CashBook() {
   const [err, setErr] = useState('');
   const [incFilters, setIncFilters] = useState({});
   const [expFilters, setExpFilters] = useState({});
+  const [msg, setMsg] = useState({ text: '', bad: false });
+  const editor = useRowEdit();
+  // Today's entries can be corrected by staff; past days only by the owner.
+  const canEdit = getRole() === 'owner' || date === today();
 
-  useEffect(() => {
-    get(`/cashbook?date=${date}`).then(setBook).catch((e) => setErr(e.message));
-  }, [date]);
+  const load = () => get(`/cashbook?date=${date}`).then(setBook).catch((e) => setErr(e.message));
+  useEffect(() => { editor.stop(); load(); }, [date]);
+
+  // Amount (and payee for expenses) edited in place; RowActions handles edit/save/cancel.
+  const amountCell = (r) => (editor.isEditing(r.id)
+    ? <input inputMode="decimal" className="cell-input" {...editor.field('amount')} />
+    : null);
+  const nameCell = (r) => (editor.isEditing(r.id) && r.kind === 'expense'
+    ? <input className="cell-input" {...editor.field('payee')} />
+    : <strong>{r.name}</strong>);
+  const actions = (r) => (
+    <td className="actions">
+      {r.id && (
+        <RowActions
+          editor={editor} id={r.id} path={`/${EDIT_PATH[r.kind]}/${r.id}`} name={r.name}
+          initial={r.kind === 'expense' ? { amount: String(r.amount), payee: r.name } : { amount: String(r.amount) }}
+          toPayload={(d) => (r.kind === 'expense' ? { amount: d.amount, payee: d.payee } : { amount: d.amount })}
+          canEdit={canEdit} canDelete={false}
+          onSaved={() => { setMsg({ text: t.savedOk, bad: false }); load(); }}
+          onError={(m) => setMsg({ text: m, bad: true })}
+        />
+      )}
+    </td>
+  );
 
   return (
     <div className="grid">
@@ -55,6 +84,7 @@ export default function CashBook() {
       </div>
 
       {err && <p role="alert" className="err">{err}</p>}
+      {msg.text && <p role={msg.bad ? 'alert' : 'status'} className={msg.bad ? 'err' : 'ok'}>{msg.text}</p>}
 
       {book && (
         <>
@@ -62,7 +92,7 @@ export default function CashBook() {
           <div className="kpi-section">
             <div className="kpi-group">
               <h3 className="kpi-group-title">
-                💵 {t.groupInflows}
+                {t.groupInflows}
               </h3>
               <div className="kpi-grid">
                 <div className="stat" style={{ borderInlineStartColor: 'var(--info)' }}>
@@ -78,7 +108,7 @@ export default function CashBook() {
 
             <div className="kpi-group">
               <h3 className="kpi-group-title">
-                💸 {t.groupOutflows}
+                {t.groupOutflows}
               </h3>
               <div className="kpi-grid">
                 <div className="stat" style={{ borderInlineStartColor: 'var(--err-dark)' }}>
@@ -97,7 +127,7 @@ export default function CashBook() {
           {/* Income Table with Column Outlines and Quick Filters */}
           <div className="card table-wrap">
             <div style={{ padding: '0.75rem 1rem 0.4rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2>🟢 {t.incomeDetails}</h2>
+              <h2>{t.incomeDetails}</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                 {Object.values(incFilters).some(Boolean) && (
                   <button type="button" className="clear-filter-btn" onClick={() => setIncFilters({})}>
@@ -112,9 +142,10 @@ export default function CashBook() {
                 <tr>
                   <th className="rownum">#</th>
                   <th>{t.dateTime}</th>
-                  <th>{t.name}</th>
+                  <th className="sticky-col">{t.name}</th>
                   <th>{t.details}</th>
                   <th>{t.amount}</th>
+                  <th className="actions">{t.action}</th>
                 </tr>
                 <tr className="filter-row">
                   <th className="rownum" />
@@ -122,6 +153,7 @@ export default function CashBook() {
                   <th><input type="search" className="table-col-filter" value={incFilters.name || ''} onChange={(e) => setIncFilters({ ...incFilters, name: e.target.value })} /></th>
                   <th><input type="search" className="table-col-filter" value={incFilters.detail || ''} onChange={(e) => setIncFilters({ ...incFilters, detail: e.target.value })} /></th>
                   <th><input type="search" className="table-col-filter" value={incFilters.amount || ''} onChange={(e) => setIncFilters({ ...incFilters, amount: e.target.value })} /></th>
+                  <th className="actions" />
                 </tr>
               </thead>
               <tbody>
@@ -134,17 +166,18 @@ export default function CashBook() {
                     return true;
                   })
                   .map((r, i) => (
-                    <tr key={i}>
+                    <tr key={r.id || i}>
                       <td className="rownum">{i + 1}</td>
-                      <td>{fmtDateTime(r.at)}</td>
-                      <td><strong>{r.name}</strong></td>
+                      <td><DateTime value={r.at} /></td>
+                      <td>{nameCell(r)}</td>
                       <td>{r.detail}</td>
-                      <td className="ok"><strong>+{Number(r.amount).toLocaleString()}</strong></td>
+                      <td className="ok">{amountCell(r) ?? <strong>+{Number(r.amount).toLocaleString()}</strong>}</td>
+                      {actions(r)}
                     </tr>
                   ))}
                 {!book.income.length && (
                   <tr>
-                    <td colSpan={5} style={{ textAlign: 'center', padding: '1.25rem', color: 'var(--muted)' }}>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '1.25rem', color: 'var(--muted)' }}>
                       {t.noEntries}
                     </td>
                   </tr>
@@ -156,7 +189,7 @@ export default function CashBook() {
           {/* Expense Table with Column Outlines and Quick Filters */}
           <div className="card table-wrap">
             <div style={{ padding: '0.75rem 1rem 0.4rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2>🔴 {t.expenseDetails}</h2>
+              <h2>{t.expenseDetails}</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                 {Object.values(expFilters).some(Boolean) && (
                   <button type="button" className="clear-filter-btn" onClick={() => setExpFilters({})}>
@@ -171,9 +204,10 @@ export default function CashBook() {
                 <tr>
                   <th className="rownum">#</th>
                   <th>{t.dateTime}</th>
-                  <th>{t.name}</th>
+                  <th className="sticky-col">{t.name}</th>
                   <th>{t.details}</th>
                   <th>{t.amount}</th>
+                  <th className="actions">{t.action}</th>
                 </tr>
                 <tr className="filter-row">
                   <th className="rownum" />
@@ -181,6 +215,7 @@ export default function CashBook() {
                   <th><input type="search" className="table-col-filter" value={expFilters.name || ''} onChange={(e) => setExpFilters({ ...expFilters, name: e.target.value })} /></th>
                   <th><input type="search" className="table-col-filter" value={expFilters.detail || ''} onChange={(e) => setExpFilters({ ...expFilters, detail: e.target.value })} /></th>
                   <th><input type="search" className="table-col-filter" value={expFilters.amount || ''} onChange={(e) => setExpFilters({ ...expFilters, amount: e.target.value })} /></th>
+                  <th className="actions" />
                 </tr>
               </thead>
               <tbody>
@@ -193,17 +228,18 @@ export default function CashBook() {
                     return true;
                   })
                   .map((r, i) => (
-                    <tr key={i}>
+                    <tr key={r.id || i}>
                       <td className="rownum">{i + 1}</td>
-                      <td>{fmtDateTime(r.at)}</td>
-                      <td><strong>{r.name}</strong></td>
+                      <td><DateTime value={r.at} /></td>
+                      <td>{nameCell(r)}</td>
                       <td>{r.detail}</td>
-                      <td className="err"><strong>-{Number(r.amount).toLocaleString()}</strong></td>
+                      <td className="err">{amountCell(r) ?? <strong>-{Number(r.amount).toLocaleString()}</strong>}</td>
+                      {actions(r)}
                     </tr>
                   ))}
                 {!book.expense.length && (
                   <tr>
-                    <td colSpan={5} style={{ textAlign: 'center', padding: '1.25rem', color: 'var(--muted)' }}>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '1.25rem', color: 'var(--muted)' }}>
                       {t.noEntries}
                     </td>
                   </tr>

@@ -1,21 +1,28 @@
 import { useEffect, useState } from 'react';
 import { useT } from '../i18n.js';
 import { get, post, uuid, fmtDateTime } from '../api.js';
+import DateTime from '../components/DateTime.jsx';
 import { useTypes, typeLabel } from '../useTypes.js';
-import DeleteButton from '../components/DeleteButton.jsx';
+import RowActions, { useRowEdit } from '../components/RowActions.jsx';
 import { useLang } from '../i18n.js';
 
 export default function Inventory() {
   const t = useT();
+  const editor = useRowEdit();
   const { lang } = useLang();
   const items = useTypes('procurementItem');
   const [summary, setSummary] = useState(null);
   const [unloadings, setUnloadings] = useState([]);
   const [grns, setGrns] = useState([]);
-  const [f, setF] = useState({ item: 'coal', supplierName: '', vehicleNo: '', qty: '', rate: '', freight: '0' });
+  const [f, setF] = useState({ item: 'coal', supplierName: '', vehicleNo: '', qty: '', rate: '', freight: '0', date: new Date().toISOString().slice(0, 10) });
   const [lab, setLab] = useState({ calorificValue: '', ashPct: '', volatileMatterPct: '', silicaPct: '', aluminaPct: '', ironOxidePct: '' });
   const [msg, setMsg] = useState({ text: '', bad: false });
   const [submitting, setSubmitting] = useState(false);
+  const [filters, setFilters] = useState({});
+  const setFilter = (k, v) => setFilters((f2) => ({ ...f2, [k]: v }));
+  const has = (v, q) => !q || String(v ?? '').toLowerCase().includes(q.toLowerCase());
+  const shownGrns = grns.filter((g) => has(fmtDateTime(g.date), filters.date) && has(items.label(g.item), filters.item)
+    && has(g.supplierName, filters.supplier) && has(g.qty, filters.qty) && has(g.landedUnitCost, filters.cost));
 
   const load = () => {
     get('/inventory/summary').then(setSummary).catch(() => {});
@@ -49,7 +56,7 @@ export default function Inventory() {
           {/* Group 1: Brick Stock by Grade */}
           <div className="kpi-group">
             <h3 className="kpi-group-title">
-              🧱 Manufactured Brick Stock by Grade (اینٹوں کا ذخیرہ)
+              Manufactured Brick Stock by Grade (اینٹوں کا ذخیرہ)
             </h3>
             <div className="kpi-grid">
               <div className="stat" style={{ borderInlineStartColor: 'var(--brand-dark)' }}>
@@ -74,7 +81,7 @@ export default function Inventory() {
           {/* Group 2: Fuel & Raw Material Inventory */}
           <div className="kpi-group">
             <h3 className="kpi-group-title">
-              ⚡ Fuel & Raw Material Storage (ایندھن اور کوئلہ ذخیرہ)
+              Fuel & Raw Material Storage (ایندھن اور کوئلہ ذخیرہ)
             </h3>
             <div className="kpi-grid">
               <div className="stat" style={{ borderInlineStartColor: '#334155' }}>
@@ -88,7 +95,7 @@ export default function Inventory() {
 
       {/* Procurement (GRN) Form */}
       <form className="card grid" onSubmit={submitGrn}>
-        <h2>🚚 {t.grnTitle} — Goods Receipt Note</h2>
+        <h2>{t.grnTitle} — Goods Receipt Note</h2>
 
         <div className="grid two" style={{ gap: '0.85rem' }}>
           <label>
@@ -111,13 +118,18 @@ export default function Inventory() {
           </label>
 
           <label>
-            {t.qty} (Tonnes / Units)
-            <input required inputMode="decimal" placeholder="Quantity" value={f.qty} onChange={(e) => setF({ ...f, qty: e.target.value })} />
+            {t.quantity}
+            <input required inputMode="decimal" placeholder={t.qtyUnitsHint} value={f.qty} onChange={(e) => setF({ ...f, qty: e.target.value })} />
           </label>
 
           <label>
             {t.rate}
             <input required inputMode="decimal" placeholder="Price rate" value={f.rate} onChange={(e) => setF({ ...f, rate: e.target.value })} />
+          </label>
+
+          <label>
+            {t.entryDate}
+            <input type="date" required max={new Date().toISOString().slice(0, 10)} value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} />
           </label>
 
           <label>
@@ -128,10 +140,10 @@ export default function Inventory() {
 
         {/* Optional Lab Tests */}
         {f.item === 'coal' && (
-          <div style={{ padding: '0.85rem 1rem', background: '#f8fafc', borderRadius: '10px', border: '1.5px solid var(--line)' }}>
-            <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem', textTransform: 'uppercase' }}>
-              🔬 {t.labFieldsOptional} (Coal Quality Parameters)
-            </div>
+          <details className="lab-box">
+            <summary>
+              {t.labFieldsOptional} (Coal Quality Parameters)
+            </summary>
             <div className="grid two" style={{ gap: '0.75rem' }}>
               <label>
                 {t.calorificValue}
@@ -146,14 +158,14 @@ export default function Inventory() {
                 <input inputMode="decimal" placeholder="Volatile %" value={lab.volatileMatterPct} onChange={(e) => setLab({ ...lab, volatileMatterPct: e.target.value })} />
               </label>
             </div>
-          </div>
+          </details>
         )}
 
         {f.item === 'soil' && (
-          <div style={{ padding: '0.85rem 1rem', background: '#f8fafc', borderRadius: '10px', border: '1.5px solid var(--line)' }}>
-            <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem', textTransform: 'uppercase' }}>
-              🔬 {t.labFieldsOptional} (Soil Composition)
-            </div>
+          <details className="lab-box">
+            <summary>
+              {t.labFieldsOptional} (Soil Composition)
+            </summary>
             <div className="grid two" style={{ gap: '0.75rem' }}>
               <label>
                 {t.silicaPct}
@@ -164,7 +176,7 @@ export default function Inventory() {
                 <input inputMode="decimal" placeholder="Alumina %" value={lab.aluminaPct} onChange={(e) => setLab({ ...lab, aluminaPct: e.target.value })} />
               </label>
             </div>
-          </div>
+          </details>
         )}
 
         <button className="primary" disabled={submitting}>
@@ -176,43 +188,61 @@ export default function Inventory() {
 
       {/* Recent GRN Purchases Table with Column Outlines */}
       <div className="card table-wrap">
-        <h2>📋 {t.recentGrns} ({grns.length})</h2>
+        <h2>{t.recentGrns} ({shownGrns.length} / {grns.length})</h2>
         <table>
           <thead>
             <tr>
               <th className="rownum">#</th>
-              <th>{t.dateTime}</th>
+              <th className="sticky-col">{t.dateTime}</th>
               <th>{t.item}</th>
               <th>{t.supplier}</th>
               <th>{t.qty}</th>
               <th style={{ textAlign: 'end' }}>{t.landedCost}</th>
+              <th className="actions">{t.action}</th>
+            </tr>
+            <tr className="filter-row">
+              <th className="rownum" />
+              {['date', 'item', 'supplier', 'qty', 'cost'].map((k) => (
+                <th key={k}>
+                  <input type="search" className="table-col-filter" aria-label={k} value={filters[k] || ''} onChange={(e) => setFilter(k, e.target.value)} />
+                </th>
+              ))}
               <th className="actions" />
             </tr>
           </thead>
           <tbody>
-            {grns.map((g, i) => (
+            {shownGrns.map((g, i) => {
+              const editing = editor.isEditing(g._id);
+              return (
               <tr key={g._id}>
                 <td className="rownum">{i + 1}</td>
-                <td>{fmtDateTime(g.date)}</td>
+                <td className="dt-bold"><DateTime value={g.date} /></td>
                 <td>
                   <span className="badge" style={{ background: '#f1f5f9', color: '#1e293b' }}>
                     {items.label(g.item)}
                   </span>
                 </td>
-                <td><strong>{g.supplierName}</strong></td>
-                <td>{g.qty}</td>
-                <td style={{ textAlign: 'end' }}><strong>{Number(g.landedUnitCost).toLocaleString()}</strong></td>
+                <td>{editing ? <input className="cell-input" {...editor.field('supplierName')} /> : <strong>{g.supplierName}</strong>}</td>
+                <td>{editing ? <input inputMode="decimal" className="cell-input" {...editor.field('qty')} /> : g.qty}</td>
+                <td style={{ textAlign: 'end' }}>
+                  {editing
+                    ? <input inputMode="decimal" className="cell-input" title={t.rate} {...editor.field('rate')} />
+                    : <strong>{Number(g.landedUnitCost).toLocaleString()}</strong>}
+                </td>
                 <td className="actions">
-                  <DeleteButton
-                    path={`/grns/${g._id}`}
-                    name={`${items.label(g.item)} — ${g.supplierName}`}
-                    onDone={() => { setMsg({ text: t.deleted, bad: false }); load(); }}
+                  <RowActions
+                    editor={editor} id={g._id} path={`/grns/${g._id}`} name={`${items.label(g.item)} — ${g.supplierName}`}
+                    initial={{ supplierName: g.supplierName, qty: String(g.qty), rate: String(g.rate) }}
+                    toPayload={(d) => ({ supplierName: d.supplierName, qty: Number(d.qty), rate: d.rate })}
+                    onSaved={() => { setMsg({ text: t.savedOk, bad: false }); load(); }}
+                    onDeleted={() => { setMsg({ text: t.deleted, bad: false }); load(); }}
                     onError={(m) => setMsg({ text: m, bad: true })}
                   />
                 </td>
               </tr>
-            ))}
-            {!grns.length && (
+              );
+            })}
+            {!shownGrns.length && (
               <tr>
                 <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted)' }}>
                   {t.noEntries}

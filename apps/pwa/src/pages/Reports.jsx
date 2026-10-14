@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useT, useLang } from '../i18n.js';
-import { get, fmtDate, fmtDateDM, fmtDateSpan } from '../api.js';
+import { get, fmtDate, fmtDateDM } from '../api.js';
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const daysAgoStr = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
@@ -201,7 +201,6 @@ export default function Reports() {
   const filteredGrn = useMemo(() => filterList(data.grn, filters.grn), [data.grn, filters.grn]);
   const filteredCashbook = useMemo(() => filterList(data.cashbook, filters.cashbook), [data.cashbook, filters.cashbook]);
 
-  const dateSpan = `${fmtDateSpan(fromDate)} to ${fmtDateSpan(toDate)}`;
 
   return (
     <div className="grid" style={{ gap: '1.25rem' }}>
@@ -209,7 +208,7 @@ export default function Reports() {
       <div className="card no-print" style={{ display: 'grid', gap: '0.85rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
           <h2 style={{ margin: 0, border: 'none', padding: 0 }}>
-            📊 {lang === 'ur' ? 'جامع کاروباری رپورٹ جنریٹر' : 'Comprehensive Kiln Operations Reports'}
+            {lang === 'ur' ? 'جامع کاروباری رپورٹ جنریٹر' : 'Comprehensive Kiln Operations Reports'}
           </h2>
           <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', alignItems: 'center' }}>
             <button
@@ -343,7 +342,7 @@ export default function Reports() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.5rem' }}>
             {REPORT_MODULES.map((m) => (
               <label
                 key={m.id}
@@ -373,30 +372,12 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* Printable Report Header */}
-      <div className="card slip-header-box" style={{ textAlign: 'center', padding: '1rem', background: '#ffffff', border: '1.5px solid var(--line)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', borderBottom: '2px solid var(--brand-dark)', paddingBottom: '0.65rem', marginBottom: '0.65rem' }}>
-          <div style={{ textAlign: 'start' }}>
-            <h1 style={{ margin: 0, fontSize: '1.35rem', color: '#0f172a' }}>
-              {t.appName} — {lang === 'ur' ? 'جامع آپریشنل رپورٹ' : 'Executive Operations Report'}
-            </h1>
-            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--brand-dark)' }}>
-              Kiln Code: SAD208
-            </span>
-          </div>
-          <div style={{ textAlign: 'end' }}>
-            <div style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0f172a' }}>
-              📅 {dateSpan}
-            </div>
-            <div style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>
-              {lang === 'ur' ? 'تیار کردہ تاریخ:' : 'Generated:'} {new Date().toLocaleDateString()} {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </div>
-          </div>
-        </div>
-
-        <div style={{ fontSize: '0.78rem', color: 'var(--muted)', fontWeight: 700 }}>
-          {lang === 'ur' ? 'شامل شدہ شعبہ جات:' : 'Selected Modules:'}{' '}
-          {REPORT_MODULES.filter((m) => selectedModules[m.id]).map((m) => (lang === 'ur' ? m.ur : m.en)).join(' • ')}
+      {/* Printable Report Header: title, then From / To in one outlined row */}
+      <div className="card slip-header-box report-head">
+        <h1>{lang === 'ur' ? 'جامع آپریشنل رپورٹ' : 'Executive Operations Report'}</h1>
+        <div className="report-range">
+          <span>{t.fromDate}</span><strong>{fmtDate(fromDate)}</strong>
+          <span>{t.toDate}</span><strong>{fmtDate(toDate)}</strong>
         </div>
       </div>
 
@@ -404,7 +385,7 @@ export default function Reports() {
       <div className="kpi-section">
         <div className="kpi-group">
           <h3 className="kpi-group-title">
-            📌 {lang === 'ur' ? 'مدت کا مجموعی خلاصہ (10٪ شفافیت پر)' : 'Period Executive Summary'}
+            {lang === 'ur' ? 'مدت کا مجموعی خلاصہ (10٪ شفافیت پر)' : 'Period Executive Summary'}
           </h3>
           <div className="kpi-grid">
             {selectedModules.moulding && (
@@ -470,7 +451,7 @@ export default function Reports() {
         <div className="card table-wrap">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.65rem 0.85rem' }}>
             <h2 style={{ margin: 0, border: 'none', padding: 0 }}>
-              🧱 {lang === 'ur' ? 'کچی اینٹ (پتھائی) کا ریکارڈ' : 'Moulding Production Records'} ({filteredMoulding.length})
+              {lang === 'ur' ? 'کچی اینٹ (پتھائی) کا ریکارڈ' : 'Moulding Production Records'} ({filteredMoulding.length})
             </h2>
             {Object.values(filters.moulding).some(Boolean) && (
               <button type="button" className="clear-filter-btn" onClick={() => clearFilter('moulding')}>
@@ -483,7 +464,7 @@ export default function Reports() {
               <tr>
                 <th className="rownum">#</th>
                 <th>{t.date}</th>
-                <th>{t.team}</th>
+                <th className="sticky-col">{t.team}</th>
                 <th>{lang === 'ur' ? 'کل کچی' : 'Gross Bricks'}</th>
                 <th>{t.kharaba}</th>
                 <th>{lang === 'ur' ? 'خالص کچی' : 'Net Bricks'}</th>
@@ -576,7 +557,7 @@ export default function Reports() {
         <div className="card table-wrap">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.65rem 0.85rem' }}>
             <h2 style={{ margin: 0, border: 'none', padding: 0 }}>
-              🔥 {lang === 'ur' ? 'پکائی و کوئلہ کھپت' : 'Firing Shifts & Coal Consumption'} ({filteredFiring.length})
+              {lang === 'ur' ? 'پکائی و کوئلہ کھپت' : 'Firing Shifts & Coal Consumption'} ({filteredFiring.length})
             </h2>
             {Object.values(filters.firing).some(Boolean) && (
               <button type="button" className="clear-filter-btn" onClick={() => clearFilter('firing')}>
@@ -642,7 +623,7 @@ export default function Reports() {
         <div className="card table-wrap">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.65rem 0.85rem' }}>
             <h2 style={{ margin: 0, border: 'none', padding: 0 }}>
-              💰 {lang === 'ur' ? 'اینٹ فروخت و ترسیل' : 'Brick Sales & Invoices'} ({filteredSales.length})
+              {lang === 'ur' ? 'اینٹ فروخت و ترسیل' : 'Brick Sales & Invoices'} ({filteredSales.length})
             </h2>
             {Object.values(filters.sales).some(Boolean) && (
               <button type="button" className="clear-filter-btn" onClick={() => clearFilter('sales')}>
@@ -705,7 +686,7 @@ export default function Reports() {
         <div className="card table-wrap">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.65rem 0.85rem' }}>
             <h2 style={{ margin: 0, border: 'none', padding: 0 }}>
-              💵 {lang === 'ur' ? 'پیشگی ایڈوانس کی تفصیل' : 'Peshgi Advances Record'} ({filteredPeshgi.length})
+              {lang === 'ur' ? 'پیشگی ایڈوانس کی تفصیل' : 'Peshgi Advances Record'} ({filteredPeshgi.length})
             </h2>
             {Object.values(filters.peshgi).some(Boolean) && (
               <button type="button" className="clear-filter-btn" onClick={() => clearFilter('peshgi')}>
@@ -718,7 +699,7 @@ export default function Reports() {
               <tr>
                 <th className="rownum">#</th>
                 <th>{t.date}</th>
-                <th>{t.worker}</th>
+                <th className="sticky-col">{t.worker}</th>
                 <th>{lang === 'ur' ? 'رقم' : 'Amount'}</th>
                 <th>{t.notes}</th>
               </tr>
@@ -761,7 +742,7 @@ export default function Reports() {
         <div className="card table-wrap">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.65rem 0.85rem' }}>
             <h2 style={{ margin: 0, border: 'none', padding: 0 }}>
-              🚚 {lang === 'ur' ? 'خریداری و رسد (کوئلہ / مٹی)' : 'Procurement & GRN'} ({filteredGrn.length})
+              {lang === 'ur' ? 'خریداری و رسد (کوئلہ / مٹی)' : 'Procurement & GRN'} ({filteredGrn.length})
             </h2>
             {Object.values(filters.grn).some(Boolean) && (
               <button type="button" className="clear-filter-btn" onClick={() => clearFilter('grn')}>
@@ -825,7 +806,7 @@ export default function Reports() {
         <div className="card table-wrap">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.65rem 0.85rem' }}>
             <h2 style={{ margin: 0, border: 'none', padding: 0 }}>
-              📖 {lang === 'ur' ? 'کیش بک (آمدن و خرچ روزنامچہ)' : 'Cash Book Transactions'} ({filteredCashbook.length})
+              {lang === 'ur' ? 'کیش بک (آمدن و خرچ روزنامچہ)' : 'Cash Book Transactions'} ({filteredCashbook.length})
             </h2>
             {Object.values(filters.cashbook).some(Boolean) && (
               <button type="button" className="clear-filter-btn" onClick={() => clearFilter('cashbook')}>

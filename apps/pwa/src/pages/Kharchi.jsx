@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useT } from '../i18n.js';
 import { get, post, uuid, fmtDateTime } from '../api.js';
+import DateTime from '../components/DateTime.jsx';
 import { useTypes, typeLabel } from '../useTypes.js';
 import { useLang } from '../i18n.js';
 
@@ -62,7 +63,7 @@ export default function Kharchi() {
     <div className="grid">
       {/* Run Proposal Card */}
       <div className="card grid">
-        <h2>🧾 {t.kharchiRun} (ہفتہ وار خرچی تصفیہ)</h2>
+        <h2>{t.kharchiRun} (ہفتہ وار خرچی تصفیہ)</h2>
         <div className="grid two" style={{ gap: '0.9rem' }}>
           <label>
             {t.category}
@@ -89,7 +90,7 @@ export default function Kharchi() {
       {proposal && proposal.items.length > 0 && (
         <div className="card grid" style={{ borderInlineStart: '4.5px solid var(--brand)', animation: 'fade-in 0.2s ease' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <h2>📋 Settlement Proposal</h2>
+            <h2>Settlement Proposal</h2>
             <span style={{ fontSize: '0.84rem', color: 'var(--muted)', background: '#f8fafc', padding: '0.2rem 0.6rem', borderRadius: '6px', border: '1px solid var(--line)' }}>
               {t.kharchiFormula.replace('{r}', proposal.recoveryPct).replace('{f}', proposal.kharchiFloor)}
             </span>
@@ -100,7 +101,7 @@ export default function Kharchi() {
               <thead>
                 <tr>
                   <th className="rownum">#</th>
-                  <th>{t.name}</th>
+                  <th className="sticky-col">{t.name}</th>
                   <th style={{ textAlign: 'end' }}>{t.amount} ({t.gross})</th>
                   <th style={{ textAlign: 'end' }}>{t.recovery}</th>
                   <th style={{ textAlign: 'end' }}>{t.kharchiPaid}</th>
@@ -143,23 +144,23 @@ export default function Kharchi() {
 
       {/* Recent Settlements */}
       <div className="card table-wrap">
-        <h2>📜 {t.recentRuns} ({runs.length})</h2>
+        <h2>{t.recentRuns} ({runs.length})</h2>
         <table>
           <thead>
             <tr>
               <th className="rownum">#</th>
               <th>{t.dateTime}</th>
               <th>{t.category}</th>
-              <th>{t.workers}</th>
+              <th className="sticky-col">{t.workers}</th>
               <th style={{ textAlign: 'end' }}>{t.totalOut}</th>
-              <th className="actions">Slip</th>
+              <th className="actions">{t.action}</th>
             </tr>
           </thead>
           <tbody>
             {runs.map((r, i) => (
               <tr key={r._id}>
                 <td className="rownum">{i + 1}</td>
-                <td>{fmtDateTime(r.createdAt)}</td>
+                <td><DateTime value={r.createdAt} /></td>
                 <td><span className="badge" style={{ background: '#f1f5f9', color: '#1e293b' }}>{cats.label(r.category)}</span></td>
                 <td>{r.items?.length || '—'} workers</td>
                 <td style={{ textAlign: 'end' }} className="ok"><strong>{Number(r.totalKharchi).toLocaleString()}</strong></td>

@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { connect, close } from '../src/db.js';
 import { createApp } from '../src/app.js';
 import { seed } from '../src/seed.js';
-import { postEntry } from '../src/core.js';
+import { postEntry, oid } from '../src/core.js';
 
 let base, server, ctx, testDb, tokens = {};
 
@@ -33,14 +33,14 @@ after(async () => { server.close(); await close(); });
 
 const newWorker = async (over = {}, who = 'owner') => {
   const r = await api('POST', '/workers', {
-    name: 'Ali', cnic: String(Math.floor(1e12 + Math.random() * 9e12)), dob: '1990-01-01', category: 'pathera', ...over,
+    name: 'Ali', fatherName: 'Akbar', cnic: String(Math.floor(1e12 + Math.random() * 9e12)), dob: '1990-01-01', category: 'pathera', ...over,
   }, who);
   if (r.status === 201) await api('POST', `/workers/${r.body.id}/contract-signed`, { signedDocUrl: 'x' }, who);
   return r;
 };
 
 test('rejects worker under 14', async () => {
-  const r = await api('POST', '/workers', { name: 'Kid', cnic: '1234567890123', dob: '2020-01-01', category: 'pathera' });
+  const r = await api('POST', '/workers', { name: 'Kid', fatherName: 'Akbar', cnic: '1234567890123', dob: '2020-01-01', category: 'pathera' });
   assert.equal(r.status, 422);
 });
 
@@ -51,7 +51,7 @@ test('duplicate CNIC blocked', async () => {
 });
 
 test('no advance without signed contract', async () => {
-  const w = await api('POST', '/workers', { name: 'Bilal', cnic: '3120200000001', dob: '1990-01-01', category: 'pathera' });
+  const w = await api('POST', '/workers', { name: 'Bilal', fatherName: 'Akbar', cnic: '3120200000001', dob: '1990-01-01', category: 'pathera' });
   const r = await api('POST', '/advances', { workerId: w.body.id, amount: '1000', clientUuid: randomUUID() });
   assert.equal(r.status, 422);
 });
@@ -225,6 +225,71 @@ test('permission matrix: grants and restricts beyond role defaults', async () =>
   assert.equal((await api('PUT', `/users/${userId}/permissions`, { module: 'workers', add: true }, 'munshi')).status, 403);
 });
 
+test('moulding: a whole week can be entered by date, and edits re-post wages', async () => {
+  const m1 = (await newWorker()).body.id;
+  const team = await testDb.collection('teams').insertOne({ tenantId: ctx.tenantId, kilnId: ctx.kilnId, category: 'pathera', label: 'Week', memberIds: [m1] });
+  const teamId = String(team.insertedId);
+
+  // seven days, oldest first
+  for (let d = 6; d >= 0; d--) {
+    const date = new Date(Date.now() - d * 86400000).toISOString().slice(0, 10);
+    const r = await api('POST', '/moulding', { teamId, count: 1000, kharaba: 0, date, clientUuid: randomUUID() });
+    assert.equal(r.status, 201, `day -${d}`);
+  }
+  // future dates are refused
+  const tomorrow2 = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
+  assert.equal((await api('POST', '/moulding', { teamId, count: 1000, date: tomorrow2, clientUuid: randomUUID() })).status, 400);
+
+  // a second entry for the same team and day is refused; the existing one must be edited instead
+  const today = new Date().toISOString().slice(0, 10);
+  const dup = await api('POST', '/moulding', { teamId, count: 500, kharaba: 0, date: today, clientUuid: randomUUID() });
+  assert.equal(dup.status, 409);
+
+  const batches = (await api('GET', '/moulding')).body.filter((b) => b.teamId === teamId);
+  assert.equal(batches.length, 7);
+  const days = new Set(batches.map((b) => new Date(b.date).toISOString().slice(0, 10)));
+  assert.equal(days.size, 7);
+
+  // wage entries carry the work date, not "now"
+  const ledger = (await api('GET', `/workers/${m1}/ledger`)).body;
+  const ledgerDays = new Set(ledger.map((e) => new Date(e.createdAt).toISOString().slice(0, 10)));
+  assert.equal(ledgerDays.size, 7);
+
+  // owner edits one batch: old wage reversed, new one posted, net equals the new count's wage
+  await api('PUT', '/settings', { key: 'ratePathera', value: '2000' });
+  const one = batches[0];
+  const before = ledger.reduce((a, e) => a + Number(e.debit) - Number(e.credit), 0);
+  const ed = await api('PUT', `/moulding/${one._id}`, { count: 3000 });
+  assert.equal(ed.status, 200);
+  const after = (await api('GET', `/workers/${m1}/ledger`)).body.reduce((a, e) => a + Number(e.debit) - Number(e.credit), 0);
+  const oldWage = (1000 / 1000) * 2738;
+  assert.ok(Math.abs(after - (before - oldWage + 3 * 2000)) < 0.01, `before=${before} after=${after}`);
+  // moving an entry onto a day the team already has is refused too
+  const otherDay = new Date(batches[1].date).toISOString().slice(0, 10);
+  assert.equal((await api('PUT', `/moulding/${one._id}`, { date: otherDay })).status, 409);
+  // munshi cannot edit records
+  assert.equal((await api('PUT', `/moulding/${one._id}`, { count: 10 }, 'munshi')).status, 403);
+});
+
+test('session: active users get a renewed token; failed logins are rate-limited per user', async () => {
+  // a token older than the renewal threshold is renewed on the next request
+  const jwt = (await import('jsonwebtoken')).default;
+  const me = JSON.parse(Buffer.from(tokens.owner.split('.')[1], 'base64url').toString());
+  const old = jwt.sign({ sub: me.sub, role: me.role, tenantId: me.tenantId, kilnId: me.kilnId, iat: Math.floor(Date.now() / 1000) - 2 * 3600 }, 'dev-secret-change-me', { expiresIn: '7d' });
+  const r = await fetch(`${base}/settings`, { headers: { authorization: `Bearer ${old}` } });
+  assert.equal(r.status, 200);
+  assert.ok(r.headers.get('x-refresh-token'));
+
+  // a successful login doesn't count toward the limit; ten wrong passwords for one user do
+  const user = `lim-${Date.now()}`;
+  await api('POST', '/users', { username: user, password: 'right123', role: 'viewer', clientUuid: randomUUID() });
+  for (let i = 0; i < 12; i++) assert.equal((await api('POST', '/auth/login', { username: 'owner', password: 'owner123' }, null)).status, 200);
+  for (let i = 0; i < 10; i++) await api('POST', '/auth/login', { username: user, password: 'wrong' }, null);
+  assert.equal((await api('POST', '/auth/login', { username: user, password: 'wrong' }, null)).status, 429);
+  // a different user from the same IP is unaffected
+  assert.equal((await api('POST', '/auth/login', { username: 'owner', password: 'owner123' }, null)).status, 200);
+});
+
 test('delete: guards, reversals and settings reset', async () => {
   // munshi cannot delete anything
   const w0 = (await newWorker()).body.id;
@@ -256,7 +321,7 @@ test('delete: guards, reversals and settings reset', async () => {
   assert.equal(mould.status, 201);
   const sumOf = async (id) => (await api('GET', `/workers/${id}/ledger`)).body.reduce((a, e) => a + Number(e.debit) - Number(e.credit), 0);
   assert.ok((await sumOf(m1)) > 0);
-  const batch = (await api('GET', '/moulding')).body[0];
+  const batch = (await api('GET', '/moulding')).body.find((b) => b.teamId === String(team.insertedId));
   const del = await api('DELETE', `/moulding/${batch._id}`);
   assert.equal(del.status, 200);
   assert.equal(del.body.wageEntriesReversed, 2);
@@ -275,4 +340,71 @@ test('delete: guards, reversals and settings reset', async () => {
   assert.equal((await api('DELETE', '/settings/kharchiFloor')).status, 200);
   assert.equal((await api('GET', '/settings')).body.kharchiFloor, '5000');
   assert.equal((await api('DELETE', '/settings/nope')).status, 400);
+});
+
+test('cash book: today\'s entries can be corrected by staff, past days only by the owner', async () => {
+  const w = (await newWorker()).body.id;
+  const today = new Date().toISOString().slice(0, 10);
+  assert.equal((await api('POST', '/advances', { workerId: w, amount: '3000', clientUuid: randomUUID() })).status, 201);
+  const book = async () => (await api('GET', `/cashbook?date=${today}`)).body;
+  const before = await book();
+  const row = before.expense.find((r) => r.kind === 'advance' && r.amount === '3000');
+  assert.ok(row, 'advance listed in cash book');
+
+  // munshi may lower today's advance but not raise it
+  assert.equal((await api('PUT', `/advances/${row.id}`, { amount: '5000' }, 'munshi')).status, 403);
+  const fix = await api('PUT', `/advances/${row.id}`, { amount: '2000' }, 'munshi');
+  assert.equal(fix.status, 200);
+  const after = await book();
+  assert.ok(!after.expense.some((r) => r.id === row.id), 'corrected original hidden');
+  assert.ok(after.expense.some((r) => r.kind === 'advance' && r.amount === '2000'), 'corrected advance listed');
+  assert.ok(Math.abs(Number(after.totalOut) - (Number(before.totalOut) - 1000)) < 0.01, 'cash out reduced by the correction');
+  // the original can't be corrected twice
+  assert.equal((await api('PUT', `/advances/${row.id}`, { amount: '1500' })).status, 409);
+
+  // a past-day entry: munshi refused, owner allowed
+  const old = await testDb.collection('ledgerEntries').findOne({ _id: oid(fix.body.id) });
+  await testDb.collection('ledgerEntries').updateOne({ _id: old._id }, { $set: { createdAt: new Date(Date.now() - 3 * 86400000) } });
+  assert.equal((await api('PUT', `/advances/${old._id}`, { amount: '1000' }, 'munshi')).status, 403);
+  assert.equal((await api('PUT', `/advances/${old._id}`, { amount: '1000' })).status, 200);
+});
+
+test('sales: a part-payment leaves the invoice open with the remaining balance', async () => {
+  const cust = (await api('POST', '/customers', { name: 'Part Payer', type: 'individual', clientUuid: randomUUID() })).body.id;
+  const inv = (await api('POST', '/invoices', { customerId: cust, grade: 'awwal', qty: 1000, clientUuid: randomUUID() })).body;
+  const find = async () => (await api('GET', '/invoices')).body.find((i) => String(i._id) === String(inv.id));
+  const full = Number((await find()).total);
+  const half = (full / 2).toFixed(2);
+  assert.equal((await api('POST', '/payments', { invoiceId: inv.id, amount: half, clientUuid: randomUUID() })).status, 201);
+  let now = await find();
+  assert.equal(now.status, 'open');
+  assert.equal(now.paid, half);
+  assert.equal(now.balance, (full - Number(half)).toFixed(2));
+  // paying more than the balance is refused; paying the balance closes it
+  assert.equal((await api('POST', '/payments', { invoiceId: inv.id, amount: full.toFixed(2), clientUuid: randomUUID() })).status, 422);
+  assert.equal((await api('POST', '/payments', { invoiceId: inv.id, amount: now.balance, clientUuid: randomUUID() })).status, 201);
+  now = await find();
+  assert.equal(now.status, 'paid');
+  assert.equal(now.balance, '0.00');
+});
+
+test('back-dated entries: invoice, payment and advance land on the chosen day', async () => {
+  const day = new Date(Date.now() - 5 * 86400000).toISOString().slice(0, 10);
+  const before = new Date(Date.now() - 9 * 86400000).toISOString().slice(0, 10);
+  const future = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
+  const cust = (await api('POST', '/customers', { name: 'Old Buyer', type: 'individual', clientUuid: randomUUID() })).body.id;
+  const inv = (await api('POST', '/invoices', { customerId: cust, grade: 'awwal', qty: 1000, date: day, clientUuid: randomUUID() })).body;
+  const row = (await api('GET', '/invoices')).body.find((i) => String(i._id) === String(inv.id));
+  assert.equal(new Date(row.date).toISOString().slice(0, 10), day);
+  // a payment cannot predate its invoice, nor be in the future
+  assert.equal((await api('POST', '/payments', { invoiceId: inv.id, amount: '100', date: before, clientUuid: randomUUID() })).status, 422);
+  assert.equal((await api('POST', '/payments', { invoiceId: inv.id, amount: '100', date: future, clientUuid: randomUUID() })).status, 400);
+  assert.equal((await api('POST', '/payments', { invoiceId: inv.id, amount: '100', date: day, clientUuid: randomUUID() })).status, 201);
+  const book = (await api('GET', `/cashbook?date=${day}`)).body;
+  assert.ok(book.income.some((r) => r.amount === '100'), 'payment shows in that day\'s cash book');
+
+  const w = (await newWorker()).body.id;
+  assert.equal((await api('POST', '/advances', { workerId: w, amount: '700', date: day, clientUuid: randomUUID() })).status, 201);
+  const led = (await api('GET', `/workers/${w}/ledger`)).body.find((e) => e.type === 'advance');
+  assert.equal(new Date(led.createdAt).toISOString().slice(0, 10), day);
 });

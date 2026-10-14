@@ -10,28 +10,48 @@ const notify = () => listeners.forEach((fn) => fn());
 export const getToken = () => localStorage.getItem('token');
 export const getRole = () => localStorage.getItem('role');
 export const getUsername = () => localStorage.getItem('username') || localStorage.getItem('role') || 'User';
-export const setSession = (token, role, username) => {
+export const getKilnCode = () => localStorage.getItem('kilnCode') || '';
+export const setSession = (token, role, username, kilnCode) => {
   localStorage.setItem('token', token);
   localStorage.setItem('role', role);
   if (username) localStorage.setItem('username', username);
+  if (kilnCode) localStorage.setItem('kilnCode', kilnCode);
 };
 export const clearSession = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('role');
   localStorage.removeItem('username');
+  localStorage.removeItem('kilnCode');
 };
 
+function tokenExp(token) {
+  try {
+    const payload = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(payload)).exp || 0;
+  } catch {
+    return 0;
+  }
+}
+
 async function raw(method, path, body) {
+  const hadToken = !!getToken();
   const res = await fetch(`/api${path}`, {
     method,
-    headers: { 'content-type': 'application/json', ...(getToken() ? { authorization: `Bearer ${getToken()}` } : {}) },
+    headers: { 'content-type': 'application/json', ...(hadToken ? { authorization: `Bearer ${getToken()}` } : {}) },
     body: body ? JSON.stringify(body) : undefined,
   });
+  // Sliding session: the server hands back a renewed token while the user is active. A
+  // response replayed from the offline cache can carry an older token, so only accept one
+  // that expires later than what we already hold.
+  const renewed = res.headers.get('x-refresh-token');
+  if (renewed && tokenExp(renewed) > tokenExp(getToken())) localStorage.setItem('token', renewed);
   const data = await res.json().catch(() => ({}));
-  if (res.status === 401) {
+  // Only an expired/invalid session is a logout. A wrong password on /auth/login is also a
+  // 401, but there was no session to end, so it must not clear anything or redirect.
+  if (res.status === 401 && hadToken && path !== '/auth/login') {
     clearSession();
     if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-      window.location.href = '/login';
+      window.location.replace('/login');
     }
   }
   if (!res.ok) throw Object.assign(new Error(data.error || res.statusText), { status: res.status });

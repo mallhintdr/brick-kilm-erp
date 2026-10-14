@@ -1,11 +1,17 @@
 import { useMemo, useState } from 'react';
 import { fmtDateTime } from '../api.js';
 
-// Oblique-projection plan of a zig-zag kiln: chambers are 3D blocks laid out in a racetrack
-// circuit (top row left->right, bottom row right->left), joined by the fire corridor.
+// Portrait oblique plan of a zig-zag kiln: chambers are wide, short 3D blocks in two columns
+// (left column top->bottom, right column bottom->top) joined by the fire corridor between them.
 // Section numbering follows the circuit, so index order == the direction the fire travels.
-const CW = 40; const CH = 58; const DEP = 8; const GAP = 10;
-const PAD = 46; const CORR = 74; const TOP = 96;
+const CW = 50; const CH = 22; const DEP = 5; const GAP = 5;
+const PADX = 52; const CORR = 52; const TOP = 88; const R = 14; // R: corner radius of the end chambers
+
+// Block outline with only the given corners rounded (the kiln's curved ends).
+const facePath = (c) => {
+  const tl = c === 'tl' ? R : 0; const tr = c === 'tr' ? R : 0; const br = c === 'br' ? R : 0; const bl = c === 'bl' ? R : 0;
+  return `M${tl},0 H${CW - tr} A${tr},${tr} 0 0 1 ${CW},${tr} V${CH - br} A${br},${br} 0 0 1 ${CW - br},${CH} H${bl} A${bl},${bl} 0 0 1 0,${CH - bl} V${tl} A${tl},${tl} 0 0 1 ${tl},0 Z`;
+};
 
 const STATE_KEY = {
   Empty: 'empty', Loading: 'loading', Preheating: 'preheating', Firing: 'firingState', Cooling: 'cooling', Unloading: 'unloading',
@@ -16,36 +22,36 @@ export default function KilnDiagram({ sections, selected, onSelect, t }) {
   const N = sections.length;
 
   const geo = useMemo(() => {
-    const rowLen = Math.ceil(N / 2);
-    const pitch = CW + GAP;
-    const rowsWidth = rowLen * pitch - GAP;
-    const W = PAD * 2 + rowsWidth + DEP;
-    const bottomY = TOP + CH + CORR;
-    const H = bottomY + CH + 26;
+    const colLen = Math.ceil(N / 2);
+    const pitch = CH + GAP;
+    const colsHeight = colLen * pitch - GAP;
+    const xLeft = PADX;
+    const xRight = PADX + CW + DEP + CORR;
+    const W = xRight + CW + DEP + PADX;
+    const H = TOP + colsHeight + 30;
     const pos = (i) => {
-      if (i < rowLen) return { x: PAD + i * pitch, y: TOP, row: 'top' };
-      const j = i - rowLen; // bottom row runs right -> left
-      return { x: PAD + (rowLen - 1 - j) * pitch, y: bottomY, row: 'bottom' };
+      if (i < colLen) return { x: xLeft, y: TOP + i * pitch, col: 'left', corner: i === 0 ? 'tl' : i === colLen - 1 ? 'bl' : null };
+      const j = i - colLen; // right column runs bottom -> top
+      return { x: xRight, y: TOP + (colLen - 1 - j) * pitch, col: 'right', corner: j === 0 ? 'br' : i === N - 1 ? 'tr' : null };
     };
-    const yA = TOP + CH + CORR * 0.32;
-    const yB = TOP + CH + CORR * 0.68;
-    return { rowLen, rowsWidth, W, H, bottomY, pos, yA, yB, xL: PAD - 2, xR: PAD + rowsWidth + 2 };
+    const xA = xLeft + CW + DEP + CORR * 0.3;
+    const xB = xLeft + CW + DEP + CORR * 0.7;
+    return { W, H, colsHeight, pos, xA, xB, xLeft, xRight, yT: TOP + 2, yB: TOP + colsHeight - 2 };
   }, [N]);
 
   if (!N) return null;
-  const { W, H, rowsWidth, bottomY, pos, yA, yB, xL, xR } = geo;
-  const r = (yB - yA) / 2;
+  const { W, H, colsHeight, pos, xA, xB, xLeft, yT, yB } = geo;
+  const r = (xB - xA) / 2;
   const firing = sections.some((s) => s.state === 'Firing');
-  const chimneyX = PAD + CW / 2;
-  const slabTop = TOP - DEP - 16;
+  const chimneyX = W / 2;
+  const slabTop = TOP - DEP - 18;
   const stateLabel = (s) => t[STATE_KEY[s.state]] || s.state;
 
   const items = sections
     .map((s, i) => ({ s, p: pos(i) }))
     .sort((a, b) => a.p.y - b.p.y || a.p.x - b.p.x); // paint back-to-front so side faces tuck under neighbours
 
-  const flamePts = (xc, h) => `${xc - 6},${CH - 4} ${xc},${CH - 4 - h} ${xc + 6},${CH - 4}`;
-
+  const flamePts = (xc, h) => `${xc - 5},${CH - 2} ${xc},${CH - 2 - h} ${xc + 5},${CH - 2}`;
   return (
     <div className="kiln-scroll">
       <div className="kiln">
@@ -67,17 +73,17 @@ export default function KilnDiagram({ sections, selected, onSelect, t }) {
           </defs>
 
           {/* kiln body (masonry slab) and ground shadow */}
-          <rect x={PAD - 14} y={slabTop + 6} width={rowsWidth + DEP + 28} height={bottomY + CH - slabTop + 10} rx="18" fill="rgba(28,25,23,.12)" />
-          <rect x={PAD - 16} y={slabTop} width={rowsWidth + DEP + 32} height={bottomY + CH - slabTop + 12} rx="18" fill="url(#kslab)" stroke="#b89a68" strokeWidth="1.5" />
+          <rect x={xLeft - 14} y={slabTop + 6} width={W - 2 * xLeft + 28} height={colsHeight + TOP - slabTop + 14} rx="18" fill="rgba(28,25,23,.12)" />
+          <rect x={xLeft - 16} y={slabTop} width={W - 2 * xLeft + 32} height={colsHeight + TOP - slabTop + 16} rx="18" fill="url(#kslab)" stroke="#b89a68" strokeWidth="1.5" />
 
           {/* fire corridor: the circuit the fire travels around */}
-          <rect x={xL - r - 4} y={yA - 8} width={xR - xL + 2 * r + 8} height={yB - yA + 16} rx={(yB - yA) / 2 + 8} fill="#7c5a3a" opacity=".28" />
+          <rect x={xA - 8} y={yT - r - 4} width={xB - xA + 16} height={yB - yT + 2 * r + 8} rx={(xB - xA) / 2 + 8} fill="#7c5a3a" opacity=".28" />
           <path
             className="flow" fill="none" stroke={firing ? '#ea580c' : '#a8896a'} strokeWidth="2.5" strokeLinecap="round"
-            d={`M${xL} ${yA} H${xR} A${r} ${r} 0 0 1 ${xR} ${yB} H${xL} A${r} ${r} 0 0 1 ${xL} ${yA}`}
+            d={`M${xA} ${yT} V${yB} A${r} ${r} 0 0 0 ${xB} ${yB} V${yT} A${r} ${r} 0 0 0 ${xA} ${yT}`}
           />
-          <polygon points={`${W / 2 - 6},${yA - 5} ${W / 2 + 6},${yA} ${W / 2 - 6},${yA + 5}`} fill="#7c5a3a" />
-          <polygon points={`${W / 2 + 6},${yB - 5} ${W / 2 - 6},${yB} ${W / 2 + 6},${yB + 5}`} fill="#7c5a3a" />
+          <polygon points={`${xA - 5},${(yT + yB) / 2 - 6} ${xA},${(yT + yB) / 2 + 6} ${xA + 5},${(yT + yB) / 2 - 6}`} fill="#7c5a3a" />
+          <polygon points={`${xB - 5},${(yT + yB) / 2 + 6} ${xB},${(yT + yB) / 2 - 6} ${xB + 5},${(yT + yB) / 2 + 6}`} fill="#7c5a3a" />
 
           {/* chimney + ID fan house */}
           <g>
@@ -96,7 +102,7 @@ export default function KilnDiagram({ sections, selected, onSelect, t }) {
             const sel = selected?.index === s.index;
             const isFiring = s.state === 'Firing';
             const show = (on) => (on
-              ? setHover({ s, cx: p.x + CW / 2, cy: p.row === 'top' ? p.y - DEP : p.y - DEP })
+              ? setHover({ s, cx: p.x + CW / 2, cy: p.y - DEP })
               : setHover((h) => (h?.s.index === s.index ? null : h)));
             return (
               <g key={s.index} transform={`translate(${p.x},${p.y})`}>
@@ -109,14 +115,14 @@ export default function KilnDiagram({ sections, selected, onSelect, t }) {
                   onMouseEnter={() => show(true)} onMouseLeave={() => show(false)}
                   onFocus={() => show(true)} onBlur={() => show(false)}
                 >
-                  <polygon className="topf" points={`0,0 ${DEP},${-DEP} ${CW + DEP},${-DEP} ${CW},0`} />
-                  <polygon className="side" points={`${CW},0 ${CW + DEP},${-DEP} ${CW + DEP},${CH - DEP} ${CW},${CH}`} />
-                  <rect className="face" width={CW} height={CH} />
-                  {s.state !== 'Empty' && <rect width={CW} height={CH} fill="url(#kbricks)" opacity=".22" pointerEvents="none" />}
+                  <polygon className="topf" points={p.corner === 'tl' ? `${R},0 ${R + DEP},${-DEP} ${CW + DEP},${-DEP} ${CW},0` : p.corner === 'tr' ? `0,0 ${DEP},${-DEP} ${CW - R + DEP},${-DEP} ${CW - R},0` : `0,0 ${DEP},${-DEP} ${CW + DEP},${-DEP} ${CW},0`} />
+                  <polygon className="side" points={p.corner === 'tr' ? `${CW},${R} ${CW + DEP},${R - DEP} ${CW + DEP},${CH - DEP} ${CW},${CH}` : p.corner === 'br' ? `${CW},0 ${CW + DEP},${-DEP} ${CW + DEP},${CH - R - DEP} ${CW},${CH - R}` : `${CW},0 ${CW + DEP},${-DEP} ${CW + DEP},${CH - DEP} ${CW},${CH}`} />
+                  <path className="face" d={facePath(p.corner)} />
+                  {s.state !== 'Empty' && <path d={facePath(p.corner)} fill="url(#kbricks)" opacity=".22" pointerEvents="none" />}
                   {isFiring && (
                     <g pointerEvents="none">
-                      <ellipse className="glow" cx={CW / 2} cy={CH - 14} rx={CW * 0.75} ry="26" fill="url(#kglow)" />
-                      {[[10, 22], [20, 32], [30, 20]].map(([xc, h], k) => (
+                      <ellipse className="glow" cx={CW / 2} cy={CH / 2} rx={CW * 0.6} ry={CH * 0.8} fill="url(#kglow)" />
+                      {[[CW * 0.3, CH * 0.55], [CW * 0.5, CH * 0.75], [CW * 0.7, CH * 0.5]].map(([xc, h], k) => (
                         <g key={xc}>
                           <polygon className="flame" style={{ animationDelay: `${k * 0.18}s` }} points={flamePts(xc, h)} fill="#f97316" />
                           <polygon className="flame" style={{ animationDelay: `${k * 0.18 + 0.1}s` }} points={flamePts(xc, h * 0.55)} fill="#fde047" />
@@ -124,14 +130,14 @@ export default function KilnDiagram({ sections, selected, onSelect, t }) {
                       ))}
                     </g>
                   )}
-                  <text className="num" x={CW / 2} y="21" textAnchor="middle">{s.index}</text>
-                  {s.currentLoad > 0 && <text className="load" x={CW / 2} y={CH - 6} textAnchor="middle">{Math.round(s.currentLoad / 1000)}k</text>}
-                  <rect className="ring" width={CW} height={CH} rx="2" />
+                  <text className="num" x={CW / 2} y={CH / 2 + 4} textAnchor="middle">{s.index}</text>
+                  {s.currentLoad > 0 && <text className="load" x={CW - 3} y={CH - 3} textAnchor="end">{Math.round(s.currentLoad / 1000)}k</text>}
+                  <path className="ring" d={facePath(p.corner)} />
                 </g>
                 {isFiring && (
                   <g pointerEvents="none">
-                    <rect x={CW / 2 - 21} y={p.row === 'top' ? -DEP - 28 : CH + 8} width="42" height="16" rx="8" fill="#dc2626" />
-                    <text x={CW / 2} y={p.row === 'top' ? -DEP - 16.5 : CH + 19.5} fontSize="9" fontWeight="800" fill="#fff" textAnchor="middle">{t.firingState}</text>
+                    <rect x={p.col === 'left' ? -48 : CW + DEP + 4} y={CH / 2 - 8} width="44" height="16" rx="8" fill="#dc2626" />
+                    <text x={p.col === 'left' ? -26 : CW + DEP + 26} y={CH / 2 + 3.5} fontSize="9" fontWeight="800" fill="#fff" textAnchor="middle">{t.firingState}</text>
                   </g>
                 )}
               </g>

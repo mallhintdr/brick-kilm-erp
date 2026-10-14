@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useT } from '../i18n.js';
 import { get, fmtDateTime } from '../api.js';
+import DateTime from '../components/DateTime.jsx';
 
 // A browser-printable worker statement: Urdu text renders through the same font/engine
 // as the rest of the app, so there's no separate PDF-library text-shaping risk. The
@@ -39,7 +40,7 @@ export default function PrintWorkerSlip() {
             {entries.map((e, i) => (
               <tr key={e._id}>
                 <td className="rownum">{i + 1}</td>
-                <td>{fmtDateTime(e.createdAt)}</td>
+                <td><DateTime value={e.createdAt} /></td>
                 <td>{e.account === 'peshgi' ? t.peshgi : t.earnings}</td>
                 <td>{e.type}</td>
                 <td>{Number(e.debit) > 0 ? `+Rs ${e.debit}` : `-Rs ${e.credit}`}</td>

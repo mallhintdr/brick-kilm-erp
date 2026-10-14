@@ -130,6 +130,7 @@ const cnic = z.string().regex(/^\d{5}-?\d{7}-?\d$/, 'CNIC/Form-B must be 13 digi
 
 export const workerInput = z.object({
   name: z.string().min(2),
+  fatherName: z.string().trim().min(2), // tells apart workers who share a common name
   cnic,
   dob: z.coerce.date(),
   category: z.string().min(1), // validated against the owner-editable workerCategory types on the server
@@ -143,7 +144,10 @@ export const workerInput = z.object({
   clientUuid: z.string().uuid().optional(),
 });
 
+const workDate = z.coerce.date().refine((d) => d.getTime() <= Date.now() + 24 * 60 * 60 * 1000, 'Date cannot be in the future');
+
 export const advanceInput = z.object({
+  date: workDate.optional(), // back-dated entry; defaults to now
   workerId: z.string(),
   amount: moneyString,
   overrideReason: z.string().min(3).optional(),
@@ -151,6 +155,7 @@ export const advanceInput = z.object({
 });
 
 export const recoveryInput = z.object({
+  date: workDate.optional(), // back-dated entry; defaults to now
   workerId: z.string(),
   amount: moneyString,
   clientUuid: z.string().uuid(),
@@ -193,12 +198,45 @@ const nonNegInt = z.coerce.number().int().nonnegative();
 export const GRADES = ['awwal', 'doem', 'khangar', 'broken'];
 export const KILN_STATES = ['Empty', 'Loading', 'Preheating', 'Firing', 'Cooling', 'Unloading'];
 
+// A work date (YYYY-MM-DD) lets a whole week be entered at once; it can't be in the future.
+
 export const mouldingInput = z.object({
   teamId: z.string(),
   count: positiveInt,
   kharaba: nonNegInt.default(0),
+  date: workDate.optional(),
   clientUuid: z.string().uuid(),
 });
+
+// Owner/permitted edits. Fields are optional: only what's sent is changed.
+export const mouldingUpdate = z.object({ count: positiveInt.optional(), kharaba: nonNegInt.optional(), date: workDate.optional() });
+export const firingUpdate = z.object({
+  shift: z.enum(['day', 'night']).optional(),
+  coalKg: positiveInt.optional(),
+  tempC: z.coerce.number().int().min(0).max(2000).optional(),
+  fanOn: z.boolean().optional(),
+  genHours: z.coerce.number().min(0).max(24).optional(),
+});
+export const workerUpdate = z.object({
+  name: z.string().min(2).optional(),
+  fatherName: z.string().trim().min(2).optional(),
+  category: z.string().min(1).optional(),
+  phone: z.string().optional(),
+  eobiNo: z.string().optional(),
+  pessiNo: z.string().optional(),
+});
+export const customerUpdate = z.object({ name: z.string().min(2).optional(), type: z.string().min(1).optional(), phone: z.string().optional() });
+export const grnUpdate = z.object({
+  supplierName: z.string().min(2).optional(),
+  vehicleNo: z.string().optional(),
+  qty: z.coerce.number().positive().optional(),
+  rate: moneyString.optional(),
+  freight: nonNegMoneyString.optional(),
+});
+export const invoiceUpdate = z.object({ qty: positiveInt.optional(), rate: moneyString.optional(), taxPct: z.coerce.number().min(0).max(100).optional() });
+export const paymentUpdate = z.object({ amount: moneyString.optional(), mode: z.string().min(1).optional() });
+export const expenseUpdate = z.object({ amount: moneyString.optional(), payee: z.string().trim().min(1).optional() });
+export const advanceUpdate = z.object({ amount: moneyString });
 
 export const sectionLoadInput = z.object({
   sectionIndex: positiveInt,
@@ -245,6 +283,7 @@ export const customerInput = z.object({
 });
 
 export const invoiceInput = z.object({
+  date: workDate.optional(), // back-dated entry; defaults to now
   customerId: z.string(),
   grade: z.enum(['awwal', 'doem', 'khangar']),
   qty: positiveInt,
@@ -254,6 +293,7 @@ export const invoiceInput = z.object({
 });
 
 export const paymentInput = z.object({
+  date: workDate.optional(), // back-dated entry; defaults to now
   invoiceId: z.string(),
   amount: moneyString,
   mode: z.string().min(1).default('cash'),
@@ -279,6 +319,7 @@ export const kharchiRunInput = z.object({
 });
 
 export const grnInput = z.object({
+  date: workDate.optional(), // back-dated entry; defaults to now
   item: z.string().min(1),
   supplierName: z.string().min(2),
   vehicleNo: z.string().optional(),
