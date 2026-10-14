@@ -445,14 +445,20 @@ export default function Reports() {
         const rows = data.nikasi || [];
         const sum = (k) => rows.reduce((a, r) => a + (Number(r[k]) || 0), 0);
         return (
-          <div className="card table-wrap">
-            <h2>{lang === 'ur' ? 'نکاسی' : 'Nikasi (Unloading)'}</h2>
-            <div className="kpi-grid" style={{ padding: '0.5rem 0.75rem' }}>
+          <>
+          <div className="kpi-section">
+            <div className="kpi-group">
+              <h3 className="kpi-group-title">{lang === 'ur' ? 'نکاسی' : 'Nikasi (Unloading)'}</h3>
+              <div className="kpi-grid">
               <div className="stat" style={{ borderInlineStartColor: 'var(--ok-dark)' }}><span>{t.awwal}</span><strong className="ok">{sum('awwal').toLocaleString()}</strong></div>
               <div className="stat" style={{ borderInlineStartColor: 'var(--info)' }}><span>{t.doem}</span><strong>{sum('doem').toLocaleString()}</strong></div>
               <div className="stat" style={{ borderInlineStartColor: 'var(--warn-dark)' }}><span>{t.khangar}</span><strong className="warn">{sum('khangar').toLocaleString()}</strong></div>
               <div className="stat" style={{ borderInlineStartColor: 'var(--err-dark)' }}><span>{t.broken}</span><strong className="err">{sum('broken').toLocaleString()}</strong></div>
+              </div>
             </div>
+          </div>
+          <div className="card table-wrap">
+            <h2>{lang === 'ur' ? 'نکاسی — تفصیل' : 'Nikasi (Unloading) — details'}</h2>
             <table>
               <thead><tr><th className="rownum">#</th><th className="sticky-col">{lang === 'ur' ? 'تاریخ' : 'Date'}</th><th>{lang === 'ur' ? 'لائن / چیمبر' : 'Line / chamber'}</th><th>{t.awwal}</th><th>{t.doem}</th><th>{t.khangar}</th><th>{t.broken}</th></tr></thead>
               <tbody>
@@ -463,6 +469,7 @@ export default function Reports() {
               </tbody>
             </table>
           </div>
+          </>
         );
       })()}
 
