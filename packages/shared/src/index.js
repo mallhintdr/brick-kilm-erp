@@ -193,7 +193,7 @@ export const SETTING_DEFAULTS = {
   // '1' = allow it (a real kiln sometimes runs ahead of its own stock records on paper).
   allowNegativeStock: '0',
   // How this kiln counts bharai, firing and nikasi: 'chamber' (the chamber board) or 'line'.
-  kilnUnit: 'chamber',
+  kilnUnit: 'line',
   kilnLineCount: '240', // lines in the kiln, split evenly between its two sides
 };
 

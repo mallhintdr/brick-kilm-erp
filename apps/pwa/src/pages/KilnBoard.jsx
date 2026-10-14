@@ -76,8 +76,8 @@ export default function KilnBoard({ focus } = {}) {
 
   useEffect(() => {
     get('/settings')
-      .then((s) => setUnit(s.kilnUnit === 'line' ? 'line' : 'chamber'))
-      .catch(() => setUnit('chamber'));
+      .then((s) => setUnit(s.kilnUnit === 'chamber' ? 'chamber' : 'line'))
+      .catch(() => setUnit('line'));
   }, []);
   useEffect(() => {
     if (!unit) return;
