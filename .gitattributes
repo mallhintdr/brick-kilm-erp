@@ -1,3 +1,4 @@
 # Git hooks run under sh: keep Unix line endings on every platform.
 .githooks/* text eol=lf
 *.sh text eol=lf
+update.sh text eol=lf
