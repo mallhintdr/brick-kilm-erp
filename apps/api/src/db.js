@@ -2,6 +2,9 @@ import { MongoClient } from 'mongodb';
 
 let client;
 let memory;
+// Multi-document transactions need a replica set (or mongos). A standalone server can't run them,
+// so there we fall back to running the same writes without a transaction.
+let transactions = true;
 
 // Dev/prod: a real, locally-installed MongoDB (Windows service, replica set "rs0")
 // at the default port. Data persists across restarts because it's a real database,
@@ -11,9 +14,12 @@ const DEV_URI = 'mongodb://localhost:27017';
 export async function connect(uri = process.env.MONGO_URI) {
   if (!uri) {
     if (process.env.NODE_ENV === 'test') {
-      // Tests want a clean, throwaway replica set every run, isolated from dev data.
-      const { MongoMemoryReplSet } = await import('mongodb-memory-server');
-      memory = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
+      // Tests want a clean, throwaway database every run, isolated from dev data: a replica set by
+      // default, or a standalone server (like many production hosts) with TEST_STANDALONE=1.
+      const { MongoMemoryReplSet, MongoMemoryServer } = await import('mongodb-memory-server');
+      memory = process.env.TEST_STANDALONE === '1'
+        ? await MongoMemoryServer.create()
+        : await MongoMemoryReplSet.create({ replSet: { count: 1 } });
       uri = memory.getUri();
     } else {
       uri = DEV_URI;
@@ -21,6 +27,11 @@ export async function connect(uri = process.env.MONGO_URI) {
   }
   client = await new MongoClient(uri).connect();
   const db = client.db(process.env.MONGO_DB || 'brick_kiln');
+  const hello = await db.admin().command({ hello: 1 }).catch(() => ({}));
+  transactions = Boolean(hello.setName || hello.msg === 'isdbgrid');
+  if (!transactions) {
+    console.warn('[db] MongoDB is a standalone server: transactions are off. Run it as a replica set for all-or-nothing writes.');
+  }
   await ensureIndexes(db);
   return db;
 }
@@ -30,7 +41,11 @@ export async function close() {
   await memory?.stop();
 }
 
+export const supportsTransactions = () => transactions;
+
 export function withTransaction(db, fn) {
+  // Standalone server: run the steps directly (`session` undefined = ordinary writes).
+  if (!transactions) return Promise.resolve().then(() => fn(undefined));
   const session = client.startSession();
   return session
     .withTransaction(() => fn(session))

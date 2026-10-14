@@ -408,3 +408,48 @@ test('back-dated entries: invoice, payment and advance land on the chosen day', 
   const led = (await api('GET', `/workers/${w}/ledger`)).body.find((e) => e.type === 'advance');
   assert.equal(new Date(led.createdAt).toISOString().slice(0, 10), day);
 });
+
+test('every form: an existing record can be edited and saved (payloads as the screens send them)', async () => {
+  await api('PUT', '/settings', { key: 'allowNegativeStock', value: '1' });
+  // Workers
+  const w = (await newWorker()).body.id;
+  let r = await api('PUT', `/workers/${w}`, { name: 'Ali Edited', fatherName: 'Akbar Khan', category: 'pathera', eobiNo: '', pessiNo: '' });
+  assert.equal(r.status, 200, `worker: ${JSON.stringify(r.body)}`);
+  // a worker saved before father names existed (none on record) still edits fine
+  await testDb.collection('workers').updateOne({ _id: oid(w) }, { $unset: { fatherName: 1 } });
+  r = await api('PUT', `/workers/${w}`, { name: 'Ali Again', category: 'pathera', eobiNo: '', pessiNo: '' });
+  assert.equal(r.status, 200, `legacy worker: ${JSON.stringify(r.body)}`);
+
+  // Customers
+  const cust = (await api('POST', '/customers', { name: 'Edit Buyer', type: 'individual', clientUuid: randomUUID() })).body.id;
+  assert.equal((await api('PUT', `/customers/${cust}`, { name: 'Edit Buyer 2' })).status, 200);
+
+  // Invoices + payments
+  const inv = (await api('POST', '/invoices', { customerId: cust, grade: 'awwal', qty: 2000, clientUuid: randomUUID() })).body;
+  r = await api('PUT', `/invoices/${inv.id}`, { qty: 3000, rate: '20000' });
+  assert.equal(r.status, 200, `invoice: ${JSON.stringify(r.body)}`);
+  const pay = (await api('POST', '/payments', { invoiceId: inv.id, amount: '1000', clientUuid: randomUUID() })).body;
+  assert.equal((await api('PUT', `/payments/${pay.id}`, { amount: '1500' })).status, 200);
+
+  // Goods receipts, including one saved without a supplier (as the sample data is)
+  assert.equal((await api('POST', '/grns', { item: 'coal', supplierName: 'Edit Coal Co', qty: 5, rate: '30000', freight: '0', clientUuid: randomUUID() })).status, 201);
+  const grn = (await api('GET', '/grns')).body.find((g) => g.supplierName === 'Edit Coal Co');
+  r = await api('PUT', `/grns/${grn._id}`, { supplierName: 'Edit Coal Co', qty: 6, rate: '31000' });
+  assert.equal(r.status, 200, `grn: ${JSON.stringify(r.body)}`);
+  await testDb.collection('grns').updateOne({ _id: oid(String(grn._id)) }, { $set: { supplierName: '' } });
+  r = await api('PUT', `/grns/${grn._id}`, { qty: 7, rate: '31000' });
+  assert.equal(r.status, 200, `grn without supplier: ${JSON.stringify(r.body)}`);
+
+  // Firing logs
+  const fteam = await testDb.collection('teams').insertOne({ tenantId: ctx.tenantId, kilnId: ctx.kilnId, category: 'jalai', label: 'Edit Fire', memberIds: [w] });
+  assert.equal((await api('POST', '/firing-logs', { shift: 'day', teamId: String(fteam.insertedId), coalKg: 100, tempC: 900, fanOn: true, clientUuid: randomUUID() })).status, 201);
+  const log = (await api('GET', '/firing-logs')).body.find((f) => f.teamId === String(fteam.insertedId));
+  r = await api('PUT', `/firing-logs/${log._id}`, { shift: 'night', coalKg: 120, tempC: 950, fanOn: false });
+  assert.equal(r.status, 200, `firing: ${JSON.stringify(r.body)}`);
+
+  // Cash book expense (from the goods receipt)
+  const today = new Date().toISOString().slice(0, 10);
+  const exp = (await api('GET', `/cashbook?date=${today}`)).body.expense.find((e) => e.kind === 'expense');
+  r = await api('PUT', `/expenses/${exp.id}`, { amount: '1000.00', payee: 'Edited Payee' });
+  assert.equal(r.status, 200, `expense: ${JSON.stringify(r.body)}`);
+});

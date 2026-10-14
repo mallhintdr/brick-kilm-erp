@@ -325,7 +325,7 @@ export const grnInput = z.object({
   vehicleNo: z.string().optional(),
   qty: z.coerce.number().positive(), // tonnes for coal/soil, litres for diesel
   rate: moneyString, // per tonne / per litre
-  freight: moneyString.optional(),
+  freight: nonNegMoneyString.optional(), // 0 = delivered free
   labFields: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
   clientUuid: z.string().uuid(),
 });

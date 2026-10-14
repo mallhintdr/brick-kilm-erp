@@ -232,8 +232,8 @@ export default function Inventory() {
                 <td className="actions">
                   <RowActions
                     editor={editor} id={g._id} path={`/grns/${g._id}`} name={`${items.label(g.item)} — ${g.supplierName}`}
-                    initial={{ supplierName: g.supplierName, qty: String(g.qty), rate: String(g.rate) }}
-                    toPayload={(d) => ({ supplierName: d.supplierName, qty: Number(d.qty), rate: d.rate })}
+                    initial={{ supplierName: g.supplierName || '', qty: String(g.qty ?? ''), rate: g.rate != null ? String(g.rate) : '' }}
+                    toPayload={(d) => Object.fromEntries(Object.entries({ supplierName: d.supplierName?.trim(), qty: Number(d.qty) || undefined, rate: d.rate }).filter(([, v]) => v !== undefined && v !== '' && v !== 'undefined'))}
                     onSaved={() => { setMsg({ text: t.savedOk, bad: false }); load(); }}
                     onDeleted={() => { setMsg({ text: t.deleted, bad: false }); load(); }}
                     onError={(m) => setMsg({ text: m, bad: true })}
