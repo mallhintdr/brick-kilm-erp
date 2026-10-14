@@ -186,7 +186,7 @@ function Shell({ children }) {
             </div>
             <span className="brand-stack">
               <strong className="brand-text">{t.appName}</strong>
-              <small className="brand-user">{kilnCode ? `${username} • ${kilnCode}` : username}</small>
+              <small className="brand-user">{kilnCode ? `${username} • ${kilnCode}` : username} • v{__APP_VERSION__}</small>
             </span>
           </NavLink>
 

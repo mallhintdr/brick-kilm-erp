@@ -1,12 +1,22 @@
 {
   "name": "brick-kiln-erp",
+  "version": "1.2.1",
   "private": true,
-  "workspaces": ["apps/*", "packages/*"],
-  "devDependencies": { "concurrently": "^9.0.1" },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  },
   "scripts": {
     "dev": "concurrently -n api,pwa -c yellow,cyan \"npm:dev:api\" \"npm:dev:pwa\"",
     "dev:api": "npm run dev -w apps/api",
     "dev:pwa": "npm run dev -w apps/pwa",
-    "test": "npm test -w apps/api"
+    "test": "npm test -w apps/api",
+    "prepare": "git config core.hooksPath .githooks",
+    "version:patch": "node scripts/bump-version.mjs patch",
+    "version:minor": "node scripts/bump-version.mjs minor",
+    "version:major": "node scripts/bump-version.mjs major"
   }
 }

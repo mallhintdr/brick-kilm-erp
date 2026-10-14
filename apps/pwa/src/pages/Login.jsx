@@ -91,6 +91,7 @@ export default function Login() {
         >
           🌐 {t.lang}
         </button>
+        <p className="app-version">v{__APP_VERSION__}</p>
       </form>
     </div>
   );

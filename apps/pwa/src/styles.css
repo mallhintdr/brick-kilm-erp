@@ -2978,3 +2978,4 @@ h2, .kpi-group-title { width: 100%; }
 .card.table-wrap > h2, .card.table-wrap > div:has(> h2) { padding: 0.6rem 0.75rem !important; border-bottom: 1px solid #e2e8f0; }
 .card.table-wrap > table > thead > tr > th { position: sticky; z-index: 4; }
 .card.table-wrap > table > thead > tr > th.sticky-col { z-index: 5; }
+.app-version { margin: 0.25rem 0 0; text-align: center; font-size: 0.72rem; color: #94a3b8; font-variant-numeric: tabular-nums; }
