@@ -29,6 +29,8 @@ export async function connect(uri = process.env.MONGO_URI) {
   const db = client.db(process.env.MONGO_DB || 'brick_kiln');
   const hello = await db.admin().command({ hello: 1 }).catch(() => ({}));
   transactions = Boolean(hello.setName || hello.msg === 'isdbgrid');
+  // test hook: pretend the server claims transaction support, to exercise the runtime fallback
+  if (process.env.NODE_ENV === 'test' && process.env.TEST_FORCE_TX === '1') transactions = true;
   if (!transactions) {
     console.warn('[db] MongoDB is a standalone server: transactions are off. Run it as a replica set for all-or-nothing writes.');
   }
@@ -50,8 +52,20 @@ export function withTransaction(db, fn) {
   return session
     .withTransaction(() => fn(session))
     .then((r) => r)
+    .catch((err) => {
+      // The server said it was a replica set but refused the transaction (e.g. started with --replSet
+      // but never initiated). It refuses before the first write, so nothing landed: switch off and redo.
+      if (isNoTransactionsError(err)) {
+        transactions = false;
+        console.warn('[db] transactions refused by MongoDB; continuing without them:', err.message);
+        return fn(undefined);
+      }
+      throw err;
+    })
     .finally(() => session.endSession());
 }
+
+const isNoTransactionsError = (err) => /Transaction numbers are only allowed|Transactions are not supported/i.test(String(err?.message));
 
 async function ensureIndexes(db) {
   await db.collection('tenants').createIndex({ code: 1 }, { unique: true, sparse: true });

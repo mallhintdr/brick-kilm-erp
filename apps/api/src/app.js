@@ -8,7 +8,12 @@ import {
   workerInput, advanceInput, recoveryInput, settingInput, SETTING_DEFAULTS,
   ageOn, MIN_WORKER_AGE, RECOMMENDED_WORKER_AGE, toPaisa,
 } from '@kiln/shared';
-import { withTransaction } from './db.js';
+import { withTransaction, supportsTransactions } from './db.js';
+import { readFileSync } from 'node:fs';
+
+const APP_VERSION = (() => {
+  try { return JSON.parse(readFileSync(new URL('../../../package.json', import.meta.url), 'utf8')).version; } catch { return 'unknown'; }
+})();
 import {
   dec, oid, scope, audit, getSetting, postEntry, reverseEntry, balance, httpError, assertType,
 } from './core.js';
@@ -71,6 +76,9 @@ export function createApp(db) {
 
   app.get('/', (_req, res) => res.json({ service: 'Brick Kiln ERP API', status: 'ok' }));
   app.get('/.well-known/*', (_req, res) => res.status(204).end());
+
+  // Which build is running, and whether MongoDB is giving us transactions. Open /api/version to check a deploy.
+  app.get('/version', (req, res) => res.json({ version: APP_VERSION, transactions: supportsTransactions() }));
 
   app.post('/auth/login', loginLimiter, wrap(async (req, res) => {
     const { password } = req.body;
