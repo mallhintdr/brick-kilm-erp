@@ -3150,3 +3150,10 @@ td.issues-cell { white-space: normal !important; min-width: 220px; max-width: 42
 .kiln-panel { scroll-margin-top: 0.75rem; }
 button.close-btn { width: 34px; height: 34px; min-height: 34px !important; padding: 0 !important; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; background: #dc2626; color: #fff; font-size: 1rem; font-weight: 900; cursor: pointer; }
 button.close-btn:hover { background: #b91c1c; }
+
+/* Info-card sections never grow wider than the screen: cards wrap instead */
+.kpi-section, .kpi-group, .kpi-grid { min-width: 0 !important; max-width: 100%; box-sizing: border-box; }
+.kpi-grid { flex-wrap: wrap !important; }
+* > .stat { min-width: 0; flex: 1 1 140px; max-width: 100%; }
+/* a whole section placed inside a card row takes the full row */
+.kpi-grid > :not(.stat) { flex: 1 1 100%; min-width: 0; }
