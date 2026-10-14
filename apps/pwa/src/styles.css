@@ -2979,3 +2979,35 @@ h2, .kpi-group-title { width: 100%; }
 .card.table-wrap > table > thead > tr > th { position: sticky; z-index: 4; }
 .card.table-wrap > table > thead > tr > th.sticky-col { z-index: 5; }
 .app-version { margin: 0.25rem 0 0; text-align: center; font-size: 0.72rem; color: #94a3b8; font-variant-numeric: tabular-nums; }
+
+/* ==========================================================================
+   INSIGHTS CHARTS
+   ========================================================================== */
+/* Small screens: title, dates, then the daily-average badge stacked, never overlapping */
+@media (max-width: 720px) {
+  .chart-header-top { display: flex !important; flex-direction: column !important; align-items: center !important; gap: 0.35rem; }
+  .chart-header-side-spacer { display: none !important; }
+  .chart-header-right-kpi { position: static !important; transform: none !important; margin: 0 !important; width: auto !important; }
+  .chart-title-center-block { width: 100%; text-align: center; }
+}
+/* Legends: one row, no swatches, text coloured like its bar or line */
+.chart-checkbox-legend-row { display: flex !important; flex-wrap: nowrap !important; justify-content: center; gap: 0.9rem; overflow-x: auto; }
+.chart-checkbox-label { display: inline-flex !important; align-items: center; gap: 0.3rem; white-space: nowrap; font-size: 0.8rem; font-weight: 800; flex: 0 0 auto; }
+.chart-checkbox-label .chart-legend-box { display: none !important; }
+
+/* Trend line draws itself from start to end */
+.trend-draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: trend-draw 1.6s ease-out 0.2s forwards; }
+@keyframes trend-draw { to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .trend-draw { animation: none; stroke-dashoffset: 0; } }
+@media print { .trend-draw { animation: none; stroke-dashoffset: 0; } }
+
+/* Bars grow up from the baseline on load and when switched on; shrink down when switched off */
+.chart-bar {
+  transform-box: fill-box; transform-origin: 50% 100%;
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease;
+  animation: bar-grow 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.bars-off .chart-bar { transform: scaleY(0); opacity: 0 !important; pointer-events: none; }
+@keyframes bar-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@media (prefers-reduced-motion: reduce) { .chart-bar { animation: none; transition: none; } }
+@media print { .chart-bar { animation: none; transition: none; } }

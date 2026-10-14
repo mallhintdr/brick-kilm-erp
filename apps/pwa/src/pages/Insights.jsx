@@ -82,7 +82,7 @@ export default function Insights() {
       <div className="card" style={{ display: 'grid', gap: '0.65rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
           <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            📅 {t.insights}
+            {t.insights}
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
             <label htmlFor="insights-range-select" className="visually-hidden">
