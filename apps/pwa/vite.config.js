@@ -23,6 +23,10 @@ export default defineConfig({
         icons: [{ src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }],
       },
       workbox: {
+        // a new build takes over open tabs straight away instead of waiting for every tab to close
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
         // App shell (JS/CSS/HTML/font) is precached at build time, so the UI itself
         // loads with no network — not just the write-outbox this app already had.
         globPatterns: ['**/*.{js,css,html,svg,woff2}'],
