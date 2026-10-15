@@ -3172,3 +3172,6 @@ h2, h3.kpi-group-title, .kpi-group > .kpi-group-title, .card > h2:first-child, .
 .table-wrap > div > h2, .home-group-title, .pay-picker-title > span, details.lab-box > summary {
   font-size: 1.19rem !important;
 }
+
+/* Home: a lone last tile in a group spans both columns */
+.home-module-grid > .home-module:last-child:nth-child(odd) { grid-column: 1 / -1; justify-content: center; }
