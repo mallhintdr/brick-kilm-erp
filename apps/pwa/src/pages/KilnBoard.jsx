@@ -240,7 +240,7 @@ export default function KilnBoard({ focus } = {}) {
 
         <div className="legend">
           {Object.entries(STATE_LABEL_KEY).map(([state, key]) => (
-            <span key={state} className="legend-item">
+            <span key={state} className={`legend-item ${STATE_CLASS[state]}`}>
               <span>{t[key]}</span>
               <b>{rows.filter((s) => s.state === state).length}</b>
             </span>

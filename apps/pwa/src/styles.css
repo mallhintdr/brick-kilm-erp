@@ -3193,3 +3193,11 @@ details.week-card[open] > summary.week-summary::after { transform: rotate(180deg
 /* Buttons that fit their text and sit in the middle */
 button.fit-center { justify-self: center !important; width: auto !important; min-width: 0 !important; padding-inline: 1.6rem !important; }
 .plus-icon { color: #22c55e; font-weight: 900; font-size: 1.35em; line-height: 1; -webkit-text-stroke: 1px #22c55e; }
+
+/* State cards keep their light fill (tied to the card, not to a colour square) */
+.legend-item.sec-empty { background: #f1f5f9; border-color: #94a3b8; }
+.legend-item.sec-loading { background: #dbeafe; border-color: #60a5fa; }
+.legend-item.sec-preheating { background: #fef3c7; border-color: #f59e0b; }
+.legend-item.sec-firing { background: #fee2e2; border-color: #ef4444; }
+.legend-item.sec-cooling { background: #e0e7ff; border-color: #6366f1; }
+.legend-item.sec-unloading { background: #dcfce7; border-color: #22c55e; }
