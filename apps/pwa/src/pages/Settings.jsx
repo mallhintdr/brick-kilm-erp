@@ -3,6 +3,7 @@ import { useT } from '../i18n.js';
 import { get, put, getRole } from '../api.js';
 import TypesManager from '../components/TypesManager.jsx';
 import DeleteButton from '../components/DeleteButton.jsx';
+import LocationPicker from '../components/LocationPicker.jsx';
 
 const KEYS = [
   'peshgiLimit', 'munshiAdvanceLimit', 'recoveryPct', 'kharchiFloor',
@@ -102,6 +103,10 @@ function KilnLocation({ t, isOwner, vals, onSaved }) {
     <div className="card grid">
       <h2>{t.kilnLocation}</h2>
       <p className="muted" style={{ margin: 0 }}>{t.kilnLocationHint}</p>
+      <LocationPicker
+        lat={loc.kilnLat} lon={loc.kilnLon} disabled={!isOwner}
+        onPick={(la, lo) => { setLoc((x) => ({ ...x, kilnLat: la, kilnLon: lo })); setMsg({ text: t.locPickedSave, bad: false }); }}
+      />
       <div className="grid two">
         <label>{t.locPlace}<input disabled={!isOwner} value={loc.kilnPlace} placeholder="e.g. Sadiqabad" onChange={(e) => setLoc({ ...loc, kilnPlace: e.target.value })} /></label>
         <label>{t.locLat}<input disabled={!isOwner} inputMode="decimal" value={loc.kilnLat} placeholder="28.30000" onChange={(e) => setLoc({ ...loc, kilnLat: e.target.value })} /></label>

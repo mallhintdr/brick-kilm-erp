@@ -3234,3 +3234,9 @@ button.fit-center { justify-self: center !important; width: auto !important; min
 .wx-advice li.adv-green { background: #dcfce7; color: #166534; }
 table tbody tr.wx-rain-row > td { background: #fef2f2 !important; }
 a.button-link { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 0 1rem; border-radius: 8px; text-decoration: none; font-weight: 800; }
+
+/* Kiln location map */
+.location-map { height: 340px; width: 100%; border-radius: 10px; border: 1.5px solid #cbd5e1; overflow: hidden; z-index: 0; }
+@media (min-width: 1024px) { .location-map { height: 440px; } }
+.kiln-pin { background: none; border: 0; }
+.location-map .leaflet-control-layers { font-size: 0.8rem; }
