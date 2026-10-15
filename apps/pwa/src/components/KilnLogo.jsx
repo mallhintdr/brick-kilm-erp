@@ -1,34 +1,24 @@
-// Bhatta (kiln) chimney: thin outline with brick courses, a cap band, the kiln mound at its
-// foot and smoke drifting up. Same drawing as the installed app icon (public/icon.svg).
+﻿// Bhatta (kiln) chimney: tall, tapering towards the top, thin outline with brick courses, a cap,
+// smoke drifting up, and the kiln mound standing on the bottom edge. Same drawing as public/icon.svg.
 export default function KilnLogo({ size = 24, color = '#ffffff', smoke = true, title }) {
   return (
-    <svg viewBox="0 0 32 32" width={size} height={size} fill="none" stroke={color} strokeWidth="1.15"
+    <svg viewBox="0 0 32 32" width={size} height={size} fill="none" stroke={color} strokeWidth="1.1"
       strokeLinecap="round" strokeLinejoin="round" role={title ? 'img' : undefined} aria-hidden={title ? undefined : 'true'}
       className="kiln-logo">
       {title && <title>{title}</title>}
-      {/* smoke puffs */}
       {smoke && (
-        <g className="kiln-logo-smoke" strokeWidth="1">
-          <path className="puff p1" d="M15.2 6.2c-1.6-.2-2.2-1.9-1-2.8.2-1.5 2.2-1.9 3-.7 1.4-.4 2.4 1 1.6 2.2.2 1.2-1.4 1.8-2.2 1" />
-          <path className="puff p2" d="M18.6 3.4c-.9-.6-.5-2 .6-2 .5-.9 1.9-.7 2.1.3 1 .1 1.2 1.4.3 1.8-.4.6-1.4.6-1.8.1" />
-          <path className="puff p3" d="M22.4 1.9c-.5-.4-.2-1.2.4-1.2.3-.5 1.1-.4 1.2.2.6.1.6.8.1 1" />
+        <g className="kiln-logo-smoke" strokeWidth="0.95">
+          <path className="puff p1" d="M16.4 3.9c-1.3-.1-1.7-1.5-.8-2.2.2-1.2 1.8-1.5 2.4-.6 1.1-.3 1.9.8 1.3 1.7.1 1-1.1 1.4-1.8.8" />
+          <path className="puff p2" d="M19.6 2c-.7-.5-.4-1.6.5-1.6.4-.7 1.5-.6 1.7.2.8.1.9 1.1.2 1.4-.3.5-1.1.5-1.4.1" />
+          <path className="puff p3" d="M22.6.9c-.4-.3-.2-.9.3-.9" />
         </g>
       )}
-      {/* chimney cap and lip */}
-      <path d="M12.6 7.6h6.8v1.3h-6.8z" />
-      <path d="M13.1 8.9h5.8" />
-      {/* tapered stack */}
-      <path d="M13.2 8.9 11.6 26M18.8 8.9 20.4 26" />
-      {/* brick courses (horizontal joints) */}
-      <path d="M13.05 11.6h5.9M12.8 14.3h6.4M12.55 17h6.9M12.3 19.7h7.4M12.05 22.4h7.9" />
-      {/* staggered vertical joints */}
-      <path d="M16 8.9v2.7M14.5 11.6v2.7M17.5 11.6v2.7M16 14.3v2.7M14.3 17v2.7M17.7 17v2.7M16 19.7v2.7M14.1 22.4v3.6M17.9 22.4v3.6" />
-      {/* kiln mound with firing arches */}
-      <path d="M3 26c1.6-3 5-4.3 8.6-4.6M20.4 21.4c3.6.3 7 1.6 8.6 4.6" />
-      <path d="M5.4 26a2 2 0 0 1 4 0M22.6 26a2 2 0 0 1 4 0" />
-      {/* ground */}
-      <path d="M1.5 26h29" />
-      <path d="M4 28.2h6M13 28.2h6M22 28.2h6" strokeWidth=".9" opacity=".7" />
+      <path d="M14.1 4h3.8v1.2h-3.8zM14.6 5.2h2.8" />
+      <path d="M14.6 5.2 11.37 29.2M17.4 5.2 20.63 29.2" />
+      <path d="M14.22 8h3.55M13.82 11h4.36M13.42 14h5.17M13.01 17h5.97M12.61 20h6.78M12.21 23h7.59M11.8 26h8.4" strokeWidth="0.9" />
+      <path d="M16 5.2v2.8M15.01 8v3M16.99 8v3M16 11v3M14.61 14v3M17.39 14v3M16 17v3M14.2 20v3M17.8 20v3M16 23v3M13.79 26v3.2M18.21 26v3.2" strokeWidth="0.8" />
+      <path d="M1.6 29.2c1.5-2.4 5-3.3 9.9-3.5M20.5 25.7c4.9.2 8.4 1.1 9.9 3.5M4.2 29.2a1.7 1.7 0 0 1 3.4 0M24.4 29.2a1.7 1.7 0 0 1 3.4 0" />
+      <path d="M.8 29.6h30.4" />
     </svg>
   );
 }
