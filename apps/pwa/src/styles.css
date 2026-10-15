@@ -3267,3 +3267,29 @@ button.wx-refresh .spin { display: inline-block; animation: status-spin 0.8s lin
 .wx-days .wx-facts { grid-template-columns: 1fr 1fr; gap: 0.05rem 0.4rem; font-size: 0.7rem; line-height: 1.3; }
 .wx-days .wx-advice { gap: 0.2rem; }
 .wx-days .wx-advice li { font-size: 0.72rem; padding: 0.2rem 0.35rem; line-height: 1.3; }
+
+/* Chimney logo: smoke drifts up and fades, one puff after another */
+.kiln-logo .puff { transform-box: fill-box; transform-origin: center; animation: logo-smoke 3.2s ease-in-out infinite; }
+.kiln-logo .p2 { animation-delay: 0.9s; }
+.kiln-logo .p3 { animation-delay: 1.8s; }
+@keyframes logo-smoke {
+  0% { opacity: 0; transform: translate(-1px, 2px) scale(0.7); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: translate(1.5px, -2.5px) scale(1.15); }
+}
+@media (prefers-reduced-motion: reduce) { .kiln-logo .puff { animation: none; opacity: 0.9; } }
+.brand-icon-box { width: 40px !important; height: 40px !important; }
+
+/* ==========================================================================
+   TITLE CASE for headers, titles, buttons, labels and table/list headers
+   (all-caps styling removed; Urdu is unaffected). Typed values keep their case.
+   ========================================================================== */
+h1, h2, h3, h4, summary, th, button, label, legend,
+.stat > span, .kpi-group-title, .home-group-title, .home-module span, .chart-title-top,
+.report-range > span, .week-range > span, .cycle-dates span, .legend-item > span, .unit-switch-label,
+.pay-picker-title, .wx-tabs button, .status-btn, .clear-filter-btn {
+  text-transform: capitalize !important;
+}
+input, select, textarea, option, td, .badge, .muted, p, .brand-user, .issues-cell, .wx-advice li {
+  text-transform: none !important;
+}

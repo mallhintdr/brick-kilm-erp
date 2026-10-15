@@ -12,15 +12,21 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg'],
+      includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Brick Kiln ERP',
-        short_name: 'Kiln',
+        name: 'Bhatta Manager',
+        short_name: 'Bhatta Manager',
+        description: 'Brick kiln operations: moulding, kiln lines, workers, peshgi, sales and cash book',
         start_url: '/',
         display: 'standalone',
         background_color: '#fdf6e9',
-        theme_color: '#b45309',
-        icons: [{ src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }],
+        theme_color: '#0f172a',
+        icons: [
+          { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+        ],
       },
       workbox: {
         // a new build takes over open tabs straight away instead of waiting for every tab to close
@@ -29,7 +35,7 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         // App shell (JS/CSS/HTML/font) is precached at build time, so the UI itself
         // loads with no network — not just the write-outbox this app already had.
-        globPatterns: ['**/*.{js,css,html,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallback: '/index.html',
         runtimeCaching: [
           {

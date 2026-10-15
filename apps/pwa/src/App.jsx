@@ -20,6 +20,7 @@ import Kharchi from './pages/Kharchi.jsx';
 import Users from './pages/Users.jsx';
 import Reports from './pages/Reports.jsx';
 import Home from './pages/Home.jsx';
+import KilnLogo from './components/KilnLogo.jsx';
 import Weather from './pages/Weather.jsx';
 import PrintWorkerSlip from './pages/PrintWorkerSlip.jsx';
 import PrintKharchiSlip from './pages/PrintKharchiSlip.jsx';
@@ -186,7 +187,7 @@ function Shell({ children }) {
           {/* Brand Logo & Name */}
           <NavLink to="/home" className="brand-badge" title={t.home}>
             <div className="brand-icon-box" aria-hidden="true">
-              <Icon name="kilnLogo" color="#ffffff" size={22} />
+              <KilnLogo size={30} color="#ffffff" />
             </div>
             <span className="brand-stack">
               <strong className="brand-text">{t.appName}</strong>
