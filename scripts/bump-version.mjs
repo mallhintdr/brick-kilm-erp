@@ -19,7 +19,13 @@ let next;
 if (/^\d+\.\d+\.\d+$/.test(arg)) next = arg;
 else if (arg === 'major') next = `${maj + 1}.0.0`;
 else if (arg === 'minor') next = `${maj}.${min + 1}.0`;
-else next = `${maj}.${min}.${pat + 1}`;
+else {
+  // each part counts 0-9 and rolls over: 2.1.9 -> 2.2.0, 2.9.9 -> 3.0.0
+  let [a, b, c] = [maj, min, pat + 1];
+  if (c > 9) { c = 0; b += 1; }
+  if (b > 9) { b = 0; a += 1; }
+  next = `${a}.${b}.${c}`;
+}
 
 pkg.version = next;
 writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
