@@ -3166,3 +3166,9 @@ button.close-btn:hover { background: #b91c1c; }
   .report-range > span { font-size: 0.68rem; padding: 0.3rem 0.35rem !important; }
   .report-range > strong { font-size: 0.8rem; padding: 0.3rem 0.4rem !important; }
 }
+
+/* Section / group titles 15% larger (1.035rem -> 1.19rem) everywhere */
+h2, h3.kpi-group-title, .kpi-group > .kpi-group-title, .card > h2:first-child, .table-wrap > h2,
+.table-wrap > div > h2, .home-group-title, .pay-picker-title > span, details.lab-box > summary {
+  font-size: 1.19rem !important;
+}

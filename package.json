@@ -1,6 +1,6 @@
 {
   "name": "brick-kiln-erp",
-  "version": "1.2.15",
+  "version": "1.2.16",
   "private": true,
   "workspaces": [
     "apps/*",
