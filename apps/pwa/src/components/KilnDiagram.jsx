@@ -93,8 +93,6 @@ export default function KilnDiagram({ sections, selected, onSelect, t }) {
             {firing && [0, 1, 2].map((k) => (
               <circle key={k} className="puff" cx={chimneyX + (k - 1) * 3} cy="18" r="6" fill="#78716c" style={{ animationDelay: `${k * 1}s` }} />
             ))}
-            <rect x={chimneyX + 20} y={slabTop - 14} width="34" height="20" rx="3" fill="#57534e" />
-            <text x={chimneyX + 37} y={slabTop} fontSize="9" fontWeight="700" fill="#fff" textAnchor="middle">ID FAN</text>
           </g>
 
           {/* chambers */}

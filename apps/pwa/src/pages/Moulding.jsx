@@ -177,9 +177,10 @@ export default function Moulding() {
       </div>
 
       {/* Weekly entry: every pathera team × 7 days, saved in one go */}
-      <div className="card grid">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <h2 style={{ margin: 0 }}>{t.weeklyEntry}</h2>
+      <details className="card week-card">
+        <summary className="week-summary"><h2>{t.weeklyEntry}</h2></summary>
+        <div className="grid week-body">
+        <div className="week-controls">
           <div className="row" style={{ alignItems: 'center', gap: '0.35rem' }}>
             <button type="button" className="ghost" onClick={() => setWeekStart(addDays(weekStart, -7))} aria-label="Previous week">‹</button>
             <div className="week-range">
@@ -264,10 +265,11 @@ export default function Moulding() {
             </tfoot>
           </table>
         </div>
-        <button type="button" className="primary" disabled={weekBusy || weekEdit || !newTotal} onClick={saveWeek}>
+        <button type="button" className="primary fit-center" disabled={weekBusy || weekEdit || !newTotal} onClick={saveWeek}>
           {weekBusy ? '...' : `💾 ${t.saveWeek}`}
         </button>
-      </div>
+        </div>
+      </details>
 
       {/* Single batch entry (with kharaba), any past date */}
       <form className="card grid" onSubmit={submit}>
@@ -294,7 +296,7 @@ export default function Moulding() {
           </label>
         </div>
         {f.count && <p className="muted" style={{ margin: 0 }}>{t.netCount}: <strong>{currentNet.toLocaleString()}</strong></p>}
-        <button className="primary" disabled={submitting}>➕ {t.add}</button>
+        <button className="primary fit-center" disabled={submitting}><span className="plus-icon" aria-hidden="true">+</span> {t.add}</button>
         {msg.text && <p role={msg.bad ? 'alert' : 'status'} className={msg.bad ? 'err' : 'ok'}>{msg.text}</p>}
       </form>
 

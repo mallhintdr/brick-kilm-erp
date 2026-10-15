@@ -648,7 +648,6 @@ export default function Reports() {
                 <th>{t.shift}</th>
                 <th>{t.coalKg}</th>
                 <th>{t.tempC}</th>
-                <th>{t.fan}</th>
                 <th>{lang === 'ur' ? 'جنریٹر گھنٹے' : 'Gen Hours'}</th>
               </tr>
               <tr className="filter-row no-print">
@@ -657,7 +656,6 @@ export default function Reports() {
                 <th><input type="search" className="table-col-filter" value={filters.firing.shift || ''} onChange={(e) => updateFilter('firing', 'shift', e.target.value)} /></th>
                 <th><input type="search" className="table-col-filter" value={filters.firing.coalKg || ''} onChange={(e) => updateFilter('firing', 'coalKg', e.target.value)} /></th>
                 <th><input type="search" className="table-col-filter" value={filters.firing.tempC || ''} onChange={(e) => updateFilter('firing', 'tempC', e.target.value)} /></th>
-                <th><input type="search" className="table-col-filter" value={filters.firing.fanOn || ''} onChange={(e) => updateFilter('firing', 'fanOn', e.target.value)} /></th>
                 <th><input type="search" className="table-col-filter" value={filters.firing.genHours || ''} onChange={(e) => updateFilter('firing', 'genHours', e.target.value)} /></th>
               </tr>
             </thead>
@@ -672,11 +670,6 @@ export default function Reports() {
                     <td><strong>{row.shift}</strong></td>
                     <td><strong>{Number(row.coalKg).toLocaleString()} kg</strong></td>
                     <td>{row.tempC ? `${row.tempC}°C` : '-'}</td>
-                    <td>
-                      <span className={`badge ${row.fanOn ? 'green' : 'red'}`}>
-                        {row.fanOn ? 'ON' : 'OFF'}
-                      </span>
-                    </td>
                     <td>{row.genHours || 0} hrs</td>
                   </tr>
                 ))

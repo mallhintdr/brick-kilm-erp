@@ -57,12 +57,6 @@ export default function Firing() {
           <span>Total Coal Logged</span>
           <strong>{totalCoalToday.toLocaleString()} kg</strong>
         </div>
-        <div className="stat" style={{ borderInlineStartColor: 'var(--ok)' }}>
-          <span>ID Fan Status</span>
-          <strong className={list[0]?.fanOn !== false ? 'ok' : 'err'}>
-            {list[0]?.fanOn !== false ? '⚡ Active' : '⚠️ Offline'}
-          </strong>
-        </div>
       </div>
 
       {/* Firing Entry Form */}
@@ -97,20 +91,6 @@ export default function Firing() {
           </label>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.85rem 1rem', background: '#f8fafc', borderRadius: '10px', border: '1px solid var(--line)', flexWrap: 'wrap' }}>
-          <label className="row" style={{ alignItems: 'center', margin: 0, cursor: 'pointer' }}>
-            <input type="checkbox" checked={f.fanOn} onChange={(e) => setF({ ...f, fanOn: e.target.checked })} />
-            <span>💨 {t.fanOn}</span>
-          </label>
-
-          {!f.fanOn && (
-            <label style={{ margin: 0, minWidth: '160px' }}>
-              {t.genHours}
-              <input inputMode="numeric" placeholder="Hours" value={f.genHours} onChange={(e) => setF({ ...f, genHours: e.target.value })} style={{ minHeight: '38px', padding: '0.3rem 0.6rem' }} />
-            </label>
-          )}
-        </div>
-
         <button className="primary" disabled={submitting}>
           💾 {t.logFiring}
         </button>
@@ -143,7 +123,6 @@ export default function Firing() {
               <th>{t.shift}</th>
               <th>{t.coalKg}</th>
               <th>{t.tempC}</th>
-              <th>{t.fanOn}</th>
               <th className="actions">{t.action}</th>
             </tr>
             <tr className="filter-row">
@@ -152,7 +131,6 @@ export default function Firing() {
               <th><input type="search" className="table-col-filter" value={filters.shift || ''} onChange={(e) => setFilters({ ...filters, shift: e.target.value })} /></th>
               <th><input type="search" className="table-col-filter" value={filters.coalKg || ''} onChange={(e) => setFilters({ ...filters, coalKg: e.target.value })} /></th>
               <th><input type="search" className="table-col-filter" value={filters.tempC || ''} onChange={(e) => setFilters({ ...filters, tempC: e.target.value })} /></th>
-              <th><input type="search" className="table-col-filter" value={filters.fanOn || ''} onChange={(e) => setFilters({ ...filters, fanOn: e.target.value })} /></th>
               <th className="actions" />
             </tr>
           </thead>
@@ -163,7 +141,6 @@ export default function Firing() {
                 if (filters.shift && !String(f2.shift).toLowerCase().includes(filters.shift.toLowerCase())) return false;
                 if (filters.coalKg && !String(f2.coalKg).toLowerCase().includes(filters.coalKg.toLowerCase())) return false;
                 if (filters.tempC && !String(f2.tempC).toLowerCase().includes(filters.tempC.toLowerCase())) return false;
-                if (filters.fanOn && !String(f2.fanOn ? 'on' : 'off').toLowerCase().includes(filters.fanOn.toLowerCase())) return false;
                 return true;
               })
               .map((f2, i) => {
@@ -186,21 +163,11 @@ export default function Firing() {
                   </td>
                   <td>{editing ? <input inputMode="numeric" className="cell-input" {...editor.field('coalKg')} /> : <strong>{Number(f2.coalKg).toLocaleString()} kg</strong>}</td>
                   <td>{editing ? <input inputMode="numeric" className="cell-input" {...editor.field('tempC')} /> : <strong>{f2.tempC} °C</strong>}</td>
-                  <td>
-                    {editing ? (
-                      <select className="cell-input" {...editor.field('fanOn')}>
-                        <option value="true">On</option>
-                        <option value="false">Off</option>
-                      </select>
-                    ) : (
-                      <span className={`badge ${f2.fanOn ? 'green' : 'red'}`}>{f2.fanOn ? '✓ On' : '✗ Off'}</span>
-                    )}
-                  </td>
                   <td className="actions">
                     <RowActions
                       editor={editor} id={f2._id} path={`/firing-logs/${f2._id}`} name={fmtDateTime(f2.date)}
-                      initial={{ shift: f2.shift, coalKg: String(f2.coalKg), tempC: String(f2.tempC), fanOn: String(!!f2.fanOn) }}
-                      toPayload={(d) => ({ shift: d.shift, coalKg: Number(d.coalKg), tempC: Number(d.tempC), fanOn: d.fanOn === 'true' })}
+                      initial={{ shift: f2.shift, coalKg: String(f2.coalKg), tempC: String(f2.tempC) }}
+                      toPayload={(d) => ({ shift: d.shift, coalKg: Number(d.coalKg), tempC: Number(d.tempC) })}
                       onSaved={() => { setMsg({ text: t.savedOk, bad: false }); load(); }}
                       onDeleted={(r) => { setMsg({ text: r?.legacyNoLedgerLink ? `${t.deleted} — ${t.legacyNote}` : t.deleted, bad: false }); load(); }}
                       onError={(m) => setMsg({ text: m, bad: true })}

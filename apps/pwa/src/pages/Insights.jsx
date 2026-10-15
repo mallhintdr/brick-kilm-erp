@@ -222,10 +222,6 @@ export default function Insights() {
               <span>{t.outstanding}</span>
               <strong>{summary.peshgiOutstanding.toLocaleString()}</strong>
             </div>
-            <div className="stat" style={{ borderInlineStartColor: summary.fanOffDays > 0 ? 'var(--err-dark)' : 'var(--ok-dark)' }}>
-              <span>{t.fanAlertMsg}</span>
-              <strong className={summary.fanOffDays > 0 ? 'err' : 'ok'}>{summary.fanOffDays}</strong>
-            </div>
           </div>
         </div>
       </div>

@@ -3175,3 +3175,21 @@ h2, h3.kpi-group-title, .kpi-group > .kpi-group-title, .card > h2:first-child, .
 
 /* Home: a lone last tile in a group spans both columns */
 .home-module-grid > .home-module:last-child:nth-child(odd) { grid-column: 1 / -1; justify-content: center; }
+
+/* Moulding weekly entry: collapsible (closed by default), controls centred */
+details.week-card { padding: 0 !important; }
+details.week-card > summary.week-summary {
+  list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: center; position: relative;
+  background: #f8fafc; padding: 0.6rem 2.5rem; border-radius: var(--radius);
+}
+details.week-card[open] > summary.week-summary { border-bottom: 1.5px solid #cbd5e1; border-radius: var(--radius) var(--radius) 0 0; }
+details.week-card > summary::-webkit-details-marker { display: none; }
+details.week-card > summary.week-summary h2 { margin: 0 !important; padding: 0 !important; background: none !important; border: 0 !important; }
+details.week-card > summary.week-summary::after { content: '▾'; position: absolute; inset-inline-end: 0.9rem; font-size: 1.6rem; color: #64748b; transition: transform 0.15s; }
+details.week-card[open] > summary.week-summary::after { transform: rotate(180deg); }
+.week-body { padding: 0.85rem 1rem; }
+.week-controls { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0.5rem; }
+
+/* Buttons that fit their text and sit in the middle */
+button.fit-center { justify-self: center !important; width: auto !important; min-width: 0 !important; padding-inline: 1.6rem !important; }
+.plus-icon { color: #22c55e; font-weight: 900; font-size: 1.35em; line-height: 1; -webkit-text-stroke: 1px #22c55e; }

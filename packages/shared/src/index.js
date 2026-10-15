@@ -287,7 +287,7 @@ export const firingLogInput = z.object({
   teamId: z.string(),
   coalKg: positiveInt,
   tempC: z.coerce.number().int().min(0).max(2000),
-  fanOn: z.boolean(),
+  fanOn: z.boolean().default(true), // zig-zag kilns have no ID fan; kept for older logs
   genHours: z.coerce.number().min(0).max(24).default(0),
   clientUuid: z.string().uuid(),
 });
