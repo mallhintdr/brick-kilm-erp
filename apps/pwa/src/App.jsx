@@ -177,6 +177,8 @@ function Shell({ children }) {
   const { lang, setLang } = useLang();
   const nav = useNavigate();
   const username = getUsername();
+  // tapping the logo (back to Home) makes the chimney pour out a thick cloud of smoke
+  const [smokeBurst, setSmokeBurst] = useState(null);
   const kilnCode = getKilnCode();
 
   return (
@@ -185,9 +187,9 @@ function Shell({ children }) {
       <div className="sticky-header-wrapper">
         <header className="top">
           {/* Brand Logo & Name */}
-          <NavLink to="/home" className="brand-badge" title={t.home}>
+          <NavLink to="/home" className="brand-badge" title={t.home} onClick={() => setSmokeBurst(Date.now())}>
             <div className="brand-icon-box" aria-hidden="true">
-              <KilnLogo size={30} color="#ffffff" />
+              <KilnLogo size={30} color="#ffffff" burst={smokeBurst} />
             </div>
             <span className="brand-stack">
               <strong className="brand-text">{t.appName}</strong>

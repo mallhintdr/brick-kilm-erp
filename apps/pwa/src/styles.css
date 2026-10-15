@@ -3293,3 +3293,18 @@ h1, h2, h3, h4, summary, th, button, label, legend,
 input, select, textarea, option, td, .badge, .muted, p, .brand-user, .issues-cell, .wx-advice li {
   text-transform: none !important;
 }
+
+/* Logo tap: a thick cloud billows out (1s), then rises and fades away (2s); normal smoke carries on */
+.brand-badge, .brand-icon-box { overflow: visible !important; }
+.kiln-logo-burst .b { transform-box: fill-box; transform-origin: 50% 100%; opacity: 0; animation: logo-burst 3s ease-out forwards; fill: rgba(255, 255, 255, 0.35); }
+.kiln-logo-burst .b2 { animation-delay: 0.12s; }
+.kiln-logo-burst .b3 { animation-delay: 0.2s; }
+.kiln-logo-burst .b4 { animation-delay: 0.32s; }
+.kiln-logo-burst .b5 { animation-delay: 0.42s; }
+@keyframes logo-burst {
+  0% { opacity: 0; transform: translateY(3px) scale(0.3); }
+  12% { opacity: 1; }
+  33% { opacity: 1; transform: translateY(-1px) scale(1.35); }
+  100% { opacity: 0; transform: translateY(-9px) scale(1.9); }
+}
+@media (prefers-reduced-motion: reduce) { .kiln-logo-burst { display: none; } }
