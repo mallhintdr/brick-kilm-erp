@@ -51,8 +51,11 @@ export default function Weather() {
 
   return (
     <div className="grid">
-      <div className="card grid">
+      <div className="card grid wx-head">
         <h2>{t.weather}{wx?.place ? ` — ${wx.place}` : ''}</h2>
+        <button type="button" className="wx-refresh" disabled={busy} onClick={() => load(true)} title={t.wxRefresh} aria-label={t.wxRefresh}>
+          <span className={busy ? 'spin' : undefined}>↻</span>
+        </button>
         <div className="wx-tabs" role="tablist">
           {RANGES.map((r) => (
             <button key={r} type="button" role="tab" aria-selected={range === r} className={range === r ? 'on' : ''} onClick={() => setRange(r)}>
@@ -63,7 +66,6 @@ export default function Weather() {
         {wx && (
           <p className="muted wx-meta">
             {t.wxUpdated}: {fmtDateTime(wx.updatedAt)}{wx.stale ? ` — ${t.wxStale}` : ''} · {t.wxSource}: {wx.source}
-            {' '}<button type="button" className="ghost wx-refresh" disabled={busy} onClick={() => load(true)}>↻</button>
           </p>
         )}
         {busy && !wx && <p className="muted">…</p>}

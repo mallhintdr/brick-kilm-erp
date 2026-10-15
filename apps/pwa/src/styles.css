@@ -3240,3 +3240,17 @@ a.button-link { display: inline-flex; align-items: center; justify-content: cent
 @media (min-width: 1024px) { .location-map { height: 440px; } }
 .kiln-pin { background: none; border: 0; }
 .location-map .leaflet-control-layers { font-size: 0.8rem; }
+
+/* Weather: range buttons on one line; green refresh at the top right of the section */
+.wx-tabs { flex-wrap: nowrap !important; gap: 0.3rem !important; }
+.wx-tabs button { flex: 1 1 0; min-width: 0; padding: 0 0.4rem !important; white-space: nowrap; font-size: 0.85rem; }
+.wx-head { position: relative; }
+button.wx-refresh {
+  position: absolute; top: 0.45rem; inset-inline-end: 0.6rem; z-index: 2;
+  width: 36px; height: 36px; min-height: 36px !important; padding: 0 !important; border: 0; border-radius: 8px;
+  background: #16a34a; color: #fff; font-size: 1.25rem; font-weight: 900; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+button.wx-refresh:hover { background: #15803d; }
+button.wx-refresh:disabled { opacity: 0.7; }
+button.wx-refresh .spin { display: inline-block; animation: status-spin 0.8s linear infinite; }
