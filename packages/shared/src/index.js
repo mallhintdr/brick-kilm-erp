@@ -172,6 +172,7 @@ export const SETTING_KEYS = [
   'ratePathera', 'rateBharai', 'rateNikasi', 'rateJalai', 'priceAwwal', 'priceDoem', 'priceKhangar',
   'allowNegativeStock', 'kilnUnit', 'kilnLineCount',
   'cutPathera', 'cutBharai', 'cutNikasi',
+  'kilnLat', 'kilnLon', 'kilnPlace',
 ];
 
 export const settingInput = z.object({
@@ -194,6 +195,10 @@ export const SETTING_DEFAULTS = {
   cutPathera: '400',
   cutBharai: '50',
   cutNikasi: '0',
+  // kiln location for the weather advisory, set by the owner (decimal degrees)
+  kilnLat: '',
+  kilnLon: '',
+  kilnPlace: '',
   rateJalai: '1200', // Rs per shift (day/night), not per 1,000 — firemen are paid by shift, not piece-rate
   priceAwwal: '17500',
   priceDoem: '12500',

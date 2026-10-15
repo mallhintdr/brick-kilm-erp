@@ -5,7 +5,7 @@ import { getRole } from '../api.js';
 const GROUPS = [
   { titleKey: 'dailyOps', paths: ['/moulding', '/loading', '/kiln-board', '/firing', '/unloading'] },
   { titleKey: 'commercialAndFinance', paths: ['/cashbook', '/sales', '/peshgi', '/kharchi', '/inventory'] },
-  { titleKey: 'managementAndReports', paths: ['/reports', '/insights', '/activity', '/workers', '/settings', '/audit-logs', '/users'] },
+  { titleKey: 'managementAndReports', paths: ['/reports', '/insights', '/weather', '/activity', '/workers', '/settings', '/audit-logs', '/users'] },
 ];
 
 export default function Home({ links = [] }) {

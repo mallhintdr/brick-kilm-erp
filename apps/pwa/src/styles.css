@@ -3201,3 +3201,36 @@ button.fit-center { justify-self: center !important; width: auto !important; min
 .legend-item.sec-firing { background: #fee2e2; border-color: #ef4444; }
 .legend-item.sec-cooling { background: #e0e7ff; border-color: #6366f1; }
 .legend-item.sec-unloading { background: #dcfce7; border-color: #22c55e; }
+
+/* ==========================================================================
+   WEATHER ADVISORY
+   ========================================================================== */
+.wx-tabs { display: flex; justify-content: center; gap: 0.4rem; flex-wrap: wrap; }
+.wx-tabs button { min-height: 36px !important; padding: 0 1rem !important; border: 1.5px solid #cbd5e1; border-radius: 999px; background: #fff; font-weight: 800; color: #334155; cursor: pointer; }
+.wx-tabs button.on { background: #0ea5e9; border-color: #0ea5e9; color: #fff; }
+.wx-meta { margin: 0; text-align: center; font-size: 0.78rem; }
+.wx-refresh { min-height: 28px !important; padding: 0 0.5rem !important; }
+.wx-note { margin: 0; text-align: center; font-size: 0.82rem; color: #92400e; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 0.45rem 0.7rem; }
+.wx-days { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0.75rem; }
+.wx-day { display: grid; gap: 0.45rem; padding: 0.75rem 0.85rem !important; border-width: 2px !important; }
+.wx-day.lvl-green { border-color: #86efac !important; background: #f0fdf4; }
+.wx-day.lvl-amber { border-color: #fcd34d !important; background: #fffbeb; }
+.wx-day.lvl-red { border-color: #fca5a5 !important; background: #fef2f2; }
+.wx-day-head { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+.wx-conf { font-size: 0.68rem; font-weight: 800; padding: 0.1rem 0.45rem; border-radius: 999px; background: #e2e8f0; color: #334155; }
+.wx-conf.conf-high { background: #dcfce7; color: #166534; }
+.wx-conf.conf-medium { background: #e0f2fe; color: #075985; }
+.wx-conf.conf-low { background: #f1f5f9; color: #64748b; }
+.wx-day-main { display: flex; align-items: center; justify-content: center; gap: 0.6rem; }
+.wx-icon { font-size: 2rem; line-height: 1; }
+.wx-big .wx-icon { font-size: 2.8rem; }
+.wx-temp { font-size: 1.05rem; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+.wx-temp b { font-size: 1.35rem; }
+.wx-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 0.2rem 0.6rem; font-size: 0.8rem; color: #334155; }
+.wx-advice { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.3rem; }
+.wx-advice li { font-size: 0.84rem; font-weight: 700; padding: 0.3rem 0.5rem; border-radius: 6px; }
+.wx-advice li.adv-red { background: #fee2e2; color: #991b1b; }
+.wx-advice li.adv-amber { background: #fef3c7; color: #92400e; }
+.wx-advice li.adv-green { background: #dcfce7; color: #166534; }
+table tbody tr.wx-rain-row > td { background: #fef2f2 !important; }
+a.button-link { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 0 1rem; border-radius: 8px; text-decoration: none; font-weight: 800; }

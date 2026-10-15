@@ -23,6 +23,7 @@ import { registerDeleteRoutes } from './deletes.js';
 import { registerKharchiRoutes } from './kharchi.js';
 import { registerUserRoutes, requirePerm } from './users.js';
 import { registerEditRoutes } from './edits.js';
+import { registerWeatherRoutes } from './weather.js';
 
 const SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 
@@ -368,6 +369,7 @@ export function createApp(db) {
   registerKharchiRoutes(app, db);
   registerUserRoutes(app, db);
   registerEditRoutes(app, db);
+  registerWeatherRoutes(app, db);
 
   app.use((err, _req, res, _next) => {
     if (err instanceof ZodError) return res.status(400).json({ error: 'Validation failed', issues: err.issues });

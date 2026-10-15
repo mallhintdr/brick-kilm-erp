@@ -55,7 +55,66 @@ export default function Settings() {
         </label>
         {msg.text && <p role={msg.bad ? 'alert' : 'status'} className={msg.bad ? 'err' : 'ok'}>{msg.text}</p>}
       </div>
+
+      <KilnLocation t={t} isOwner={isOwner} vals={vals} onSaved={(v) => setVals((x) => ({ ...x, ...v }))} />
       <TypesManager isOwner={isOwner} />
     </>
+  );
+}
+
+// Owner sets where the kiln is (for the weather advisory): GPS from the phone, or typed coordinates.
+function KilnLocation({ t, isOwner, vals, onSaved }) {
+  const [loc, setLoc] = useState({ kilnLat: '', kilnLon: '', kilnPlace: '' });
+  const [msg, setMsg] = useState({ text: '', bad: false });
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { setLoc({ kilnLat: vals.kilnLat || '', kilnLon: vals.kilnLon || '', kilnPlace: vals.kilnPlace || '' }); }, [vals.kilnLat, vals.kilnLon, vals.kilnPlace]);
+
+  async function save(next = loc) {
+    const lat = Number(next.kilnLat); const lon = Number(next.kilnLon);
+    if (!(lat >= -90 && lat <= 90) || !(lon >= -180 && lon <= 180) || next.kilnLat === '' || next.kilnLon === '') {
+      setMsg({ text: t.locInvalid, bad: true }); return;
+    }
+    setBusy(true);
+    try {
+      for (const k of ['kilnLat', 'kilnLon', 'kilnPlace']) await put('/settings', { key: k, value: String(next[k] ?? '') });
+      onSaved(next);
+      setMsg({ text: t.savedOk, bad: false });
+    } catch (e) { setMsg({ text: e.message, bad: true }); }
+    setBusy(false);
+  }
+
+  function useGps() {
+    if (!navigator.geolocation) { setMsg({ text: t.locNoGps, bad: true }); return; }
+    setBusy(true); setMsg({ text: t.locFinding, bad: false });
+    navigator.geolocation.getCurrentPosition(
+      (p) => {
+        const next = { ...loc, kilnLat: p.coords.latitude.toFixed(5), kilnLon: p.coords.longitude.toFixed(5) };
+        setLoc(next);
+        save(next); // saved straight away
+      },
+      (e) => { setBusy(false); setMsg({ text: `${t.locNoGps} (${e.message})`, bad: true }); },
+      { enableHighAccuracy: true, timeout: 20000 },
+    );
+  }
+
+  const set = Boolean(vals.kilnLat && vals.kilnLon);
+  return (
+    <div className="card grid">
+      <h2>{t.kilnLocation}</h2>
+      <p className="muted" style={{ margin: 0 }}>{t.kilnLocationHint}</p>
+      <div className="grid two">
+        <label>{t.locPlace}<input disabled={!isOwner} value={loc.kilnPlace} placeholder="e.g. Sadiqabad" onChange={(e) => setLoc({ ...loc, kilnPlace: e.target.value })} /></label>
+        <label>{t.locLat}<input disabled={!isOwner} inputMode="decimal" value={loc.kilnLat} placeholder="28.30000" onChange={(e) => setLoc({ ...loc, kilnLat: e.target.value })} /></label>
+        <label>{t.locLon}<input disabled={!isOwner} inputMode="decimal" value={loc.kilnLon} placeholder="70.13000" onChange={(e) => setLoc({ ...loc, kilnLon: e.target.value })} /></label>
+      </div>
+      {isOwner && (
+        <div className="row" style={{ justifyContent: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <button type="button" className="primary" disabled={busy} onClick={useGps}>📍 {t.locUseGps}</button>
+          <button type="button" className="ghost" disabled={busy} onClick={() => save()}>{t.save}</button>
+          {set && <a className="ghost button-link" target="_blank" rel="noreferrer" href={`https://www.google.com/maps?q=${vals.kilnLat},${vals.kilnLon}`}>{t.locOnMap}</a>}
+        </div>
+      )}
+      {msg.text && <p role={msg.bad ? 'alert' : 'status'} className={msg.bad ? 'err' : 'ok'}>{msg.text}</p>}
+    </div>
   );
 }

@@ -514,3 +514,17 @@ test('piece work: own rate, opening peshgi, cut per 1,000 bricks and dasti give 
   assert.equal(it.taken, '3000.00');     // dasti during the week
   assert.equal(it.balance, '8000.00');   // cash on Thursday
 });
+
+test('weather advice: rain, wind, heat and drying rules', async () => {
+  const { adviseDay } = await import('../src/weather.js');
+  const keys = (d) => adviseDay(d).notes.map((n) => n.key);
+  assert.equal(adviseDay({ rainChance: 70, rainMm: 5, tMax: 30, humidity: 80 }).level, 'red');
+  assert.ok(keys({ rainChance: 70, rainMm: 5, tMax: 30, humidity: 80 }).includes('wxRainCover'));
+  assert.ok(keys({ rainChance: 35, rainMm: 0, tMax: 30, humidity: 50 }).includes('wxRainReady'));
+  assert.ok(keys({ rainChance: 0, gustKmh: 60, tMax: 30, humidity: 40 }).includes('wxWind'));
+  assert.equal(adviseDay({ rainChance: 0, tMax: 44, humidity: 20 }).level, 'red');
+  assert.deepEqual(keys({ rainChance: 5, rainMm: 0, tMax: 33, humidity: 40, windKmh: 10 }), ['wxGoodDrying']);
+  assert.ok(keys({ rainChance: 5, tMax: 18, humidity: 85 }).includes('wxSlowDrying'));
+  // the route refuses until the owner has set the kiln location
+  assert.equal((await api('GET', '/weather')).status, 409);
+});
