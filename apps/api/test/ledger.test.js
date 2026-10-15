@@ -134,10 +134,10 @@ test('kharchi run: propose matches the formula, settle posts correctly, overlap 
   const w2 = (await newWorker()).body.id;
   const team = await testDb.collection('teams').insertOne({ tenantId: ctx.tenantId, kilnId: ctx.kilnId, category: 'pathera', label: 'K', memberIds: [w1, w2] });
 
-  // worked example from brick kiln.md §7: 12,000 bricks @ 2,738/1000 = Rs 32,856 gross,
-  // 25% recovery -> Rs 8,214 recovery, Rs 24,642 kharchi. Each worker needs an outstanding
-  // peshgi advance at least that large, or recovery is capped at what they actually owe.
+  // Thursday hisaab: 12,000 bricks @ 2,738/1000 = Rs 32,856 gross (16,428 each, 6,000 bricks each).
+  // Peshgi cut Rs 400 per 1,000 bricks -> 2,400 each; kharchi = 16,428 - 2,400 = 14,028 each.
   await api('PUT', '/settings', { key: 'ratePathera', value: '2738' });
+  await api('PUT', '/settings', { key: 'cutPathera', value: '400' });
   await api('PUT', '/settings', { key: 'recoveryPct', value: '25' });
   await api('PUT', '/settings', { key: 'kharchiFloor', value: '0' });
   for (const w of [w1, w2]) {
@@ -152,22 +152,23 @@ test('kharchi run: propose matches the formula, settle posts correctly, overlap 
   assert.equal(proposal.status, 200);
   const row = proposal.body.items.find((i) => i.workerId === w1);
   assert.equal(row.gross, '16428.00'); // 32,856 split equally between 2 workers
-  assert.equal(row.kharchi, '12321.00');
-  assert.equal(row.recovery, '4107.00');
+  assert.equal(row.bricks, 6000);
+  assert.equal(row.recovery, '2400.00');
+  assert.equal(row.kharchi, '14028.00');
 
   const settle = await api('POST', '/kharchi-runs', {
     periodStart: start, periodEnd: end, category: 'pathera', items: proposal.body.items, clientUuid: randomUUID(),
   });
   assert.equal(settle.status, 201);
-  assert.equal(settle.body.totalKharchi, '24642.00');
-  assert.equal(settle.body.totalRecovery, '8214.00');
+  assert.equal(settle.body.totalKharchi, '28056.00');
+  assert.equal(settle.body.totalRecovery, '4800.00');
 
   // earnings balance is netted back to ~0 after settlement (debit from moulding, credit from kharchi_paid)
   const ledger = (await api('GET', `/workers/${w1}/ledger`)).body;
   const earningsNet = ledger.filter((e) => e.account === 'earnings').reduce((a, e) => a + Number(e.debit) - Number(e.credit), 0);
   assert.ok(Math.abs(earningsNet) < 0.01);
-  // recovery posted against peshgi: 10,000 advance - 4,107 recovery = 5,893 still outstanding
-  assert.equal((await api('GET', `/workers/${w1}/peshgi`)).body.outstanding, '5893.00');
+  // recovery posted against peshgi: 10,000 advance - 2,400 cut = 7,600 still outstanding
+  assert.equal((await api('GET', `/workers/${w1}/peshgi`)).body.outstanding, '7600.00');
 
   // a worker with no outstanding peshgi gets recovery capped at 0 (gets it all as kharchi instead).
   // Uses a different category (bharai) so this doesn't collide with the pathera run just settled.
@@ -490,4 +491,26 @@ test('daily kharcha: entries are listed, hit the cash book, and reduce the settl
   const it = p.items.find((i) => i.workerId === w);
   assert.ok(it, 'worker taken kharcha appears in the proposal');
   assert.equal(it.taken, '500.00');
+});
+
+test('piece work: own rate, opening peshgi, cut per 1,000 bricks and dasti give the Thursday cash', async () => {
+  await api('PUT', '/settings', { key: 'allowNegativeStock', value: '1' });
+  await api('PUT', '/settings', { key: 'ratePathera', value: '1400' });
+  await api('PUT', '/settings', { key: 'cutPathera', value: '400' });
+  // moulder registered with peshgi 50,000 and an own rate of 1,500
+  const w = (await newWorker({ ratePerThousand: '1500', openingPeshgi: '50000' })).body.id;
+  assert.equal((await api('GET', `/workers/${w}/peshgi`)).body.outstanding, '50000.00');
+  const team = await testDb.collection('teams').insertOne({ tenantId: ctx.tenantId, kilnId: ctx.kilnId, category: 'pathera', label: 'Solo', memberIds: [w] });
+  const day = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10);
+  assert.equal((await api('POST', '/moulding', { teamId: String(team.insertedId), count: 10000, kharaba: 0, date: day, clientUuid: randomUUID() })).status, 201);
+  assert.equal((await api('POST', '/kharcha', { workerId: w, amount: '3000', date: day, clientUuid: randomUUID() })).status, 201);
+  const end = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10); // before the run settled earlier
+  const start = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
+  const it = (await api('GET', `/kharchi-runs/propose?periodStart=${start}&periodEnd=${end}&category=pathera`)).body.items.find((i) => i.workerId === w);
+  assert.equal(it.bricks, 10000);
+  assert.equal(it.gross, '15000.00');    // 10,000 x 1,500 / 1000 (own rate)
+  assert.equal(it.recovery, '4000.00');  // 10,000 x 400 / 1000 toward peshgi
+  assert.equal(it.kharchi, '11000.00');
+  assert.equal(it.taken, '3000.00');     // dasti during the week
+  assert.equal(it.balance, '8000.00');   // cash on Thursday
 });

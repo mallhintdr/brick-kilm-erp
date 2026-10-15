@@ -172,7 +172,7 @@ export default function Kharchi() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
             <h2>Settlement Proposal</h2>
             <span style={{ fontSize: '0.84rem', color: 'var(--muted)', background: '#f8fafc', padding: '0.2rem 0.6rem', borderRadius: '6px', border: '1px solid var(--line)' }}>
-              {t.kharchiFormula.replace('{r}', proposal.recoveryPct).replace('{f}', proposal.kharchiFloor)}
+              {proposal.cutMode ? t.cutFormula.replace('{c}', proposal.cutPerThousand) : t.kharchiFormula.replace('{r}', proposal.recoveryPct).replace('{f}', proposal.kharchiFloor)}
             </span>
           </div>
 
@@ -182,6 +182,7 @@ export default function Kharchi() {
                 <tr>
                   <th className="rownum">#</th>
                   <th className="sticky-col">{t.name}</th>
+                  <th style={{ textAlign: 'end' }}>{t.bricksDone}</th>
                   <th style={{ textAlign: 'end' }}>{t.amount} ({t.gross})</th>
                   <th style={{ textAlign: 'end' }}>{t.recovery}</th>
                   <th style={{ textAlign: 'end' }}>{t.kharchiPaid}</th>
@@ -194,6 +195,7 @@ export default function Kharchi() {
                   <tr key={it.workerId}>
                     <td className="rownum">{i + 1}</td>
                     <td><strong>{it.name}</strong></td>
+                    <td style={{ textAlign: 'end' }}>{Number(it.bricks || 0).toLocaleString()}</td>
                     <td style={{ textAlign: 'end' }}>{Number(it.gross).toLocaleString()}</td>
                     <td style={{ textAlign: 'end' }} className="warn"><strong>{Number(it.recovery).toLocaleString()}</strong></td>
                     <td style={{ textAlign: 'end' }}>
@@ -212,6 +214,7 @@ export default function Kharchi() {
               <tfoot>
                 <tr>
                   <td colSpan={2}><strong>Total:</strong></td>
+                  <td style={{ textAlign: 'end' }}>{proposal.items.reduce((a, it) => a + Number(it.bricks || 0), 0).toLocaleString()}</td>
                   <td style={{ textAlign: 'end' }}>{proposal.items.reduce((a, it) => a + Number(it.gross || 0), 0).toLocaleString()}</td>
                   <td style={{ textAlign: 'end' }} className="warn"><strong>{totalRecovery.toLocaleString()}</strong></td>
                   <td style={{ textAlign: 'end' }} className="ok"><strong>{totalKharchi.toLocaleString()}</strong></td>

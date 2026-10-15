@@ -134,8 +134,9 @@ export function createApp(db) {
     const age = ageOn(w.dob);
     if (age < MIN_WORKER_AGE) throw httpError(422, `Worker must be at least ${MIN_WORKER_AGE} years old`);
     await assertType(db, req.user, 'workerCategory', w.category);
+    const { openingPeshgi, ...fields } = w;
     const doc = {
-      ...scope(req.user), ...w,
+      ...scope(req.user), ...fields,
       cnic: w.cnic.replace(/-/g, ''),
       peshgiLimit: w.peshgiLimit ? dec(w.peshgiLimit) : null,
       contractSigned: false, status: 'active',
@@ -143,6 +144,13 @@ export function createApp(db) {
     };
     try {
       const r = await db.collection('workers').insertOne(doc);
+      // peshgi agreed when the worker joins goes straight onto their khata
+      if (openingPeshgi && Number(openingPeshgi) > 0) {
+        await postEntry(db, undefined, req.user, {
+          partyType: 'worker', partyId: String(r.insertedId), account: 'peshgi', type: 'advance',
+          debit: openingPeshgi, reason: 'Opening peshgi at registration', clientUuid: `open-${r.insertedId}`,
+        });
+      }
       res.status(201).json({
         id: r.insertedId, warning: age < RECOMMENDED_WORKER_AGE ? `Age under ${RECOMMENDED_WORKER_AGE}: not recommended` : undefined,
       });

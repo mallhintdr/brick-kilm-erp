@@ -6,7 +6,8 @@ import DeleteButton from '../components/DeleteButton.jsx';
 
 const KEYS = [
   'peshgiLimit', 'munshiAdvanceLimit', 'recoveryPct', 'kharchiFloor',
-  'ratePathera', 'rateBharai', 'rateNikasi', 'rateJalai', 'priceAwwal', 'priceDoem', 'priceKhangar',
+  'ratePathera', 'cutPathera', 'rateBharai', 'cutBharai', 'rateNikasi', 'cutNikasi',
+  'rateJalai', 'priceAwwal', 'priceDoem', 'priceKhangar',
 ];
 
 export default function Settings() {

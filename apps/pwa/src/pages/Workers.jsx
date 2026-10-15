@@ -5,7 +5,7 @@ import { useTypes, typeLabel } from '../useTypes.js';
 import RowActions, { useRowEdit } from '../components/RowActions.jsx';
 import { useLang } from '../i18n.js';
 
-const blank = { name: '', fatherName: '', cnic: '', dob: '', category: 'pathera', eobiNo: '', pessiNo: '' };
+const blank = { ratePerThousand: '', cutPerThousand: '', openingPeshgi: '', name: '', fatherName: '', cnic: '', dob: '', category: 'pathera', eobiNo: '', pessiNo: '' };
 
 export default function Workers() {
   const t = useT();
@@ -28,7 +28,7 @@ export default function Workers() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const r = await post('/workers', { ...f, clientUuid: uuid() });
+      const r = await post('/workers', { ...Object.fromEntries(Object.entries(f).filter(([, v]) => v !== '')), clientUuid: uuid() });
       setMsg({ text: r.queued ? t.queued : r.warning || t.savedOk, bad: false });
       setF(blank);
       load();
@@ -117,6 +117,18 @@ export default function Workers() {
           <label>
             {t.eobiNo}
             <input placeholder="Optional EOBI #" value={f.eobiNo} onChange={(e) => setF({ ...f, eobiNo: e.target.value })} />
+          </label>
+          <label>
+            {t.ratePerThousand}
+            <input inputMode="decimal" placeholder={t.useKilnRate} value={f.ratePerThousand} onChange={(e) => setF({ ...f, ratePerThousand: e.target.value })} />
+          </label>
+          <label>
+            {t.cutPerThousand}
+            <input inputMode="decimal" placeholder={t.useKilnRate} value={f.cutPerThousand} onChange={(e) => setF({ ...f, cutPerThousand: e.target.value })} />
+          </label>
+          <label>
+            {t.openingPeshgi}
+            <input inputMode="decimal" placeholder="0" value={f.openingPeshgi} onChange={(e) => setF({ ...f, openingPeshgi: e.target.value })} />
           </label>
           <label>
             {t.pessiNo}

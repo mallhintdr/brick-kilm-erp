@@ -66,7 +66,7 @@ export function registerEditRoutes(app, db) {
       await reverseBySource(db, session, req.user, b.ledgerRef, 'moulding batch edited');
       const rate = await getSetting(db, req.user, 'ratePathera', SETTING_DEFAULTS, session);
       const gross = ((netCount / 1000) * Number(rate)).toFixed(2);
-      await creditTeam(db, session, req.user, b.teamId, gross, 'moulding_credit', b.ledgerRef, `${b.ledgerRef}-edit-${Date.now()}`, date);
+      await creditTeam(db, session, req.user, b.teamId, gross, 'moulding_credit', b.ledgerRef, `${b.ledgerRef}-edit-${Date.now()}`, date, { bricks: netCount, rate });
     }
     return { count, kharaba, netCount, date };
   });

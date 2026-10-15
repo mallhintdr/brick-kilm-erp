@@ -36,6 +36,7 @@ export async function postEntry(db, session, user, entry) {
     sourceRef: entry.sourceRef ?? null,
     reversesId: entry.reversesId ?? null,
     reason: entry.reason ?? null,
+    qty: entry.qty ?? null, // bricks a piece-work wage entry pays for (reversals carry it negative)
     clientUuid: entry.clientUuid,
     createdBy: user.sub,
     createdAt: entry.at ?? new Date(),
@@ -67,7 +68,7 @@ export async function reverseBySource(db, session, user, sourceRef, reason) {
     await postEntry(db, session, user, {
       partyType: orig.partyType, partyId: orig.partyId, account: orig.account,
       type: `${orig.type}_reversal`, debit: orig.credit.toString(), credit: orig.debit.toString(),
-      sourceRef, reversesId: orig._id, reason, clientUuid: `rev-${orig._id}`,
+      sourceRef, reversesId: orig._id, reason, clientUuid: `rev-${orig._id}`, qty: orig.qty ? -orig.qty : null,
     });
     n++;
   }

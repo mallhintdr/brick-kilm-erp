@@ -10,19 +10,32 @@ import { scope, audit, getSetting, postEntry, oid, httpError, assertType } from 
 const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res)).catch(next);
 const teamOid = (s) => { try { return new ObjectId(s); } catch { return null; } };
 
-// Splits a piece-work gross amount equally across a team's members and posts
-// one earnings-ledger credit per worker, exactly like the seed simulation does.
-export async function creditTeam(db, session, user, teamId, grossRs, type, sourceRef, clientUuidBase, at) {
+// Posts one earnings-ledger entry per team member.
+// Piece work (`pieces` = { bricks, rate }): the bricks are split equally and each member is paid
+// at their own agreed rate per 1,000 if they have one, otherwise the kiln's rate; the entry keeps
+// its brick count so the weekly settlement can take the peshgi cut per 1,000 bricks.
+// Otherwise (shift pay) `grossRs` is split equally.
+export async function creditTeam(db, session, user, teamId, grossRs, type, sourceRef, clientUuidBase, at, pieces) {
   const team = await db.collection('teams').findOne({ _id: teamOid(teamId), ...scope(user) }, { session });
   if (!team) throw httpError(404, 'Team not found');
   const members = team.memberIds || [];
   if (!members.length) return [];
-  const share = (Number(grossRs) / members.length).toFixed(2);
+  const workers = pieces
+    ? await db.collection('workers').find({ _id: { $in: members.map(teamOid).filter(Boolean) }, ...scope(user) }, { session }).toArray()
+    : [];
   const out = [];
   for (let i = 0; i < members.length; i++) {
+    let debit = (Number(grossRs) / members.length).toFixed(2);
+    let qty = null;
+    if (pieces) {
+      qty = pieces.bricks / members.length;
+      const own = workers.find((w) => String(w._id) === members[i])?.ratePerThousand;
+      const rate = own != null && own !== '' ? Number(own) : Number(pieces.rate);
+      debit = ((qty / 1000) * rate).toFixed(2);
+    }
     out.push(await postEntry(db, session, user, {
       partyType: 'worker', partyId: members[i], account: 'earnings', type,
-      debit: share, sourceRef, clientUuid: `${clientUuidBase}-${i}`, at,
+      debit, sourceRef, clientUuid: `${clientUuidBase}-${i}`, at, qty,
     }));
   }
   return out;
@@ -112,7 +125,7 @@ export function registerProductionRoutes(app, db) {
         );
         const rate = await getSetting(db, req.user, 'rateBharai', SETTING_DEFAULTS, session);
         const gross = ((b.count / 1000) * Number(rate)).toFixed(2);
-        await creditTeam(db, session, req.user, b.teamId, gross, 'loading_credit', `${unit}Load:${b.sectionIndex}:${Date.now()}`, b.clientUuid);
+        await creditTeam(db, session, req.user, b.teamId, gross, 'loading_credit', `${unit}Load:${b.sectionIndex}:${Date.now()}`, b.clientUuid, undefined, { bricks: b.count, rate });
         await audit(db, session, req.user, `${unit}.load`, b);
       });
       res.status(201).json({ ok: true });
@@ -157,7 +170,7 @@ export function registerProductionRoutes(app, db) {
         );
         const rate = await getSetting(db, req.user, 'rateNikasi', SETTING_DEFAULTS, session);
         const gross = ((total / 1000) * Number(rate)).toFixed(2);
-        await creditTeam(db, session, req.user, sec.nikasiTeamId, gross, 'unloading_credit', `${unit}Unloading:${b.sectionIndex}:${Date.now()}`, b.clientUuid);
+        await creditTeam(db, session, req.user, sec.nikasiTeamId, gross, 'unloading_credit', `${unit}Unloading:${b.sectionIndex}:${Date.now()}`, b.clientUuid, undefined, { bricks: total, rate });
         await audit(db, session, req.user, `${unit}.unload.complete`, b);
       });
       res.status(201).json({ ok: true });
@@ -224,7 +237,7 @@ export function registerProductionRoutes(app, db) {
       const rate = await getSetting(db, req.user, 'ratePathera', SETTING_DEFAULTS, session);
       const gross = ((netCount / 1000) * Number(rate)).toFixed(2);
       // Wages are dated to the work day too, so the weekly kharchi run puts them in the right week.
-      await creditTeam(db, session, req.user, b.teamId, gross, 'moulding_credit', ledgerRef, b.clientUuid, workAt);
+      await creditTeam(db, session, req.user, b.teamId, gross, 'moulding_credit', ledgerRef, b.clientUuid, workAt, { bricks: netCount, rate });
       await audit(db, session, req.user, 'moulding.create', b);
     });
     res.status(201).json({ ok: true, netCount });

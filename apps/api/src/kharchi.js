@@ -43,6 +43,9 @@ function splitKharchi(grossPaisa, recoveryPctStr, floorPaisa, outstandingPaisa) 
   return { kharchi, recovery };
 }
 
+// Piece-work categories cut a fixed amount of peshgi per 1,000 bricks (setting, or the worker's own).
+const CUT_KEY = { pathera: 'cutPathera', bharai: 'cutBharai', nikasi: 'cutNikasi' };
+
 export function registerKharchiRoutes(app, db) {
   const auth = app.locals.auth;
 
@@ -72,12 +75,16 @@ export function registerKharchiRoutes(app, db) {
 
     const grossRows = await db.collection('ledgerEntries').aggregate([
       { $match: { ...s, account: 'earnings', partyId: { $in: workerIds }, createdAt: { $gte: b.periodStart, $lte: b.periodEnd } } },
-      { $group: { _id: '$partyId', d: { $sum: '$debit' }, c: { $sum: '$credit' } } },
+      { $group: { _id: '$partyId', d: { $sum: '$debit' }, c: { $sum: '$credit' }, q: { $sum: { $ifNull: ['$qty', 0] } } } },
     ]).toArray();
     const grossByWorker = Object.fromEntries(grossRows.map((r) => [r._id, toPaisa(r.d.toString()) - toPaisa(r.c.toString())]));
+    const bricksByWorker = Object.fromEntries(grossRows.map((r) => [r._id, Math.max(0, Math.round(r.q || 0))]));
+    const cutKey = CUT_KEY[b.category];
+    const cutSetting = cutKey ? await getSetting(db, req.user, cutKey, SETTING_DEFAULTS) : null;
 
     const workers = await db.collection('workers').find({ _id: { $in: workerIds.map((id) => { try { return oid(id); } catch { return null; } }).filter(Boolean) } }).toArray();
     const nameOf = Object.fromEntries(workers.map((w) => [String(w._id), w.name]));
+    const ownCut = Object.fromEntries(workers.map((w) => [String(w._id), w.cutPerThousand]));
 
     const taken = await takenInPeriod(db, s, workerIds, b.periodStart, b.periodEnd);
     const earningWorkerIds = workerIds.filter((id) => (grossByWorker[id] || 0n) > 0n || (taken[id] || 0n) > 0n);
@@ -87,16 +94,31 @@ export function registerKharchiRoutes(app, db) {
 
     const items = earningWorkerIds.map((workerId) => {
       const gross = grossByWorker[workerId] || 0n;
-      const { kharchi, recovery } = splitKharchi(gross, recoveryPct, floorPaisa, outstandingByWorker[workerId] ?? 0n);
+      const outstanding = outstandingByWorker[workerId] ?? 0n;
+      const bricks = bricksByWorker[workerId] || 0;
+      let kharchi; let recovery; let cutPerThousand = null;
+      if (cutKey) {
+        // Thursday hisaab: wages - (bricks / 1000 x cut) toward peshgi, never more than owed or earned
+        const own = ownCut[workerId];
+        cutPerThousand = own != null && own !== '' ? own : cutSetting;
+        recovery = toPaisa(((bricks / 1000) * Number(cutPerThousand)).toFixed(2));
+        const cap = outstanding > 0n ? outstanding : 0n;
+        if (recovery > cap) recovery = cap;
+        if (recovery > gross) recovery = gross > 0n ? gross : 0n;
+        kharchi = gross - recovery;
+      } else {
+        ({ kharchi, recovery } = splitKharchi(gross, recoveryPct, floorPaisa, outstanding));
+      }
       const tk = taken[workerId] || 0n;
       // what is still to hand over on settlement day = kharchi minus cash already taken this week
       return {
-        workerId, name: nameOf[workerId] || '—', gross: fromPaisa(gross), kharchi: fromPaisa(kharchi), recovery: fromPaisa(recovery),
+        workerId, name: nameOf[workerId] || '—', bricks, cutPerThousand, outstanding: fromPaisa(outstanding > 0n ? outstanding : 0n),
+        gross: fromPaisa(gross), kharchi: fromPaisa(kharchi), recovery: fromPaisa(recovery),
         taken: fromPaisa(tk), balance: fromPaisa(kharchi - tk),
       };
     });
 
-    res.json({ items, recoveryPct, kharchiFloor: kharchiFloorStr });
+    res.json({ items, recoveryPct, kharchiFloor: kharchiFloorStr, cutMode: Boolean(cutKey), cutPerThousand: cutSetting });
   }));
 
   // Posts the reviewed run: credits 'earnings' for the gross settled (closes out that

@@ -131,6 +131,10 @@ export function ageOn(dob, on = new Date()) {
 const cnic = z.string().regex(/^\d{5}-?\d{7}-?\d$/, 'CNIC/Form-B must be 13 digits');
 
 export const workerInput = z.object({
+  // piece-work terms agreed with this worker (blank = the kiln's standard rate / cut)
+  ratePerThousand: nonNegMoneyString.optional(),
+  cutPerThousand: nonNegMoneyString.optional(),
+  openingPeshgi: nonNegMoneyString.optional(), // advance already given when they join
   name: z.string().min(2),
   fatherName: z.string().trim().min(2), // tells apart workers who share a common name
   cnic,
@@ -167,6 +171,7 @@ export const SETTING_KEYS = [
   'peshgiLimit', 'munshiAdvanceLimit', 'recoveryPct', 'kharchiFloor',
   'ratePathera', 'rateBharai', 'rateNikasi', 'rateJalai', 'priceAwwal', 'priceDoem', 'priceKhangar',
   'allowNegativeStock', 'kilnUnit', 'kilnLineCount',
+  'cutPathera', 'cutBharai', 'cutNikasi',
 ];
 
 export const settingInput = z.object({
@@ -182,9 +187,13 @@ export const SETTING_DEFAULTS = {
   munshiAdvanceLimit: '10000',
   recoveryPct: '25',
   kharchiFloor: '5000',
-  ratePathera: '2738',
-  rateBharai: '1800',
-  rateNikasi: '1900',
+  ratePathera: '1400', // Rs per 1,000 kachi bricks moulded
+  rateBharai: '510', // Rs per 1,000 kachi bricks loaded into the kiln
+  rateNikasi: '250', // Rs per 1,000 fired bricks unloaded (awwal, doem, khangar alike)
+  // Peshgi cut taken from each week's wages, Rs per 1,000 bricks (a worker can have their own)
+  cutPathera: '400',
+  cutBharai: '50',
+  cutNikasi: '0',
   rateJalai: '1200', // Rs per shift (day/night), not per 1,000 — firemen are paid by shift, not piece-rate
   priceAwwal: '17500',
   priceDoem: '12500',
@@ -223,6 +232,8 @@ export const firingUpdate = z.object({
   genHours: z.coerce.number().min(0).max(24).optional(),
 });
 export const workerUpdate = z.object({
+  ratePerThousand: z.union([nonNegMoneyString, z.literal('')]).optional(),
+  cutPerThousand: z.union([nonNegMoneyString, z.literal('')]).optional(),
   name: z.string().min(2).optional(),
   fatherName: z.string().trim().min(2).optional(),
   category: z.string().min(1).optional(),
