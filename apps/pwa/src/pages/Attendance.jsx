@@ -14,6 +14,7 @@ export default function Attendance() {
   const [date, setDate] = useState(today());
   const [category, setCategory] = useState('');
   const [query, setQuery] = useState('');
+  const [catQ, setCatQ] = useState(''); // category filter typed in the list header
   const [workers, setWorkers] = useState([]);
   const [marks, setMarks] = useState({}); // workerId -> status
   const [saved, setSaved] = useState({});
@@ -31,7 +32,8 @@ export default function Attendance() {
   }, [date]);
 
   const shown = useMemo(() => workers.filter((w) => (!category || w.category === category)
-    && (!query || `${w.name} ${w.fatherName || ''}`.toLowerCase().includes(query.toLowerCase()))), [workers, category, query]);
+    && (!query || `${w.name} ${w.fatherName || ''}`.toLowerCase().includes(query.toLowerCase()))
+    && (!catQ || String(cats.label(w.category)).toLowerCase().includes(catQ.toLowerCase()))), [workers, category, query, catQ, cats]);
   const count = (st) => shown.filter((w) => marks[w._id] === st).length;
   const changed = shown.filter((w) => marks[w._id] && marks[w._id] !== saved[w._id]).length;
 
@@ -85,7 +87,15 @@ export default function Attendance() {
       <div className="card table-wrap">
         <h2>{t.workers} ({shown.length})</h2>
         <table className="att-table">
-          <thead><tr><th className="rownum">#</th><th className="att-name">{t.name}</th><th className="att-cat">{t.category}</th><th>{t.attStatus}</th></tr></thead>
+          <thead>
+            <tr><th className="rownum">#</th><th className="att-name">{t.name}</th><th className="att-cat">{t.category}</th><th>{t.attStatus}</th></tr>
+            <tr className="filter-row">
+              <th className="rownum" />
+              <th><input type="search" className="table-col-filter" aria-label={t.name} value={query} onChange={(e) => setQuery(e.target.value)} /></th>
+              <th className="att-cat"><input type="search" className="table-col-filter" aria-label={t.category} value={catQ} onChange={(e) => setCatQ(e.target.value)} /></th>
+              <th />
+            </tr>
+          </thead>
           <tbody>
             {shown.map((w, i) => (
               <tr key={w._id}>

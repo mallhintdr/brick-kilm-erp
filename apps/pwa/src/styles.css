@@ -3382,3 +3382,7 @@ table.att-table td:last-child, table.att-table th:last-child { width: 1%; white-
   .att-btns { gap: 0.12rem; }
   .att-btns button { width: 26px; height: 26px; min-height: 26px !important; font-size: 0.72rem; border-radius: 6px; }
 }
+/* Attendance list: normal header size; worker names 25% smaller (0.86rem -> 0.65rem) */
+table.att-table thead th { font-size: 0.7rem !important; letter-spacing: 0.03em !important; }
+table.att-table td:nth-child(2) { font-size: 0.65rem !important; }
+table.att-table td:nth-child(2) .muted { font-size: 0.6rem !important; }
