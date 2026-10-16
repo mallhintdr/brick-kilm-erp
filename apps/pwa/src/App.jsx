@@ -199,7 +199,7 @@ function Shell({ children }) {
             </div>
             <span className="brand-stack">
               <strong className="brand-text">{t.appName}</strong>
-              <small className="brand-user">{kilnCode ? `${username} • ${kilnCode}` : username} • v{__APP_VERSION__}</small>
+              <small className="brand-user">v{__APP_VERSION__}</small>
             </span>
           </NavLink>
 
@@ -215,12 +215,13 @@ function Shell({ children }) {
             </button>
             <button
               type="button"
-              className="ghost logout-btn"
-              title={t.logout}
-              aria-label={t.logout}
+              className="ghost logout-btn with-user"
+              title={kilnCode ? ` —  ()` : ` — `}
+              aria-label={` `}
               onClick={() => { clearSession(); nav('/login'); }}
             >
-              <Icon name="logout" color="#ffffff" size={18} stroke={2.75} />
+              <span className="logout-user">{username}</span>
+              <Icon name="logout" color="#ffffff" size={15} stroke={2.75} />
             </button>
           </div>
         </header>
