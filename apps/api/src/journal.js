@@ -85,10 +85,11 @@ export function registerJournalRoutes(app, db) {
       db.collection('kharchaEntries').find({ ...s, date: range }).toArray(),
       db.collection('auditLog').find({ ...s, action: { $in: ['line.notes', 'chamber.notes'] }, at: range }).toArray(),
     ]);
+    const marks = await db.collection('attendance').find({ ...s, date: day, status: { $in: ['absent', 'leave'] } }).toArray();
     const team = Object.fromEntries(teams.map((t) => [String(t._id), t.label]));
     const wname = Object.fromEntries(workers.map((w) => [String(w._id), w.name]));
     const cname = Object.fromEntries(customers.map((c) => [String(c._id), c.name]));
-    const unitName = (r) => `${r.unit === 'line' ? 'Line' : 'Chamber'} ${r.sectionIndex}`;
+    const unitName = (r) => (r.unit === 'grid' ? 'Weekly entry' : `${r.unit === 'line' ? 'Line' : 'Chamber'} ${r.sectionIndex}`);
     const ev = [];
     for (const m of moulding) ev.push({ at: m.date, type: 'moulding', detail: `${team[m.teamId] || '—'}: ${m.count.toLocaleString()} moulded, net ${m.netCount.toLocaleString()}${m.quality ? ` (${m.quality})` : ''}`, qty: m.netCount });
     for (const l of loads) ev.push({ at: l.date, type: 'bharai', detail: `${unitName(l)} loaded by ${team[l.teamId] || '—'}: ${l.count.toLocaleString()} kachi bricks`, qty: l.count });
@@ -103,6 +104,7 @@ export function registerJournalRoutes(app, db) {
       if (n.data?.coalKg) ev.push({ at: n.at, type: 'coalUse', detail: `${n.action.startsWith('line') ? 'Line' : 'Chamber'} ${n.data.index}: ${Number(n.data.coalKg).toLocaleString()} kg coal`, qty: Number(n.data.coalKg) });
       if (n.data?.issues) ev.push({ at: n.at, type: 'issue', detail: `${n.action.startsWith('line') ? 'Line' : 'Chamber'} ${n.data.index}: ${n.data.issues}` });
     }
+    for (const a of marks) ev.push({ at: start, type: 'absent', detail: `${wname[a.workerId] || '—'}: ${a.status === 'leave' ? 'on leave' : 'absent'}` });
     ev.sort((a, b) => new Date(a.at) - new Date(b.at));
     res.json({ date: day, rows: ev.map((e, i) => ({ no: i + 1, ...e })) });
   }));

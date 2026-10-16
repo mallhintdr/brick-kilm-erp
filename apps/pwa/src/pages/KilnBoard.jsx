@@ -4,6 +4,7 @@ import { get, post, put, uuid, getRole, fmtDate, fmtDateTime } from '../api.js';
 import KilnDiagram from '../components/KilnDiagram.jsx';
 import LineDiagram from '../components/LineDiagram.jsx';
 import SearchSelect from '../components/SearchSelect.jsx';
+import WorkWeekGrid from '../components/WorkWeekGrid.jsx';
 
 const STATE_LABEL_KEY = {
   Empty: 'empty',
@@ -185,6 +186,10 @@ export default function KilnBoard({ focus } = {}) {
 
   return (
     <div className="grid">
+      {/* Loading / Unloading pages: weekly entry per worker, like moulding */}
+      {focus === 'load' && <WorkWeekGrid kind="bharai" />}
+      {focus === 'unload' && <WorkWeekGrid kind="nikasi" />}
+
       {/* Hero Control Card */}
       <div className="card" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', background: '#ffffff', border: '1px solid var(--line)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>

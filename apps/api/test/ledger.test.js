@@ -592,3 +592,28 @@ test('khata, roznamcha, dated loading and moulding deduction', async () => {
   const rz2 = (await api('GET', `/roznamcha?date=${day}`)).body;
   assert.ok(rz2.rows.some((r) => r.type === 'bharai' && /Line 150/.test(r.detail)));
 });
+
+test('attendance and weekly grid for bharai and nikasi', async () => {
+  await api('PUT', '/settings', { key: 'allowNegativeStock', value: '1' });
+  const a = (await newWorker({ name: 'Present Pal' })).body.id;
+  const b = (await newWorker({ name: 'Absent Ali' })).body.id;
+  const day = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+  assert.equal((await api('PUT', '/attendance', { date: day, entries: [{ workerId: a, status: 'present' }, { workerId: b, status: 'absent' }] }, 'munshi')).status, 200);
+  // saving again updates, never duplicates
+  await api('PUT', '/attendance', { date: day, entries: [{ workerId: b, status: 'leave' }] });
+  const marks = (await api('GET', `/attendance?date=${day}`)).body;
+  assert.equal(marks.length, 2);
+  assert.equal(marks.find((m) => m.workerId === b).status, 'leave');
+  assert.ok((await api('GET', `/roznamcha?date=${day}`)).body.rows.some((r) => r.type === 'absent' && /Absent Ali/.test(r.detail)));
+
+  const loader = (await newWorker({ category: 'bharai' })).body.id;
+  const unloader = (await newWorker({ category: 'nikasi' })).body.id;
+  assert.equal((await api('POST', '/work-entries', { kind: 'bharai', workerId: loader, date: day, count: 9000, clientUuid: randomUUID() })).status, 201);
+  assert.equal((await api('POST', '/work-entries', { kind: 'nikasi', workerId: unloader, date: day, count: 7000, grade: 'awwal', clientUuid: randomUUID() })).status, 201);
+  assert.equal((await api('POST', '/work-entries', { kind: 'nikasi', workerId: unloader, date: day, count: 500, clientUuid: randomUUID() })).status, 400); // grade needed
+  const wk = (await api('GET', `/work-week?kind=bharai&from=${day}&to=${day}`)).body;
+  assert.ok(wk.some((r) => r.workerId === loader && r.count === 9000));
+  const nk = (await api('GET', `/work-week?kind=nikasi&grade=awwal&from=${day}&to=${day}`)).body;
+  assert.ok(nk.some((r) => r.workerId === unloader && r.count === 7000));
+  assert.ok((await api('GET', `/workers/${loader}/ledger`)).body.some((e) => e.type === 'loading_credit'));
+});

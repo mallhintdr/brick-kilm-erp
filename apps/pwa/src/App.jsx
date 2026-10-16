@@ -24,6 +24,7 @@ import KilnLogo from './components/KilnLogo.jsx';
 import Weather from './pages/Weather.jsx';
 import Khata from './pages/Khata.jsx';
 import Roznamcha from './pages/Roznamcha.jsx';
+import Attendance from './pages/Attendance.jsx';
 import PrintWorkerSlip from './pages/PrintWorkerSlip.jsx';
 import PrintKharchiSlip from './pages/PrintKharchiSlip.jsx';
 
@@ -152,6 +153,7 @@ const ROW_2_LINKS = [
   { to: '/weather', icon: 'insights', color: '#0ea5e9', labelKey: 'weather' },
   { to: '/khata', icon: 'kharchi', color: '#9333ea', labelKey: 'khataTitle' },
   { to: '/roznamcha', icon: 'reports', color: '#0f766e', labelKey: 'roznamcha' },
+  { to: '/attendance', icon: 'workers', color: '#16a34a', labelKey: 'attendance' },
   { to: '/workers', icon: 'workers', color: '#0d9488', labelKey: 'workers' },
   { to: '/settings', icon: 'settings', color: '#78716c', labelKey: 'settings' },
   { to: '/audit-logs', icon: 'auditLogs', color: '#64748b', labelKey: 'auditLogs', roles: ['owner', 'accountant'] },
@@ -267,6 +269,7 @@ export default function App() {
         <Route path="/weather" element={guard(<Weather />)} />
         <Route path="/khata" element={guard(<Khata />)} />
         <Route path="/roznamcha" element={guard(<Roznamcha />)} />
+        <Route path="/attendance" element={guard(<Attendance />)} />
         <Route path="/loading" element={guard(<KilnBoard key="load" focus="load" />)} />
         <Route path="/unloading" element={guard(<KilnBoard key="unload" focus="unload" />)} />
         <Route path="/moulding" element={guard(<Moulding />)} />

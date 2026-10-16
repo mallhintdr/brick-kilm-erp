@@ -3,7 +3,7 @@ import { useT } from '../i18n.js';
 import { getRole } from '../api.js';
 
 const GROUPS = [
-  { titleKey: 'dailyOps', paths: ['/moulding', '/loading', '/kiln-board', '/firing', '/unloading'] },
+  { titleKey: 'dailyOps', paths: ['/attendance', '/moulding', '/loading', '/kiln-board', '/firing', '/unloading'] },
   { titleKey: 'commercialAndFinance', paths: ['/cashbook', '/roznamcha', '/khata', '/sales', '/peshgi', '/kharchi', '/inventory'] },
   { titleKey: 'managementAndReports', paths: ['/reports', '/insights', '/weather', '/activity', '/workers', '/settings', '/audit-logs', '/users'] },
 ];
