@@ -617,3 +617,15 @@ test('attendance and weekly grid for bharai and nikasi', async () => {
   assert.ok(nk.some((r) => r.workerId === unloader && r.count === 7000));
   assert.ok((await api('GET', `/workers/${loader}/ledger`)).body.some((e) => e.type === 'loading_credit'));
 });
+
+test('attendance record of one worker over a period', async () => {
+  const w = (await newWorker({ name: 'Record Rafiq' })).body.id;
+  const d = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
+  await api('PUT', '/attendance', { date: d(1), entries: [{ workerId: w, status: 'present' }] });
+  await api('PUT', '/attendance', { date: d(2), entries: [{ workerId: w, status: 'absent' }] });
+  await api('PUT', '/attendance', { date: d(20), entries: [{ workerId: w, status: 'leave' }] });
+  const week = (await api('GET', `/attendance/worker/${w}?from=${d(6)}&to=${d(0)}`)).body;
+  assert.deepEqual(week.map((r) => r.status), ['present', 'absent']);
+  const month = (await api('GET', `/attendance/worker/${w}?from=${d(29)}&to=${d(0)}`)).body;
+  assert.equal(month.length, 3);
+});

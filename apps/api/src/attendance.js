@@ -30,6 +30,13 @@ export function registerAttendanceRoutes(app, db) {
     res.json(await db.collection('attendance').find({ ...scope(req.user), date }).toArray());
   }));
 
+  // One worker's marks over a period (newest first), for the week / 15 days / month view.
+  app.get('/attendance/worker/:id', auth(), wrap(async (req, res) => {
+    const to = isoDay.safeParse(req.query.to).success ? req.query.to : new Date().toISOString().slice(0, 10);
+    const from = isoDay.safeParse(req.query.from).success ? req.query.from : to;
+    res.json(await db.collection('attendance').find({ ...scope(req.user), workerId: req.params.id, date: { $gte: from, $lte: to } }).sort({ date: -1 }).toArray());
+  }));
+
   app.put('/attendance', auth('owner', 'munshi'), wrap(async (req, res) => {
     const b = attendanceInput.parse(req.body);
     const s = scope(req.user);

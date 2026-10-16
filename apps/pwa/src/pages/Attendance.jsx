@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useT, useLang } from '../i18n.js';
 import { get, put, fmtDate } from '../api.js';
 import { useTypes, typeLabel } from '../useTypes.js';
+import SearchSelect from '../components/SearchSelect.jsx';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const STATUSES = ['present', 'absent', 'leave', 'half'];
@@ -81,6 +82,8 @@ export default function Attendance() {
         </div>
       </div>
 
+      <WorkerRecord t={t} workers={workers} />
+
       <div className="card table-wrap">
         <h2>{t.workers} ({shown.length})</h2>
         <table>
@@ -107,6 +110,65 @@ export default function Attendance() {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+// One worker's attendance over the last 7 / 15 / 30 days, day by day, with totals.
+// Days with no mark show as "not marked" so gaps are visible.
+function WorkerRecord({ t, workers }) {
+  const [workerId, setWorkerId] = useState('');
+  const [days, setDays] = useState(7);
+  const [rows, setRows] = useState([]);
+  useEffect(() => {
+    if (!workerId) { setRows([]); return; }
+    const to = today();
+    const from = new Date(Date.now() - (days - 1) * 86400000).toISOString().slice(0, 10);
+    get(`/attendance/worker/${workerId}?from=${from}&to=${to}`).then(setRows).catch(() => setRows([]));
+  }, [workerId, days]);
+  const byDate = Object.fromEntries(rows.map((r) => [r.date, r.status]));
+  const list = Array.from({ length: days }, (_, i) => new Date(Date.now() - i * 86400000).toISOString().slice(0, 10));
+  const n = (st) => list.filter((d) => byDate[d] === st).length;
+  return (
+    <div className="card grid">
+      <h2>{t.attRecord}</h2>
+      <label>
+        {t.worker}
+        <SearchSelect
+          ariaLabel={t.worker} placeholder={t.typeToSearch} value={workerId} onChange={setWorkerId}
+          options={workers.map((w) => ({ value: w._id, label: w.fatherName ? `${w.name} — ${w.fatherName}` : w.name, search: w.cnic || '' }))}
+        />
+      </label>
+      <div className="wx-tabs" role="tablist">
+        {[7, 15, 30].map((d) => (
+          <button key={d} type="button" role="tab" aria-selected={days === d} className={days === d ? 'on' : ''} onClick={() => setDays(d)}>
+            {d === 7 ? t.attWeek : d === 15 ? t.att15 : t.attMonth}
+          </button>
+        ))}
+      </div>
+      {workerId && (
+        <>
+          <div className="kpi-grid">
+            <div className="stat" style={{ borderInlineStartColor: 'var(--ok-dark)' }}><span>{t.att_present}</span><strong className="ok">{n('present') + n('half') / 2}</strong></div>
+            <div className="stat" style={{ borderInlineStartColor: 'var(--err-dark)' }}><span>{t.att_absent}</span><strong className="err">{n('absent')}</strong></div>
+            <div className="stat" style={{ borderInlineStartColor: 'var(--warn-dark)' }}><span>{t.att_leave}</span><strong className="warn">{n('leave')}</strong></div>
+            <div className="stat"><span>{t.attNotMarked}</span><strong>{list.filter((d) => !byDate[d]).length}</strong></div>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th className="sticky-col">{t.date}</th><th>{t.attStatus}</th></tr></thead>
+              <tbody>
+                {list.map((d) => (
+                  <tr key={d}>
+                    <td><strong>{fmtDate(d)}</strong> <span className="muted">{new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short' })}</span></td>
+                    <td>{byDate[d] ? <span className={`badge att-badge att-${byDate[d]}`}>{t[`att_${byDate[d]}`]}</span> : <span className="muted">{t.attNotMarked}</span>}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   );
 }

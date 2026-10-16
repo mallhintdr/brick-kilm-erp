@@ -220,8 +220,8 @@ function Shell({ children }) {
               aria-label={` `}
               onClick={() => { clearSession(); nav('/login'); }}
             >
+              <Icon name="logout" color="#ffffff" size={16} stroke={2.75} />
               <span className="logout-user">{username}</span>
-              <Icon name="logout" color="#ffffff" size={15} stroke={2.75} />
             </button>
           </div>
         </header>
