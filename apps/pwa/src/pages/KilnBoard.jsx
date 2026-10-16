@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useT } from '../i18n.js';
-import { get, post, put, uuid, getRole, fmtDate, fmtDateTime } from '../api.js';
+import { get, post, put, del, uuid, getRole, fmtDate, fmtDateTime } from '../api.js';
 import KilnDiagram from '../components/KilnDiagram.jsx';
 import LineDiagram from '../components/LineDiagram.jsx';
 import SearchSelect from '../components/SearchSelect.jsx';
@@ -45,6 +45,7 @@ export default function KilnBoard({ focus } = {}) {
   const [notes, setNotes] = useState({ coalKg: '', issues: '' });
   const [history, setHistory] = useState([]);
   const [lf, setLf] = useState({}); // list filters
+  const [loadEdit, setLoadEdit] = useState(null); // owner correcting a load: { who, count, date }
   const panelRef = useRef(null);
   const planRef = useRef(null);
   const lastIndex = useRef(null);
@@ -108,6 +109,7 @@ export default function KilnBoard({ focus } = {}) {
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((w) => ({ value: `w:${w._id}`, label: w.fatherName ? `${w.name} — ${w.fatherName}` : w.name, search: `${w.cnic || ''} ${w.phone || ''}` })),
     ...teamsOf(cat).filter((tm) => !tm.solo).map((tm) => ({ value: `t:${tm._id}`, label: `${t.team}: ${teamText(tm)}`, search: '' })),
+    ...teamsOf(cat).filter((tm) => tm.solo).map((tm) => ({ value: `t:${tm._id}`, label: teamText(tm), search: '' })),
   ];
   const who = (v) => (!v ? {} : v.startsWith('w:') ? { workerId: v.slice(2) } : { teamId: v.slice(2) });
   // team name plus its members' names, so the head (e.g. the jalai mistri) shows in the list
@@ -121,6 +123,21 @@ export default function KilnBoard({ focus } = {}) {
     setNotes({ coalKg: sel.coalKg ? String(sel.coalKg) : '', issues: sel.issues || '' });
     get(`${base}/${sel.index}/history`).then(setHistory).catch(() => setHistory([]));
   }, [sel?.index, unit]);
+
+  // owner: correct or undo the current load (wages follow automatically)
+  const startLoadEdit = () => setLoadEdit({
+    who: sel.loadTeamId ? `t:${sel.loadTeamId}` : '', count: String(sel.currentLoad || ''),
+    date: sel.loadedAt ? new Date(sel.loadedAt).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+  });
+  const saveLoadEdit = () => act(() => put(`${base}/${sel.index}/load`, {
+    ...who(loadEdit.who), count: Number(loadEdit.count), date: loadEdit.date,
+  }).then((r) => { setLoadEdit(null); return r; }), { keep: true });
+  const undoLoad = () => {
+    if (!window.confirm(`${t.undoLoading}: ${unitLabel} ${sel.index}?`)) return;
+    setLoadEdit(null);
+    act(() => del(`${base}/${sel.index}/load`));
+  };
+  useEffect(() => { setLoadEdit(null); }, [sel?.index]);
 
   const saveNotes = () => act(() => put(`${base}/${sel.index}/notes`, {
     coalKg: notes.coalKg === '' ? 0 : Number(notes.coalKg), issues: notes.issues,
@@ -439,6 +456,27 @@ export default function KilnBoard({ focus } = {}) {
 
           {sel.state !== 'Empty' && (
             <div className="cycle-register">
+              {isOwner && sel.currentLoad > 0 && !loadEdit && (
+                <div className="row" style={{ justifyContent: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                  <button type="button" className="ghost" onClick={startLoadEdit}>✎ {t.editLoading}</button>
+                  {sel.state === 'Preheating' && <button type="button" className="ghost danger-text" onClick={undoLoad}>↺ {t.undoLoading}</button>}
+                </div>
+              )}
+              {loadEdit && (
+                <div className="grid two load-edit">
+                  <label>
+                    {t.loaderOrTeam}
+                    <SearchSelect ariaLabel={t.loaderOrTeam} placeholder={t.typeToSearch} value={loadEdit.who}
+                      onChange={(v) => setLoadEdit({ ...loadEdit, who: v })} options={pickOptions('bharai')} />
+                  </label>
+                  <label>{t.kachiBharai}<input inputMode="numeric" value={loadEdit.count} onChange={(e) => setLoadEdit({ ...loadEdit, count: e.target.value.replace(/[^\d]/g, '') })} /></label>
+                  <label>{t.entryDate}<input type="date" max={new Date().toISOString().slice(0, 10)} value={loadEdit.date} onChange={(e) => setLoadEdit({ ...loadEdit, date: e.target.value })} /></label>
+                  <div className="row" style={{ gridColumn: '1 / -1', justifyContent: 'center', gap: '0.4rem' }}>
+                    <button type="button" className="primary fit-center" disabled={submitting || !Number(loadEdit.count)} onClick={saveLoadEdit}>{t.save}</button>
+                    <button type="button" className="ghost" onClick={() => setLoadEdit(null)}>{t.cancel}</button>
+                  </div>
+                </div>
+              )}
               <div className="cycle-dates">
                 <div><span>{t.loadedOn}</span><strong>{sel.loadedAt ? fmtDate(sel.loadedAt) : '—'}</strong></div>
                 <div><span>{t.firedOn}</span><strong>{sel.firedAt ? fmtDateTime(sel.firedAt) : '—'}</strong></div>

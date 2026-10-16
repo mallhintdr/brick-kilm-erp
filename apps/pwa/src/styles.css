@@ -3427,3 +3427,5 @@ main > .grid:has(.chart-card) > .card { padding: 0.55rem 0.7rem !important; }
 .home-stock-grid .stat { padding: 0.4rem 0.35rem !important; flex: none !important; }
 .home-stock-grid .stat span { font-size: 0.62rem !important; line-height: 1.2; }
 .home-stock-grid .stat strong { font-size: 0.98rem !important; }
+.load-edit { padding: 0.6rem; border: 1.5px dashed #2563eb; border-radius: 8px; background: #eff6ff; }
+.danger-text { color: #b91c1c !important; }

@@ -688,3 +688,28 @@ test('opening stock is added to every stock figure', async () => {
   assert.equal((await api('GET', '/opening-stock')).body.asOf, '2026-09-01');
   await api('PUT', '/opening-stock', { awwal: 0, doem: 0, khangar: 0, green: 0, coalKg: 0, items: {} }); // leave other tests as they were
 });
+
+test('owner can edit or undo a line load; wages follow', async () => {
+  await api('PUT', '/settings', { key: 'allowNegativeStock', value: '1' });
+  await api('PUT', '/settings', { key: 'rateBharai', value: '510' });
+  const l1 = (await newWorker({ category: 'bharai', name: 'Load One' })).body.id;
+  const l2 = (await newWorker({ category: 'bharai', name: 'Load Two' })).body.id;
+  const idx = 230;
+  assert.equal((await api('POST', `/kiln-lines/${idx}/load`, { workerId: l1, count: 4000, clientUuid: randomUUID() })).status, 201);
+  const wage = async (w) => (await api('GET', `/workers/${w}/ledger`)).body.filter((e) => e.account === 'earnings').reduce((a, e) => a + Number(e.debit) - Number(e.credit), 0);
+  assert.equal(await wage(l1), 2040);                      // 4,000 x 510 / 1000
+  // munshi cannot correct
+  assert.equal((await api('PUT', `/kiln-lines/${idx}/load`, { count: 5000 }, 'munshi')).status, 403);
+  // owner: 5,000 bricks, loaded by the other worker
+  assert.equal((await api('PUT', `/kiln-lines/${idx}/load`, { count: 5000, workerId: l2 })).status, 200);
+  assert.equal(await wage(l1), 0);
+  assert.equal(await wage(l2), 2550);                      // 5,000 x 510 / 1000
+  assert.equal((await api('GET', '/kiln-lines')).body.find((x) => x.index === idx).currentLoad, 5000);
+  // undo: line empty again, wages gone
+  assert.equal((await api('DELETE', `/kiln-lines/${idx}/load`)).status, 200);
+  const line = (await api('GET', '/kiln-lines')).body.find((x) => x.index === idx);
+  assert.equal(line.state, 'Empty'); assert.equal(line.currentLoad, 0);
+  assert.equal(await wage(l2), 0);
+  // nothing to edit now
+  assert.equal((await api('PUT', `/kiln-lines/${idx}/load`, { count: 100 })).status, 422);
+});

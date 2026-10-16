@@ -1,11 +1,12 @@
 import { ObjectId } from 'mongodb';
+import { z } from 'zod';
 import {
   mouldingInput, sectionLoadInput, fireAdvanceInput, kilnNoteInput, firingLogInput,
   unloadStartInput, unloadCompleteInput, grnInput, customerInput, invoiceInput, paymentInput,
   SETTING_DEFAULTS, toPaisa,
 } from '@kiln/shared';
 import { withTransaction } from './db.js';
-import { scope, audit, getSetting, postEntry, oid, httpError, assertType } from './core.js';
+import { scope, audit, getSetting, postEntry, oid, httpError, assertType, reverseBySource } from './core.js';
 
 const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res)).catch(next);
 const teamOid = (s) => { try { return new ObjectId(s); } catch { return null; } };
@@ -141,17 +142,77 @@ export function registerProductionRoutes(app, db) {
           }
         }
         const at = entryAt(b.date);
-        await db.collection('sectionLoads').insertOne({ ...scope(req.user), unit, sectionIndex: b.sectionIndex, teamId: b.teamId, count: b.count, date: at }, { session });
+        const loadRef = `${unit}Load:${b.sectionIndex}:${Date.now()}`;
+        await db.collection('sectionLoads').insertOne({ ...scope(req.user), unit, sectionIndex: b.sectionIndex, teamId: b.teamId, count: b.count, date: at, ledgerRef: loadRef }, { session });
         await db.collection(U.coll).updateOne(
           { ...scope(req.user), index: b.sectionIndex },
-          { $set: { state: 'Preheating', currentLoad: b.count, loadedAt: at, loadTeamId: b.teamId, firedAt: null, cooledAt: null, coalKg: 0, issues: '' } }, { session },
+          { $set: { state: 'Preheating', currentLoad: b.count, loadedAt: at, loadTeamId: b.teamId, loadRef, firedAt: null, cooledAt: null, coalKg: 0, issues: '' } }, { session },
         );
         const rate = await getSetting(db, req.user, 'rateBharai', SETTING_DEFAULTS, session);
         const gross = ((b.count / 1000) * Number(rate)).toFixed(2);
-        await creditTeam(db, session, req.user, b.teamId, gross, 'loading_credit', `${unit}Load:${b.sectionIndex}:${Date.now()}`, b.clientUuid, at, { bricks: b.count, rate });
+        await creditTeam(db, session, req.user, b.teamId, gross, 'loading_credit', loadRef, b.clientUuid, at, { bricks: b.count, rate });
         await audit(db, session, req.user, `${unit}.load`, b);
       });
       res.status(201).json({ ok: true });
+    }));
+
+    // The load currently in a chamber/line, and the wage entries it posted (older loads: found by prefix).
+    async function currentLoad(user, index, session) {
+      const s = scope(user);
+      const sec = await db.collection(U.coll).findOne({ ...s, index }, { session });
+      if (!sec) throw httpError(404, `${U.label} not found`);
+      if (sec.state === 'Empty' || !sec.currentLoad) throw httpError(422, `${U.label} ${index} has no bricks loaded`);
+      const rec = await db.collection('sectionLoads').find({ ...s, unit: unit === 'line' ? 'line' : { $in: ['chamber', null] }, sectionIndex: index }, { session })
+        .sort({ date: -1, _id: -1 }).limit(1).next();
+      let ref = sec.loadRef || rec?.ledgerRef;
+      if (!ref) {
+        const last = await db.collection('ledgerEntries').find({ ...s, sourceRef: { $regex: `^${unit}Load:${index}:` }, reversesId: null }, { session })
+          .sort({ createdAt: -1 }).limit(1).next();
+        ref = last?.sourceRef;
+      }
+      return { sec, rec, ref };
+    }
+
+    // Owner corrects a load (bricks, day, loader): old wages reversed, corrected wages posted.
+    app.put(`/${U.path}/:index/load`, auth('owner'), wrap(async (req, res) => {
+      const index = Number(req.params.index);
+      const b = z.object({
+        count: z.coerce.number().int().positive().optional(), date: z.coerce.date().optional(),
+        teamId: z.string().optional(), workerId: z.string().optional(),
+      }).parse(req.body);
+      if (b.date && b.date.getTime() > Date.now() + 86400000) throw httpError(400, 'Date cannot be in the future');
+      if (!b.teamId && b.workerId) b.teamId = await soloTeamFor(db, undefined, req.user, b.workerId, 'bharai');
+      await withTransaction(db, async (session) => {
+        const { sec, rec, ref } = await currentLoad(req.user, index, session);
+        const count = b.count ?? sec.currentLoad;
+        const teamId = b.teamId ?? sec.loadTeamId ?? rec?.teamId;
+        const at = b.date ? entryAt(b.date) : (sec.loadedAt || rec?.date || new Date());
+        if (!teamId) throw httpError(422, 'Choose who loaded it');
+        if (ref) await reverseBySource(db, session, req.user, ref, 'loading corrected');
+        const newRef = `${unit}Load:${index}:${Date.now()}`;
+        const rate = await getSetting(db, req.user, 'rateBharai', SETTING_DEFAULTS, session);
+        await creditTeam(db, session, req.user, teamId, ((count / 1000) * Number(rate)).toFixed(2), 'loading_credit', newRef, `${newRef}-edit`, at, { bricks: count, rate });
+        if (rec) await db.collection('sectionLoads').updateOne({ _id: rec._id }, { $set: { count, teamId, date: at, ledgerRef: newRef } }, { session });
+        await db.collection(U.coll).updateOne({ _id: sec._id }, { $set: { currentLoad: count, loadTeamId: teamId, loadedAt: at, loadRef: newRef } }, { session });
+        await audit(db, session, req.user, `${unit}.load.edit`, { index, before: { count: sec.currentLoad, teamId: sec.loadTeamId, at: sec.loadedAt }, after: { count, teamId, at } });
+      });
+      res.json({ ok: true });
+    }));
+
+    // Owner undoes a load that has not caught fire yet: wages reversed, chamber/line empty again.
+    app.delete(`/${U.path}/:index/load`, auth('owner'), wrap(async (req, res) => {
+      const index = Number(req.params.index);
+      await withTransaction(db, async (session) => {
+        const { sec, rec, ref } = await currentLoad(req.user, index, session);
+        if (sec.state !== 'Preheating') throw httpError(422, `${U.label} ${index} is already ${sec.state.toLowerCase()}; only a load that has not caught fire can be undone`);
+        if (ref) await reverseBySource(db, session, req.user, ref, 'loading undone');
+        if (rec) await db.collection('sectionLoads').deleteOne({ _id: rec._id }, { session });
+        await db.collection(U.coll).updateOne({ _id: sec._id }, {
+          $set: { state: 'Empty', currentLoad: 0, loadTeamId: null, loadedAt: null, loadRef: null, coalKg: 0, issues: '' },
+        }, { session });
+        await audit(db, session, req.user, `${unit}.load.undo`, { index, count: sec.currentLoad });
+      });
+      res.json({ ok: true });
     }));
 
     app.post(`/${U.path}/:index/unload/start`, auth('owner', 'munshi'), wrap(async (req, res) => {
