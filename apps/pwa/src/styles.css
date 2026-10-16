@@ -3394,3 +3394,7 @@ table.att-table td:nth-child(2) .muted { font-size: 0.6rem !important; }
 /* Worker attendance record: day list scrolls inside its own frame, header row stays visible */
 .att-record .table-wrap { max-height: 320px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; }
 .att-record .table-wrap thead th { position: sticky; top: 0; z-index: 3; }
+/* Bar chart legends (e.g. fired stock by grade): wrap onto two rows, smaller text, no sideways scroll */
+.chart-checkbox-legend-row.legend-wrap { flex-wrap: wrap !important; overflow: visible !important; gap: 0.35rem 0.8rem !important; }
+.chart-checkbox-legend-row.legend-wrap .chart-checkbox-label { font-size: 0.72rem; }
+.chart-checkbox-legend-row.legend-wrap input[type="checkbox"] { width: 15px; height: 15px; }

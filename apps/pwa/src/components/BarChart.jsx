@@ -171,7 +171,7 @@ export default function BarChart({ items, colors, height = 230, label = 'Grade B
       </div>
 
       {/* Bottom Center Checkbox Legends */}
-      <div className="chart-checkbox-legend-row">
+      <div className="chart-checkbox-legend-row legend-wrap">
         {items.map((it, idx) => {
           const isChecked = activeItems.includes(idx);
           const barColor = colors?.[idx] || 'var(--brand)';
@@ -183,8 +183,7 @@ export default function BarChart({ items, colors, height = 230, label = 'Grade B
                 onChange={() => toggleItem(idx)}
                 style={{ accentColor: barColor }}
               />
-              <span className="chart-legend-box" style={{ background: barColor }} />
-              <span>{it.label}: {Number(it.value).toLocaleString()}</span>
+              <span style={{ color: barColor }}>{it.label}: {Number(it.value).toLocaleString()}</span>
             </label>
           );
         })}
