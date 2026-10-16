@@ -3386,3 +3386,7 @@ table.att-table td:last-child, table.att-table th:last-child { width: 1%; white-
 table.att-table thead th { font-size: 0.7rem !important; letter-spacing: 0.03em !important; }
 table.att-table td:nth-child(2) { font-size: 0.65rem !important; }
 table.att-table td:nth-child(2) .muted { font-size: 0.6rem !important; }
+/* per-worker save: green tick; outlined once that mark is saved */
+.att-btns button.att-save { margin-inline-start: 0.2rem; background: #16a34a; border-color: #16a34a; color: #fff; font-weight: 900; }
+.att-btns button.att-save:disabled { background: #fff; color: #cbd5e1; border-color: #e2e8f0; cursor: default; }
+.att-btns button.att-save.done:disabled { color: #16a34a; border-color: #86efac; background: #f0fdf4; }

@@ -37,6 +37,15 @@ export default function Attendance() {
   const count = (st) => shown.filter((w) => marks[w._id] === st).length;
   const changed = shown.filter((w) => marks[w._id] && marks[w._id] !== saved[w._id]).length;
 
+  // save just this worker's mark (the rest of the day can be finished later)
+  async function saveOne(w) {
+    try {
+      await put('/attendance', { date, entries: [{ workerId: w._id, status: marks[w._id] }] });
+      setSaved((x) => ({ ...x, [w._id]: marks[w._id] }));
+      setMsg({ text: `${t.savedOk}: ${w.name}`, bad: false });
+    } catch (e) { setMsg({ text: e.message, bad: true }); }
+  }
+
   async function save() {
     setBusy(true);
     try {
@@ -114,6 +123,11 @@ export default function Attendance() {
                         {t[`attShort_${st}`]}
                       </button>
                     ))}
+                    <button
+                      type="button" className={`att-save${marks[w._id] && marks[w._id] === saved[w._id] ? ' done' : ''}`}
+                      disabled={!marks[w._id] || marks[w._id] === saved[w._id]} onClick={() => saveOne(w)}
+                      title={marks[w._id] === saved[w._id] && marks[w._id] ? t.savedOk : t.save} aria-label={`${t.save} ${w.name}`}
+                    >✓</button>
                   </div>
                 </td>
               </tr>
