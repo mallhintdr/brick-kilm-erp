@@ -16,15 +16,13 @@ export default function KilnLogo({ size = 24, color = '#ffffff', smoke = true, t
         </g>
       )}
       {burst && (
-        // a column of smoke shoots straight up for 1s, then fades over 2s (keyed so every tap replays it)
-        <g key={burst} className="kiln-logo-burst" strokeWidth="0.8">
-          {/* stacked puffs, narrow at the mouth and slightly wider as they climb */}
-          <ellipse className="c c1" cx="16" cy="4.6" rx="1.7" ry="1.5" />
-          <ellipse className="c c2" cx="16.1" cy="2" rx="1.9" ry="1.6" />
-          <ellipse className="c c3" cx="15.9" cy="-0.7" rx="2.1" ry="1.7" />
-          <ellipse className="c c4" cx="16.1" cy="-3.5" rx="2.3" ry="1.8" />
-          <ellipse className="c c5" cx="15.9" cy="-6.4" rx="2.5" ry="1.9" />
-          <ellipse className="c c6" cx="16.1" cy="-9.4" rx="2.7" ry="2" />
+        // thick cloud: billows out for 1s, then rises and fades over 2s (keyed so every tap replays it)
+        <g key={burst} className="kiln-logo-burst" strokeWidth="0.9" transform="translate(0 2)">
+          <path className="b b1" d="M14.2 3.6c-2.4-.2-3.2-2.8-1.4-4.1.4-2.3 3.4-2.9 4.5-1.1 2.1-.6 3.6 1.4 2.5 3.2.3 1.9-2.1 2.7-3.4 1.5-.7.6-1.6.7-2.2.5z" />
+          <path className="b b2" d="M18.4 1.2c-1.8-.3-2.1-2.4-.7-3.2.5-1.6 2.7-1.8 3.4-.5 1.6-.2 2.5 1.4 1.6 2.6 0 1.4-1.8 1.9-2.7 1z" />
+          <path className="b b3" d="M11.6 1.4c-1.6-.2-2-2.1-.7-2.9.4-1.4 2.4-1.6 3-.4 1.4-.2 2.2 1.2 1.4 2.3 0 1.2-1.6 1.7-2.4.9z" />
+          <path className="b b4" d="M21.8-1.4c-1.2-.4-1.2-2 0-2.4.6-1 2.1-.8 2.4.3 1.1.3 1.2 1.7.2 2.1-.6.6-1.6.6-2.1.1z" />
+          <path className="b b5" d="M15.6-2.6c-1.3-.3-1.4-2-.2-2.5.5-1.1 2.2-1.1 2.6 0 1.1.1 1.4 1.6.4 2.1-.5.7-1.6.8-2.2.3z" />
         </g>
       )}
       <path d="M13.9 6.3h4.2v1.3h-4.2zM14.5 7.6h3" />
