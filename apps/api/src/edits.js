@@ -59,7 +59,8 @@ export function registerEditRoutes(app, db) {
     if (kharaba > count) throw httpError(422, 'Kharaba cannot exceed the moulded count');
     const date = patch.date ? workDateTime(patch.date) : b.date;
     if (patch.date) await assertTeamDayFree(db, session, req.user, b.teamId, date, b._id);
-    const netCount = count - kharaba;
+    const deduction = Math.round((count * (b.deductionPct || 0)) / 100);
+    const netCount = count - kharaba - deduction;
     const wagesChange = netCount !== b.netCount || (patch.date && date.getTime() !== new Date(b.date).getTime());
     if (wagesChange) {
       if (!b.ledgerRef) throw httpError(422, 'This older batch has no wage link; delete and re-enter it instead');
@@ -68,7 +69,7 @@ export function registerEditRoutes(app, db) {
       const gross = ((netCount / 1000) * Number(rate)).toFixed(2);
       await creditTeam(db, session, req.user, b.teamId, gross, 'moulding_credit', b.ledgerRef, `${b.ledgerRef}-edit-${Date.now()}`, date, { bricks: netCount, rate });
     }
-    return { count, kharaba, netCount, date };
+    return { count, kharaba, deduction, netCount, date };
   });
 
   // Firing wages are a flat per-shift rate, so these fields never change pay.

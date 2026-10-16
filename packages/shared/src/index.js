@@ -98,7 +98,8 @@ export const BUILTIN_TYPES = {
   procurementItem: [
     ['coal', 'Coal', 'کوئلہ'], ['wood', 'Wood', 'لکڑی'], ['diesel', 'Diesel', 'ڈیزل'], ['soil', 'Soil', 'مٹی'],
     ['sand', 'Sand', 'ریت'], ['shopper', 'Shopper', 'شاپر'], ['kalab', 'Kalab', 'کلب'], ['electric', 'Electric goods', 'برقی سامان'],
-    ['spare', 'Spare parts', 'پرزہ جات'], ['misc', 'Miscellaneous', 'متفرق'],
+    ['spare', 'Spare parts', 'پرزہ جات'], ['furniture', 'Office furniture', 'دفتری فرنیچر'], ['cctv', 'CCTV', 'سی سی ٹی وی'],
+    ['solar', 'Solar panels', 'سولر پینل'], ['misc', 'Miscellaneous', 'متفرق'],
   ],
   customerType: [['individual', 'Cash buyer', 'نقد گاہک'], ['registered', 'Registered customer', 'رجسٹرڈ گاہک']],
   paymentMode: [['cash', 'Cash', 'نقد'], ['bank', 'Bank', 'بینک'], ['jazzcash', 'JazzCash', 'جیز کیش']],
@@ -135,6 +136,7 @@ export const workerInput = z.object({
   ratePerThousand: nonNegMoneyString.optional(),
   cutPerThousand: nonNegMoneyString.optional(),
   openingPeshgi: nonNegMoneyString.optional(), // advance already given when they join
+  reference: z.string().trim().max(100).optional(), // who brought them: jamadar or reference person
   name: z.string().min(2),
   fatherName: z.string().trim().min(2), // tells apart workers who share a common name
   cnic,
@@ -224,6 +226,8 @@ export const mouldingInput = z.object({
   workerId: z.string().optional(), // a moulder picked by name: their own one-person team is used
   count: positiveInt,
   kharaba: nonNegInt.default(0),
+  deductionPct: z.coerce.number().min(0).max(25).default(0), // breakage (tot phot) cut, usually 2%
+  quality: z.enum(['poor', 'satisfactory', 'good']).optional(),
   date: workDate.optional(),
   clientUuid: z.string().uuid(),
 }).refine((b) => b.teamId || b.workerId, { message: 'Choose a moulder or a team' });
@@ -238,6 +242,7 @@ export const firingUpdate = z.object({
   genHours: z.coerce.number().min(0).max(24).optional(),
 });
 export const workerUpdate = z.object({
+  reference: z.string().trim().max(100).optional(),
   ratePerThousand: z.union([nonNegMoneyString, z.literal('')]).optional(),
   cutPerThousand: z.union([nonNegMoneyString, z.literal('')]).optional(),
   name: z.string().min(2).optional(),
@@ -264,6 +269,7 @@ export const sectionLoadInput = z.object({
   sectionIndex: positiveInt,
   teamId: z.string().optional(),
   workerId: z.string().optional(), // a loader picked by name: their own one-person team is used
+  date: workDate.optional(), // day the bharai was done (back-dating allowed)
   count: positiveInt,
   clientUuid: z.string().uuid(),
 });
@@ -308,6 +314,7 @@ export const unloadStartInput = z.object({
 
 export const unloadCompleteInput = z.object({
   sectionIndex: positiveInt,
+  date: workDate.optional(), // day the nikasi was done
   awwal: nonNegInt,
   doem: nonNegInt,
   khangar: nonNegInt,

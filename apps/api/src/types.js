@@ -32,7 +32,8 @@ export function registerTypeRoutes(app, db) {
 
   app.post('/types', auth(), can('add'), wrap(async (req, res) => {
     const b = typeInput.parse(req.body);
-    const key = b.key ?? slug(b.label);
+    const key = b.key ?? (slug(b.label).length >= 2 ? slug(b.label) : `t_${Date.now().toString(36)}`);
+    if (!b.labelUr && /[\u0600-\u06FF]/.test(b.label)) b.labelUr = b.label;
     if (key.length < 2) throw httpError(422, 'Could not derive a key from the label; enter one explicitly');
     await ensureBuiltinTypes(db, req.user);
     const r = await withTransaction(db, async (session) => {

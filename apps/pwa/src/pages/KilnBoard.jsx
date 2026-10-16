@@ -136,7 +136,7 @@ export default function KilnBoard({ focus } = {}) {
       if (keep) { setSel(fresh.find((x) => x.index === sel.index) || null); return; }
       if (next && unit === 'line') {
         const nextRow = fresh.find((x) => x.index === sel.index + 1);
-        if (nextRow) { setSel(nextRow); setForm({ teamId: form.teamId }); return; }
+        if (nextRow) { setSel(nextRow); setForm({ teamId: form.teamId, date: form.date }); return; }
       }
       setSel(null);
       setForm({});
@@ -156,6 +156,7 @@ export default function KilnBoard({ focus } = {}) {
   const loadRow = (row) => act(() => post(`${base}/${row.index}/load`, {
     ...who(form.teamId),
     count: Number(form.count),
+    date: form.date || new Date().toISOString().slice(0, 10),
     clientUuid: uuid(),
   }), { next: true });
 
@@ -169,6 +170,7 @@ export default function KilnBoard({ focus } = {}) {
     doem: Number(form.doem || 0),
     khangar: Number(form.khangar || 0),
     broken: Number(form.broken || 0),
+    date: form.date || new Date().toISOString().slice(0, 10),
     clientUuid: uuid(),
   }));
 
@@ -363,6 +365,10 @@ export default function KilnBoard({ focus } = {}) {
                   onChange={(e) => setForm({ ...form, count: e.target.value })}
                 />
               </label>
+              <label>
+                {t.entryDate}
+                <input type="date" required max={new Date().toISOString().slice(0, 10)} value={form.date || new Date().toISOString().slice(0, 10)} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+              </label>
               <button
                 className="primary"
                 disabled={!form.teamId || !form.count || submitting}
@@ -399,6 +405,10 @@ export default function KilnBoard({ focus } = {}) {
           {sel.state === 'Unloading' && (
             <div className="grid" style={{ gap: '0.85rem' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem' }}>
+                <label>
+                {t.entryDate}
+                <input type="date" required max={new Date().toISOString().slice(0, 10)} value={form.date || new Date().toISOString().slice(0, 10)} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+              </label>
                 <label>
                   {t.awwal}
                   <input inputMode="numeric" placeholder="0" value={form.awwal || ''} onChange={(e) => setForm({ ...form, awwal: e.target.value })} />

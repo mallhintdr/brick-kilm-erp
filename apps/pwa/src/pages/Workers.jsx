@@ -5,7 +5,7 @@ import { useTypes, typeLabel } from '../useTypes.js';
 import RowActions, { useRowEdit } from '../components/RowActions.jsx';
 import { useLang } from '../i18n.js';
 
-const blank = { ratePerThousand: '', cutPerThousand: '', openingPeshgi: '', name: '', fatherName: '', cnic: '', dob: '', category: 'pathera', eobiNo: '', pessiNo: '' };
+const blank = { phone: '', reference: '', ratePerThousand: '', cutPerThousand: '', openingPeshgi: '', name: '', fatherName: '', cnic: '', dob: '', category: 'pathera', eobiNo: '', pessiNo: '' };
 
 export default function Workers() {
   const t = useT();
@@ -117,6 +117,14 @@ export default function Workers() {
           <label>
             {t.eobiNo}
             <input placeholder="Optional EOBI #" value={f.eobiNo} onChange={(e) => setF({ ...f, eobiNo: e.target.value })} />
+          </label>
+          <label>
+            {t.mobileNo}
+            <input inputMode="tel" placeholder="03xx-xxxxxxx" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
+          </label>
+          <label>
+            {t.referenceJamadar}
+            <input value={f.reference} onChange={(e) => setF({ ...f, reference: e.target.value })} />
           </label>
           <label>
             {t.ratePerThousand}

@@ -133,14 +133,15 @@ export function registerProductionRoutes(app, db) {
             throw httpError(422, `Only ${greenStock.toLocaleString()} green bricks in stock; enter ${b.count.toLocaleString()} or less (or allow negative stock in Settings)`);
           }
         }
-        await db.collection('sectionLoads').insertOne({ ...scope(req.user), unit, sectionIndex: b.sectionIndex, teamId: b.teamId, count: b.count, date: new Date() }, { session });
+        const at = entryAt(b.date);
+        await db.collection('sectionLoads').insertOne({ ...scope(req.user), unit, sectionIndex: b.sectionIndex, teamId: b.teamId, count: b.count, date: at }, { session });
         await db.collection(U.coll).updateOne(
           { ...scope(req.user), index: b.sectionIndex },
-          { $set: { state: 'Preheating', currentLoad: b.count, loadedAt: new Date(), loadTeamId: b.teamId, firedAt: null, cooledAt: null, coalKg: 0, issues: '' } }, { session },
+          { $set: { state: 'Preheating', currentLoad: b.count, loadedAt: at, loadTeamId: b.teamId, firedAt: null, cooledAt: null, coalKg: 0, issues: '' } }, { session },
         );
         const rate = await getSetting(db, req.user, 'rateBharai', SETTING_DEFAULTS, session);
         const gross = ((b.count / 1000) * Number(rate)).toFixed(2);
-        await creditTeam(db, session, req.user, b.teamId, gross, 'loading_credit', `${unit}Load:${b.sectionIndex}:${Date.now()}`, b.clientUuid, undefined, { bricks: b.count, rate });
+        await creditTeam(db, session, req.user, b.teamId, gross, 'loading_credit', `${unit}Load:${b.sectionIndex}:${Date.now()}`, b.clientUuid, at, { bricks: b.count, rate });
         await audit(db, session, req.user, `${unit}.load`, b);
       });
       res.status(201).json({ ok: true });
@@ -169,15 +170,16 @@ export function registerProductionRoutes(app, db) {
         if (!sec) throw httpError(404, `${U.label} not found`);
         if (sec.state !== 'Unloading') throw httpError(422, `${U.label} ${b.sectionIndex} has no nikasi team assigned yet (state: ${sec.state})`);
         const total = b.awwal + b.doem + b.khangar + b.broken;
+        const at = entryAt(b.date);
         await db.collection('unloadings').insertOne({
           ...scope(req.user), unit, sectionIndex: b.sectionIndex, nikasiTeamId: sec.nikasiTeamId,
-          awwal: b.awwal, doem: b.doem, khangar: b.khangar, broken: b.broken, date: new Date(),
+          awwal: b.awwal, doem: b.doem, khangar: b.khangar, broken: b.broken, date: at,
         }, { session });
         // one row per finished cycle: when it was loaded, fired, unloaded, its coal, output and issues
         await db.collection('kilnCycles').insertOne({
           ...scope(req.user), unit, index: b.sectionIndex, count: sec.currentLoad || 0,
           loadTeamId: sec.loadTeamId ?? null, nikasiTeamId: sec.nikasiTeamId ?? null,
-          loadedAt: sec.loadedAt ?? null, firedAt: sec.firedAt ?? null, cooledAt: sec.cooledAt ?? null, unloadedAt: new Date(),
+          loadedAt: sec.loadedAt ?? null, firedAt: sec.firedAt ?? null, cooledAt: sec.cooledAt ?? null, unloadedAt: at,
           coalKg: sec.coalKg || 0, issues: sec.issues || '',
           awwal: b.awwal, doem: b.doem, khangar: b.khangar, broken: b.broken,
         }, { session });
@@ -187,7 +189,7 @@ export function registerProductionRoutes(app, db) {
         );
         const rate = await getSetting(db, req.user, 'rateNikasi', SETTING_DEFAULTS, session);
         const gross = ((total / 1000) * Number(rate)).toFixed(2);
-        await creditTeam(db, session, req.user, sec.nikasiTeamId, gross, 'unloading_credit', `${unit}Unloading:${b.sectionIndex}:${Date.now()}`, b.clientUuid, undefined, { bricks: total, rate });
+        await creditTeam(db, session, req.user, sec.nikasiTeamId, gross, 'unloading_credit', `${unit}Unloading:${b.sectionIndex}:${Date.now()}`, b.clientUuid, at, { bricks: total, rate });
         await audit(db, session, req.user, `${unit}.unload.complete`, b);
       });
       res.status(201).json({ ok: true });
@@ -246,12 +248,15 @@ export function registerProductionRoutes(app, db) {
     const b = mouldingInput.parse(req.body);
     if (!b.teamId) b.teamId = await soloTeamFor(db, undefined, req.user, b.workerId);
     if (b.kharaba > b.count) throw httpError(422, 'Kharaba cannot exceed the moulded count');
-    const netCount = b.count - b.kharaba;
+    // net = moulded - rain loss - breakage deduction (a % of the count, usually 2)
+    const deduction = Math.round((b.count * b.deductionPct) / 100);
+    const netCount = b.count - b.kharaba - deduction;
+    if (netCount < 0) throw httpError(422, 'Wastage and deduction cannot exceed the moulded count');
     const ledgerRef = `moulding:${b.clientUuid}`; // lets a later delete find and reverse the wage credits
     const workAt = workDateTime(b.date);
     await withTransaction(db, async (session) => {
       await assertTeamDayFree(db, session, req.user, b.teamId, workAt);
-      await db.collection('mouldingBatches').insertOne({ ...scope(req.user), teamId: b.teamId, count: b.count, kharaba: b.kharaba, netCount, date: workAt, status: 'drying', ledgerRef }, { session });
+      await db.collection('mouldingBatches').insertOne({ ...scope(req.user), teamId: b.teamId, count: b.count, kharaba: b.kharaba, deductionPct: b.deductionPct, deduction, quality: b.quality ?? null, netCount, date: workAt, status: 'drying', ledgerRef }, { session });
       const rate = await getSetting(db, req.user, 'ratePathera', SETTING_DEFAULTS, session);
       const gross = ((netCount / 1000) * Number(rate)).toFixed(2);
       // Wages are dated to the work day too, so the weekly kharchi run puts them in the right week.

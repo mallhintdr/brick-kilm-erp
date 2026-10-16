@@ -563,3 +563,32 @@ test('loading and nikasi by worker name use their own team', async () => {
   assert.ok((await api('GET', '/teams')).body.some((tm) => tm.solo && tm.category === 'nikasi' && tm.memberIds.includes(unloader)));
   assert.ok((await api('GET', `/workers/${loader}/ledger`)).body.some((e) => e.type === 'loading_credit'));
 });
+
+test('khata, roznamcha, dated loading and moulding deduction', async () => {
+  await api('PUT', '/settings', { key: 'allowNegativeStock', value: '1' });
+  await api('PUT', '/settings', { key: 'ratePathera', value: '1400' });
+  await api('PUT', '/settings', { key: 'cutPathera', value: '400' });
+  const w = (await newWorker({ name: 'Khata Moulder', openingPeshgi: '50000', phone: '03001234567', reference: 'Jamadar Aslam' })).body.id;
+  const worker = (await api('GET', `/workers/${w}`)).body;
+  assert.equal(worker.reference, 'Jamadar Aslam');
+  const day = new Date(Date.now() - 20 * 86400000).toISOString().slice(0, 10);
+  // 10,000 moulded, 2% breakage -> net 9,800, quality good
+  const m = await api('POST', '/moulding', { workerId: w, count: 10000, kharaba: 0, deductionPct: 2, quality: 'good', date: day, clientUuid: randomUUID() });
+  assert.equal(m.status, 201); assert.equal(m.body.netCount, 9800);
+  assert.equal((await api('POST', '/kharcha', { workerId: w, amount: '2000', date: day, clientUuid: randomUUID() })).status, 201);
+  const k = (await api('GET', `/khata/${w}`)).body;
+  // naam: 50,000 peshgi + 2,000 dasti; jama: 9,800 x 1,400 / 1000 = 13,720 wages
+  assert.equal(k.totals.naam, 52000);
+  assert.equal(k.totals.jama, 13720);
+  assert.equal(k.totals.balance, 52000 - 13720);
+  assert.equal(k.rows[k.rows.length - 1].balance, 38280);
+  // roznamcha for that day lists the moulding and the dasti
+  const rz = (await api('GET', `/roznamcha?date=${day}`)).body;
+  assert.ok(rz.rows.some((r) => r.type === 'moulding' && /9,800/.test(r.detail)));
+  assert.ok(rz.rows.some((r) => r.type === 'dasti'));
+  // back-dated bharai lands on its day
+  const loader = (await newWorker({ category: 'bharai' })).body.id;
+  assert.equal((await api('POST', '/kiln-lines/150/load', { workerId: loader, count: 4800, date: day, clientUuid: randomUUID() })).status, 201);
+  const rz2 = (await api('GET', `/roznamcha?date=${day}`)).body;
+  assert.ok(rz2.rows.some((r) => r.type === 'bharai' && /Line 150/.test(r.detail)));
+});

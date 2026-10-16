@@ -11,6 +11,16 @@ export default function Inventory() {
   const editor = useRowEdit();
   const { lang } = useLang();
   const items = useTypes('procurementItem');
+  // a new purchase item typed straight into the list (saved for next time too)
+  async function addItem() {
+    const name = window.prompt(t.newItemName);
+    if (!name || !name.trim()) return;
+    try {
+      const r = await post('/types', { kind: 'procurementItem', label: name.trim() });
+      await items.reload();
+      setF((x) => ({ ...x, item: r.key }));
+    } catch (e) { setMsg({ text: e.message, bad: true }); }
+  }
   const [summary, setSummary] = useState(null);
   const [unloadings, setUnloadings] = useState([]);
   const [grns, setGrns] = useState([]);
@@ -100,10 +110,12 @@ export default function Inventory() {
         <div className="grid two" style={{ gap: '0.85rem' }}>
           <label>
             {t.item}
-            <select value={f.item} onChange={(e) => setF({ ...f, item: e.target.value })}>
+            <select value={f.item} onChange={(e) => (e.target.value === '__new' ? addItem() : setF({ ...f, item: e.target.value }))}>
+              {!items.active.some((i) => i.key === f.item) && <option value="" disabled>—</option>}
               {items.active.map((i) => (
                 <option key={i.key} value={i.key}>{typeLabel(i, lang)}</option>
               ))}
+              <option value="__new">＋ {t.addNewItem}</option>
             </select>
           </label>
 

@@ -93,12 +93,24 @@ export async function ensureBuiltinTypes(db, user) {
   // once per kiln per server run; new built-ins added in an update reach existing kilns too
   const k = `${s.tenantId}:${s.kilnId}`;
   if (typesReady.has(k)) return;
-  typesReady.add(k);
-  const docs = [];
+  // upsert each built-in: adds only the missing ones and never fails on those already there
+  const ops = [];
   for (const [kind, rows] of Object.entries(BUILTIN_TYPES)) {
-    for (const [key, label, labelUr] of rows) docs.push({ ...s, kind, key, label, labelUr, builtin: true, active: true, createdAt: new Date() });
+    for (const [key, label, labelUr] of rows) {
+      ops.push({ updateOne: {
+        filter: { ...s, kind, key },
+        update: { $setOnInsert: { ...s, kind, key, label, labelUr, builtin: true, active: true, createdAt: new Date() } },
+        upsert: true,
+      } });
+    }
   }
-  await db.collection('types').insertMany(docs, { ordered: false }).catch((e) => { if (e.code !== 11000) throw e; });
+  try {
+    await db.collection('types').bulkWrite(ops, { ordered: false });
+    typesReady.add(k);
+  } catch (e) {
+    if (e?.code !== 11000 && !String(e?.message).includes('E11000')) throw e; // a parallel first visit raced us: fine
+    typesReady.add(k);
+  }
 }
 
 // Throws 422 unless `key` is an active type of `kind` for this kiln.

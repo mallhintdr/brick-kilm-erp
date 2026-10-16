@@ -24,7 +24,7 @@ export default function Moulding() {
   const [teams, setTeams] = useState([]);
   const [moulders, setMoulders] = useState([]);
   const [list, setList] = useState([]);
-  const [f, setF] = useState({ teamId: '', count: '', kharaba: '0', date: todayIso() });
+  const [f, setF] = useState({ teamId: '', count: '', kharaba: '0', deductionPct: '2', quality: 'good', date: todayIso() });
   const [msg, setMsg] = useState({ text: '', bad: false });
   const [submitting, setSubmitting] = useState(false);
   const [filters, setFilters] = useState({});
@@ -90,7 +90,7 @@ export default function Moulding() {
     setSubmitting(true);
     try {
       const r = await post('/moulding', {
-        ...(f.teamId.startsWith('w:') ? { workerId: f.teamId.slice(2) } : { teamId: f.teamId.slice(2) }), count: Number(f.count), kharaba: Number(f.kharaba || 0), date: f.date, clientUuid: uuid(),
+        ...(f.teamId.startsWith('w:') ? { workerId: f.teamId.slice(2) } : { teamId: f.teamId.slice(2) }), count: Number(f.count), kharaba: Number(f.kharaba || 0), deductionPct: Number(f.deductionPct || 0), quality: f.quality, date: f.date, clientUuid: uuid(),
       });
       setMsg({ text: r.queued ? t.queued : t.savedOk, bad: false });
       setF({ ...f, count: '', kharaba: '0' });
@@ -163,7 +163,8 @@ export default function Moulding() {
   const totalMoulded = list.reduce((a, b) => a + (Number(b.count) || 0), 0);
   const totalKharaba = list.reduce((a, b) => a + (Number(b.kharaba) || 0), 0);
   const totalNet = list.reduce((a, b) => a + (Number(b.netCount) || 0), 0);
-  const currentNet = Math.max(0, (Number(f.count) || 0) - (Number(f.kharaba) || 0));
+  const currentDeduction = Math.round(((Number(f.count) || 0) * (Number(f.deductionPct) || 0)) / 100);
+  const currentNet = Math.max(0, (Number(f.count) || 0) - (Number(f.kharaba) || 0) - currentDeduction);
 
   const shown = list.filter((b) => {
     if (filters.date && !fmtDate(b.date).includes(filters.date)) return false;
@@ -303,8 +304,24 @@ export default function Moulding() {
             {t.kharaba}
             <input inputMode="numeric" placeholder="0" value={f.kharaba} onChange={(e) => setF({ ...f, kharaba: e.target.value })} />
           </label>
+          <label>
+            {t.deductionPct}
+            <input inputMode="decimal" value={f.deductionPct} onChange={(e) => setF({ ...f, deductionPct: e.target.value.replace(/[^\d.]/g, '') })} />
+          </label>
+          <label>
+            {t.quality}
+            <select value={f.quality} onChange={(e) => setF({ ...f, quality: e.target.value })}>
+              <option value="good">{t.qGood}</option>
+              <option value="satisfactory">{t.qSatisfactory}</option>
+              <option value="poor">{t.qPoor}</option>
+            </select>
+          </label>
         </div>
-        {f.count && <p className="muted" style={{ margin: 0 }}>{t.netCount}: <strong>{currentNet.toLocaleString()}</strong></p>}
+        {f.count && (
+          <p className="muted" style={{ margin: 0, textAlign: 'center' }}>
+            {t.deductionPct}: <strong>{currentDeduction.toLocaleString()}</strong> · {t.netCount}: <strong>{currentNet.toLocaleString()}</strong>
+          </p>
+        )}
         <button className="primary fit-center" disabled={submitting}><span className="plus-icon" aria-hidden="true">+</span> {t.add}</button>
         {msg.text && <p role={msg.bad ? 'alert' : 'status'} className={msg.bad ? 'err' : 'ok'}>{msg.text}</p>}
       </form>
