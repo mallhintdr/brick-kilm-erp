@@ -322,6 +322,10 @@ export function registerProductionRoutes(app, db) {
         { $match: s }, { $group: { _id: '$state', n: { $sum: 1 }, bricks: { $sum: { $ifNull: ['$currentLoad', 0] } }, coal: { $sum: { $ifNull: ['$coalKg', 0] } } } },
       ]).toArray(),
     ]);
+    // every other purchased item: total received (only coal has its use recorded)
+    const itemsIn = await db.collection('grns').aggregate([
+      { $match: { ...s, item: { $ne: 'coal' } } }, { $group: { _id: '$item', qty: { $sum: '$qty' } } }, { $sort: { _id: 1 } },
+    ]).toArray();
     const st = Object.fromEntries(unitStates.map((r) => [r._id, r]));
     const soldBy = Object.fromEntries(sold.map((r) => [r._id, r.qty]));
     const n = (k) => nikasi[k] || 0;
@@ -344,6 +348,7 @@ export function registerProductionRoutes(app, db) {
         green: (moulding.net || 0) - (loaded.count || 0),
         awwal: n('awwal') - (soldBy.awwal || 0), doem: n('doem') - (soldBy.doem || 0), khangar: n('khangar') - (soldBy.khangar || 0),
       },
+      items: itemsIn.map((r) => ({ item: r._id, received: +r.qty.toFixed(2) })),
     });
   }));
 

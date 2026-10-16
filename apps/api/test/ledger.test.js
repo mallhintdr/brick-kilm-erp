@@ -659,3 +659,11 @@ test('stock report adds up moulding -> bharai -> nikasi -> sales and coal', asyn
   assert.equal(typeof after.coal.remainingKg, 'number');
   assert.ok(['line', 'chamber'].includes(after.unit));
 });
+
+test('stock report lists purchased items other than coal', async () => {
+  assert.equal((await api('POST', '/grns', { item: 'soil', supplierName: 'Soil Co', qty: 12, rate: '800', freight: '0', clientUuid: randomUUID() })).status, 201);
+  const r = (await api('GET', '/stock-report')).body;
+  assert.ok(Array.isArray(r.items));
+  assert.ok(r.items.some((i) => i.item === 'soil' && i.received >= 12));
+  assert.ok(!r.items.some((i) => i.item === 'coal'));
+});

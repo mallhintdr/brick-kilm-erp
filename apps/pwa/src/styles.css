@@ -3418,3 +3418,12 @@ main > .grid:has(.chart-card) > .card { padding: 0.55rem 0.7rem !important; }
 .chart-date-span-top, .chart-date-span-bottom { margin: 0 !important; line-height: 1.2; }
 .chart-scroll-wrap { margin: 0 !important; padding: 0 !important; }
 .chart-checkbox-legend-row { margin: 0.15rem 0 0 !important; padding: 0 !important; }
+
+/* Home: stock box on top, spans the full width; small cards, 3 per row on a phone */
+.home-stock { grid-column: 1 / -1; }
+.home-stock-link { color: inherit; text-decoration: none; }
+.home-stock-grid { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.45rem; padding: 0.6rem; }
+@media (min-width: 720px) { .home-stock-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } }
+.home-stock-grid .stat { padding: 0.4rem 0.35rem !important; flex: none !important; }
+.home-stock-grid .stat span { font-size: 0.62rem !important; line-height: 1.2; }
+.home-stock-grid .stat strong { font-size: 0.98rem !important; }

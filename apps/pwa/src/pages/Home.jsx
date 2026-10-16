@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useT } from '../i18n.js';
 import { getRole } from '../api.js';
+import HomeStock from '../components/HomeStock.jsx';
 
 const GROUPS = [
   { titleKey: 'dailyOps', paths: ['/attendance', '/moulding', '/loading', '/kiln-board', '/firing', '/unloading'] },
@@ -15,6 +16,7 @@ export default function Home({ links = [] }) {
 
   return (
     <div className="home-page-container">
+      <HomeStock />
       {GROUPS.map((g) => {
         const items = g.paths.map((p) => visible.find((l) => l.to === p)).filter(Boolean);
         if (!items.length) return null;
