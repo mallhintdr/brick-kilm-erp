@@ -3333,3 +3333,18 @@ input, select, textarea, option, td, .badge, .muted, p, .brand-user, .issues-cel
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 30vw;
 }
 .top button.ghost.logout-btn.with-user svg { flex: 0 0 auto; }
+
+/* Header logo smoke: fuller regular stream (4 puffs) */
+.kiln-logo .p4 { animation-delay: 2.4s; }
+/* Tap: a narrow column rising straight out of the chimney, then fading */
+.kiln-logo-burst .c { fill: rgba(255, 255, 255, 0.45); transform-box: fill-box; transform-origin: 50% 100%; opacity: 0;
+  animation: logo-column 3s ease-out forwards; }
+.kiln-logo-burst .c2 { animation-delay: 0.08s; } .kiln-logo-burst .c3 { animation-delay: 0.16s; }
+.kiln-logo-burst .c4 { animation-delay: 0.24s; } .kiln-logo-burst .c5 { animation-delay: 0.32s; } .kiln-logo-burst .c6 { animation-delay: 0.4s; }
+@keyframes logo-column {
+  0% { opacity: 0; transform: translateY(6px) scaleY(0.4); }
+  15% { opacity: 1; }
+  33% { opacity: 1; transform: translateY(0) scaleY(1); }
+  100% { opacity: 0; transform: translateY(-6px) scale(1.25, 1.1); }
+}
+@media (prefers-reduced-motion: reduce) { .kiln-logo-burst { display: none; } }
