@@ -183,7 +183,7 @@ export default function BarChart({ items, colors, height = 230, label = 'Grade B
                 onChange={() => toggleItem(idx)}
                 style={{ accentColor: barColor }}
               />
-              <span style={{ color: barColor }}>{it.label}: {Number(it.value).toLocaleString()}</span>
+              <span style={{ color: barColor }}>{it.label}</span>
             </label>
           );
         })}
