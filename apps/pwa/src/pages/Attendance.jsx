@@ -84,8 +84,8 @@ export default function Attendance() {
 
       <div className="card table-wrap">
         <h2>{t.workers} ({shown.length})</h2>
-        <table>
-          <thead><tr><th className="rownum">#</th><th className="sticky-col">{t.name}</th><th>{t.category}</th><th>{t.attStatus}</th></tr></thead>
+        <table className="att-table">
+          <thead><tr><th className="rownum">#</th><th className="att-name">{t.name}</th><th className="att-cat">{t.category}</th><th>{t.attStatus}</th></tr></thead>
           <tbody>
             {shown.map((w, i) => (
               <tr key={w._id}>
@@ -95,7 +95,7 @@ export default function Attendance() {
                     <strong>{w.name}</strong>{w.fatherName ? <span className="muted"> — {w.fatherName}</span> : null}
                   </button>
                 </td>
-                <td>{cats.label(w.category)}</td>
+                <td className="att-cat">{cats.label(w.category)}</td>
                 <td>
                   <div className="att-btns" role="radiogroup" aria-label={w.name}>
                     {STATUSES.map((st) => (

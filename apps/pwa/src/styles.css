@@ -3359,3 +3359,16 @@ button.name-link:hover, button.name-link.on { color: var(--brand-dark); border-b
 .att-record-head { display: flex; align-items: center; justify-content: center; gap: 0.5rem; position: relative; }
 .att-record-head .close-btn { position: absolute; inset-inline-end: 0; }
 .att-record-head h2 { padding-inline: 2.5rem !important; }
+
+/* Attendance marking list: fits a phone screen, no sideways scrolling */
+table.att-table { table-layout: auto; width: 100%; }
+table.att-table th, table.att-table td { white-space: normal !important; padding: 0.3rem 0.35rem !important; }
+table.att-table td:nth-child(2), table.att-table th.att-name { text-align: start !important; }
+table.att-table td:nth-child(2) { width: 100%; word-break: break-word; }
+table.att-table td:last-child, table.att-table th:last-child { width: 1%; white-space: nowrap !important; }
+@media (max-width: 640px) {
+  table.att-table .att-cat { display: none; }
+  table.att-table th.rownum, table.att-table td.rownum { padding: 0.3rem 0.2rem !important; font-size: 0.72rem; }
+  .att-btns { gap: 0.18rem; }
+  .att-btns button { width: 30px; height: 30px; min-height: 30px !important; font-size: 0.8rem; }
+}
