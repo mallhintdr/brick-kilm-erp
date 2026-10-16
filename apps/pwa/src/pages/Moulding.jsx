@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useT } from '../i18n.js';
 import { get, post, put, del, uuid, fmtDate, getRole } from '../api.js';
+import SearchSelect from '../components/SearchSelect.jsx';
 import RowActions, { useRowEdit, IconBtn } from '../components/RowActions.jsx';
 
 const iso = (d) => d.toISOString().slice(0, 10);
@@ -21,6 +22,7 @@ const addDays = (dateStr, n) => {
 export default function Moulding() {
   const t = useT();
   const [teams, setTeams] = useState([]);
+  const [moulders, setMoulders] = useState([]);
   const [list, setList] = useState([]);
   const [f, setF] = useState({ teamId: '', count: '', kharaba: '0', date: todayIso() });
   const [msg, setMsg] = useState({ text: '', bad: false });
@@ -50,6 +52,8 @@ export default function Moulding() {
   };
   const load = () => {
     get('/teams').then((all) => setTeams(all.filter((tm) => tm.category === 'pathera'))).catch(() => {});
+    get('/workers').then((all) => setMoulders(all.filter((w) => w.category === 'pathera' && w.status !== 'inactive')
+      .sort((a, b) => a.name.localeCompare(b.name)))).catch(() => {});
     get('/moulding').then(setList).catch(() => {});
     loadWeek();
   };
@@ -86,7 +90,7 @@ export default function Moulding() {
     setSubmitting(true);
     try {
       const r = await post('/moulding', {
-        teamId: f.teamId, count: Number(f.count), kharaba: Number(f.kharaba || 0), date: f.date, clientUuid: uuid(),
+        ...(f.teamId.startsWith('w:') ? { workerId: f.teamId.slice(2) } : { teamId: f.teamId.slice(2) }), count: Number(f.count), kharaba: Number(f.kharaba || 0), date: f.date, clientUuid: uuid(),
       });
       setMsg({ text: r.queued ? t.queued : t.savedOk, bad: false });
       setF({ ...f, count: '', kharaba: '0' });
@@ -276,11 +280,16 @@ export default function Moulding() {
         <h2>{t.moulding} — {t.singleEntry}</h2>
         <div className="grid two" style={{ gap: '0.9rem' }}>
           <label>
-            {t.team}
-            <select required value={f.teamId} onChange={(e) => setF({ ...f, teamId: e.target.value })}>
-              <option value="" disabled>—</option>
-              {teams.map((tm) => <option key={tm._id} value={tm._id}>{tm.label}</option>)}
-            </select>
+            {t.moulderOrTeam}
+            <SearchSelect
+              required ariaLabel={t.moulderOrTeam} placeholder={t.typeToSearch} value={f.teamId}
+              onChange={(v) => setF({ ...f, teamId: v })}
+              options={[
+                // every registered moulder (w:<id>), then teams of several moulders (t:<id>)
+                ...moulders.map((w) => ({ value: `w:${w._id}`, label: w.fatherName ? `${w.name} — ${w.fatherName}` : w.name, search: `${w.cnic || ''} ${w.phone || ''}` })),
+                ...teams.filter((tm) => !tm.solo).map((tm) => ({ value: `t:${tm._id}`, label: `${t.team}: ${tm.label}`, search: '' })),
+              ]}
+            />
           </label>
           <label>
             {t.date || 'Date'}

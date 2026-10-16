@@ -220,12 +220,13 @@ export const KILN_STATES = ['Empty', 'Loading', 'Preheating', 'Firing', 'Cooling
 // A work date (YYYY-MM-DD) lets a whole week be entered at once; it can't be in the future.
 
 export const mouldingInput = z.object({
-  teamId: z.string(),
+  teamId: z.string().optional(),
+  workerId: z.string().optional(), // a moulder picked by name: their own one-person team is used
   count: positiveInt,
   kharaba: nonNegInt.default(0),
   date: workDate.optional(),
   clientUuid: z.string().uuid(),
-});
+}).refine((b) => b.teamId || b.workerId, { message: 'Choose a moulder or a team' });
 
 // Owner/permitted edits. Fields are optional: only what's sent is changed.
 export const mouldingUpdate = z.object({ count: positiveInt.optional(), kharaba: nonNegInt.optional(), date: workDate.optional() });
@@ -261,7 +262,8 @@ export const advanceUpdate = z.object({ amount: moneyString });
 
 export const sectionLoadInput = z.object({
   sectionIndex: positiveInt,
-  teamId: z.string(),
+  teamId: z.string().optional(),
+  workerId: z.string().optional(), // a loader picked by name: their own one-person team is used
   count: positiveInt,
   clientUuid: z.string().uuid(),
 });
@@ -299,7 +301,8 @@ export const firingLogInput = z.object({
 
 export const unloadStartInput = z.object({
   sectionIndex: positiveInt,
-  teamId: z.string(),
+  teamId: z.string().optional(),
+  workerId: z.string().optional(), // an unloader picked by name
   clientUuid: z.string().uuid(),
 });
 

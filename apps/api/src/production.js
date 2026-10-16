@@ -61,6 +61,19 @@ export const entryAt = (d) => {
   return day === new Date().toISOString().slice(0, 10) ? new Date() : workDateTime(d);
 };
 
+// A moulder picked by name works as their own one-person pathera team (created the first time),
+// so wages, the weekly grid and settlements keep working per team.
+export async function soloTeamFor(db, session, user, workerId, category = 'pathera') {
+  const s = scope(user);
+  const worker = await db.collection('workers').findOne({ _id: teamOid(workerId), ...s }, { session });
+  if (!worker) throw httpError(404, 'Worker not found');
+  const existing = await db.collection('teams').findOne({ ...s, category, solo: true, memberIds: [workerId] }, { session });
+  if (existing) return String(existing._id);
+  const label = worker.fatherName ? `${worker.name} — ${worker.fatherName}` : worker.name;
+  const r = await db.collection('teams').insertOne({ ...s, category, label, memberIds: [workerId], solo: true, createdAt: new Date() }, { session });
+  return String(r.insertedId);
+}
+
 export const workDateTime = (d) => (d ? new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 12)) : new Date());
 
 // Shared by /inventory/summary and the stock guards below, so the number a guard
@@ -107,6 +120,8 @@ export function registerProductionRoutes(app, db) {
 
     app.post(`/${U.path}/:index/load`, auth('owner', 'munshi'), wrap(async (req, res) => {
       const b = sectionLoadInput.parse({ ...req.body, sectionIndex: req.params.index });
+      if (!b.teamId && b.workerId) b.teamId = await soloTeamFor(db, undefined, req.user, b.workerId, 'bharai');
+      if (!b.teamId) throw httpError(400, 'Choose a loader or a team');
       await withTransaction(db, async (session) => {
         const sec = await db.collection(U.coll).findOne({ ...scope(req.user), index: b.sectionIndex }, { session });
         if (!sec) throw httpError(404, `${U.label} not found`);
@@ -133,6 +148,8 @@ export function registerProductionRoutes(app, db) {
 
     app.post(`/${U.path}/:index/unload/start`, auth('owner', 'munshi'), wrap(async (req, res) => {
       const b = unloadStartInput.parse({ ...req.body, sectionIndex: req.params.index });
+      if (!b.teamId && b.workerId) b.teamId = await soloTeamFor(db, undefined, req.user, b.workerId, 'nikasi');
+      if (!b.teamId) throw httpError(400, 'Choose an unloader or a team');
       await withTransaction(db, async (session) => {
         const sec = await db.collection(U.coll).findOne({ ...scope(req.user), index: b.sectionIndex }, { session });
         if (!sec) throw httpError(404, `${U.label} not found`);
@@ -227,6 +244,7 @@ export function registerProductionRoutes(app, db) {
   // ---- Moulding (pathai) ----
   app.post('/moulding', auth('owner', 'munshi'), wrap(async (req, res) => {
     const b = mouldingInput.parse(req.body);
+    if (!b.teamId) b.teamId = await soloTeamFor(db, undefined, req.user, b.workerId);
     if (b.kharaba > b.count) throw httpError(422, 'Kharaba cannot exceed the moulded count');
     const netCount = b.count - b.kharaba;
     const ledgerRef = `moulding:${b.clientUuid}`; // lets a later delete find and reverse the wage credits

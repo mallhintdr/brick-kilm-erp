@@ -528,3 +528,38 @@ test('weather advice: rain, wind, heat and drying rules', async () => {
   // the route refuses until the owner has set the kiln location
   assert.equal((await api('GET', '/weather')).status, 409);
 });
+
+test('moulding by moulder name: own team is created once and reused', async () => {
+  const w = (await newWorker({ name: 'Solo Moulder' })).body.id;
+  const d1 = new Date(Date.now() - 9 * 86400000).toISOString().slice(0, 10);
+  const d2 = new Date(Date.now() - 8 * 86400000).toISOString().slice(0, 10);
+  assert.equal((await api('POST', '/moulding', { workerId: w, count: 3000, date: d1, clientUuid: randomUUID() })).status, 201);
+  assert.equal((await api('POST', '/moulding', { workerId: w, count: 2500, date: d2, clientUuid: randomUUID() })).status, 201);
+  const solo = (await api('GET', '/teams')).body.filter((tm) => tm.solo && tm.memberIds.includes(w));
+  assert.equal(solo.length, 1);
+  // same moulder, same day again: refused like any team
+  assert.equal((await api('POST', '/moulding', { workerId: w, count: 100, date: d1, clientUuid: randomUUID() })).status, 409);
+  // neither a moulder nor a team: refused
+  assert.equal((await api('POST', '/moulding', { count: 100, clientUuid: randomUUID() })).status, 400);
+  // wages went to the moulder
+  assert.ok((await api('GET', `/workers/${w}/ledger`)).body.some((e) => e.type === 'moulding_credit'));
+});
+
+test('loading and nikasi by worker name use their own team', async () => {
+  await api('PUT', '/settings', { key: 'allowNegativeStock', value: '1' });
+  const loader = (await newWorker({ category: 'bharai' })).body.id;
+  const unloader = (await newWorker({ category: 'nikasi' })).body.id;
+  const idx = 200;
+  assert.equal((await api('POST', `/kiln-lines/${idx}/load`, { workerId: loader, count: 4600, clientUuid: randomUUID() })).status, 201);
+  const teams = (await api('GET', '/teams')).body;
+  assert.ok(teams.some((tm) => tm.solo && tm.category === 'bharai' && tm.memberIds.includes(loader)));
+  // walk it to Cooling
+  for (let i = 0; i < 400; i++) {
+    const l = (await api('GET', '/kiln-lines')).body.find((x) => x.index === idx);
+    if (l.state === 'Cooling') break;
+    await api('POST', '/fire-advance', { unit: 'line', steps: 40, clientUuid: randomUUID() });
+  }
+  assert.equal((await api('POST', `/kiln-lines/${idx}/unload/start`, { workerId: unloader, clientUuid: randomUUID() })).status, 201);
+  assert.ok((await api('GET', '/teams')).body.some((tm) => tm.solo && tm.category === 'nikasi' && tm.memberIds.includes(unloader)));
+  assert.ok((await api('GET', `/workers/${loader}/ledger`)).body.some((e) => e.type === 'loading_credit'));
+});

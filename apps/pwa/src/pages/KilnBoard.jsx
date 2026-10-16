@@ -3,6 +3,7 @@ import { useT } from '../i18n.js';
 import { get, post, put, uuid, getRole, fmtDate, fmtDateTime } from '../api.js';
 import KilnDiagram from '../components/KilnDiagram.jsx';
 import LineDiagram from '../components/LineDiagram.jsx';
+import SearchSelect from '../components/SearchSelect.jsx';
 
 const STATE_LABEL_KEY = {
   Empty: 'empty',
@@ -101,6 +102,13 @@ export default function KilnBoard({ focus } = {}) {
   }
 
   const teamsOf = (cat) => teams.filter((tm) => tm.category === cat);
+  const pickOptions = (cat) => [
+    ...workers.filter((w) => w.category === cat && w.status !== 'inactive')
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((w) => ({ value: `w:${w._id}`, label: w.fatherName ? `${w.name} — ${w.fatherName}` : w.name, search: `${w.cnic || ''} ${w.phone || ''}` })),
+    ...teamsOf(cat).filter((tm) => !tm.solo).map((tm) => ({ value: `t:${tm._id}`, label: `${t.team}: ${teamText(tm)}`, search: '' })),
+  ];
+  const who = (v) => (!v ? {} : v.startsWith('w:') ? { workerId: v.slice(2) } : { teamId: v.slice(2) });
   // team name plus its members' names, so the head (e.g. the jalai mistri) shows in the list
   const teamText = (tm) => {
     const names = (tm.memberIds || []).map((id) => workers.find((w) => w._id === id)?.name).filter(Boolean);
@@ -146,13 +154,13 @@ export default function KilnBoard({ focus } = {}) {
   };
 
   const loadRow = (row) => act(() => post(`${base}/${row.index}/load`, {
-    teamId: form.teamId,
+    ...who(form.teamId),
     count: Number(form.count),
     clientUuid: uuid(),
   }), { next: true });
 
   const startUnload = (row) => act(() => post(`${base}/${row.index}/unload/start`, {
-    teamId: form.teamId,
+    ...who(form.teamId),
     clientUuid: uuid(),
   }));
 
@@ -339,13 +347,12 @@ export default function KilnBoard({ focus } = {}) {
                 </div>
               )}
               <label>
-                {t.team}
-                <select value={form.teamId || ''} onChange={(e) => setForm({ ...form, teamId: e.target.value })}>
-                  <option value="" disabled>— {t.team} —</option>
-                  {teamsOf('bharai').map((tm) => (
-                    <option key={tm._id} value={tm._id}>{teamText(tm)}</option>
-                  ))}
-                </select>
+                {t.loaderOrTeam}
+                <SearchSelect
+                  required ariaLabel={t.loaderOrTeam} placeholder={t.typeToSearch} value={form.teamId || ''}
+                  onChange={(v) => setForm({ ...form, teamId: v })}
+                  options={pickOptions('bharai')}
+                />
               </label>
               <label>
                 {t.kachiBharai}
@@ -371,13 +378,12 @@ export default function KilnBoard({ focus } = {}) {
           {sel.state === 'Cooling' && (
             <div className="grid two" style={{ gap: '0.85rem' }}>
               <label style={{ gridColumn: '1 / -1' }}>
-                {t.team}
-                <select value={form.teamId || ''} onChange={(e) => setForm({ ...form, teamId: e.target.value })}>
-                  <option value="" disabled>— {t.team} —</option>
-                  {teamsOf('nikasi').map((tm) => (
-                    <option key={tm._id} value={tm._id}>{teamText(tm)}</option>
-                  ))}
-                </select>
+                {t.unloaderOrTeam}
+                <SearchSelect
+                  required ariaLabel={t.unloaderOrTeam} placeholder={t.typeToSearch} value={form.teamId || ''}
+                  onChange={(v) => setForm({ ...form, teamId: v })}
+                  options={pickOptions('nikasi')}
+                />
               </label>
               <button
                 className="primary"

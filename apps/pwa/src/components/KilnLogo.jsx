@@ -1,6 +1,6 @@
 // Bhatta (kiln) chimney: tall, tapering towards the top, thin outline with brick courses, a cap,
 // smoke drifting up, and the kiln mound standing on the bottom edge. Same drawing as public/icon.svg.
-// \urst\: change it (e.g. to Date.now()) to make the chimney pour out a thick cloud for a moment.
+// The burst prop: change it (e.g. to Date.now()) to make the chimney pour out a thick cloud for a moment.
 export default function KilnLogo({ size = 24, color = '#ffffff', smoke = true, title, burst }) {
   return (
     <svg viewBox="0 0 32 32" width={size} height={size} fill="none" stroke={color} strokeWidth="1.1"
