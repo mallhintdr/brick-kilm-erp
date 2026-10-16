@@ -3372,3 +3372,13 @@ table.att-table td:last-child, table.att-table th:last-child { width: 1%; white-
   .att-btns { gap: 0.18rem; }
   .att-btns button { width: 30px; height: 30px; min-height: 30px !important; font-size: 0.8rem; }
 }
+/* Attendance on phones: keep the category column, make everything smaller instead */
+@media (max-width: 640px) {
+  table.att-table .att-cat { display: table-cell !important; font-size: 0.66rem; max-width: 4.5rem; line-height: 1.15; }
+  table.att-table thead th { font-size: 0.6rem !important; letter-spacing: 0 !important; }
+  table.att-table td:nth-child(2) { font-size: 0.72rem; line-height: 1.2; }
+  table.att-table td:nth-child(2) .muted { font-size: 0.64rem; display: block; }
+  table.att-table th, table.att-table td { padding: 0.25rem 0.22rem !important; }
+  .att-btns { gap: 0.12rem; }
+  .att-btns button { width: 26px; height: 26px; min-height: 26px !important; font-size: 0.72rem; border-radius: 6px; }
+}
