@@ -74,15 +74,15 @@ export default function Inventory() {
                 <strong>{summary.greenStock.toLocaleString()}</strong>
               </div>
               <div className="stat" style={{ borderInlineStartColor: 'var(--ok-dark)' }}>
-                <span>🥇 {t.awwal}</span>
+                <span>{t.awwal}</span>
                 <strong className="ok">{summary.firedStockByGrade.awwal.toLocaleString()}</strong>
               </div>
               <div className="stat" style={{ borderInlineStartColor: 'var(--info)' }}>
-                <span>🥈 {t.doem}</span>
+                <span>{t.doem}</span>
                 <strong>{summary.firedStockByGrade.doem.toLocaleString()}</strong>
               </div>
               <div className="stat" style={{ borderInlineStartColor: 'var(--warn-dark)' }}>
-                <span>🥉 {t.khangar}</span>
+                <span>{t.khangar}</span>
                 <strong>{summary.firedStockByGrade.khangar.toLocaleString()}</strong>
               </div>
             </div>

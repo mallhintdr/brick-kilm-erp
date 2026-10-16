@@ -158,9 +158,9 @@ export default function Sales() {
               <label>
                 {t.grade}
                 <select value={invf.grade} onChange={(e) => setInvf({ ...invf, grade: e.target.value })}>
-                  <option value="awwal">🥇 {t.awwal}</option>
-                  <option value="doem">🥈 {t.doem}</option>
-                  <option value="khangar">🥉 {t.khangar}</option>
+                  <option value="awwal">{t.awwal}</option>
+                  <option value="doem">{t.doem}</option>
+                  <option value="khangar">{t.khangar}</option>
                 </select>
               </label>
               <label>

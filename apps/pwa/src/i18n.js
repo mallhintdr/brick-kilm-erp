@@ -87,7 +87,7 @@ const dict = {
     team: 'Team', count: 'Count', kharaba: 'Wastage (rain loss)', netCount: 'Net count',
     section: 'Section', sectionState: 'State', loadSection: 'Load section', advanceFire: 'Advance fire',
     empty: 'Empty', loading: 'Loading', preheating: 'Preheating', firingState: 'Firing', cooling: 'Cooling', unloading: 'Unloading',
-    assignNikasi: 'Assign unloader team', completeUnload: 'Save counts', awwal: 'Awwal (Grade 1)', doem: 'Doem (Grade 2)', khangar: 'Khangar (Overburnt)', broken: 'Broken',
+    assignNikasi: 'Assign unloader team', completeUnload: 'Save counts', awwal: 'Awwal', doem: 'Doem', khangar: 'Khangar', broken: 'Broken',
     shift: 'Shift', day: 'Day', night: 'Night', coalKg: 'Coal (kg)', tempC: 'Temperature (°C)', fanOn: 'Fan is running',
     genHours: 'Generator hours', fanAlertMsg: 'Fan is off! Check immediately', logFiring: 'Log entry',
     greenStock: 'Green (unfired) bricks', firedStock: 'Fired stock by grade', coalOnHand: 'Coal on hand (kg)',
@@ -95,7 +95,7 @@ const dict = {
     rate: 'Rate', freight: 'Freight', item: 'Item', coal: 'Coal', soil: 'Soil', diesel: 'Diesel', spare: 'Spare part',
     landedCost: 'Landed cost/unit', recentGrns: 'Recent purchases', inventoryNote: 'Inventory is informational; it does not block operations',
     ratePathera: 'Moulding rate (per 1,000)', rateBharai: 'Loading rate (per 1,000)', rateNikasi: 'Unloading rate (per 1,000)', rateJalai: 'Firing rate (per shift)',
-    priceAwwal: 'Grade 1 price (per 1,000)', priceDoem: 'Grade 2 price (per 1,000)', priceKhangar: 'Overburnt price (per 1,000)',
+    priceAwwal: 'Awwal price (per 1,000)', priceDoem: 'Doem price (per 1,000)', priceKhangar: 'Khangar price (per 1,000)',
 
     dateTime: 'Date / time', ledgerHistory: 'Ledger history', account: 'Account', type: 'Type', earnings: 'Earnings', reversal: 'Reversal',
     sales: 'Sales', activity: 'All entries', all: 'All', details: 'Details',
