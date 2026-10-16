@@ -185,6 +185,17 @@ export default function Insights() {
           </div>
         </div>
 
+        {/* Nikasi output by grade (fired bricks taken out of the kiln) */}
+        <div className="kpi-group">
+          <h3 className="kpi-group-title">{t.nikasiOutput}</h3>
+          <div className="kpi-grid">
+            <div className="stat" style={{ borderInlineStartColor: 'var(--ok-dark)' }}><span>{t.awwal}</span><strong className="ok">{(u?.awwal ?? 0).toLocaleString()}</strong></div>
+            <div className="stat" style={{ borderInlineStartColor: 'var(--info)' }}><span>{t.doem}</span><strong>{(u?.doem ?? 0).toLocaleString()}</strong></div>
+            <div className="stat" style={{ borderInlineStartColor: 'var(--warn-dark)' }}><span>{t.khangar}</span><strong className="warn">{(u?.khangar ?? 0).toLocaleString()}</strong></div>
+            <div className="stat" style={{ borderInlineStartColor: 'var(--err-dark)' }}><span>{t.broken}</span><strong className="err">{(u?.broken ?? 0).toLocaleString()}</strong></div>
+          </div>
+        </div>
+
         {/* Group 2: Financial Performance & Cash Flow (No Rs prefix on dashboard) */}
         <div className="kpi-group">
           <h3 className="kpi-group-title">

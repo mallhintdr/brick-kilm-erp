@@ -3404,3 +3404,17 @@ table.att-table td:nth-child(2) .muted { font-size: 0.6rem !important; }
 .chart-daily-avg-kpi-badge .daily-avg-kpi-label { font-size: 0.5rem !important; }
 .chart-daily-avg-kpi-badge .daily-avg-kpi-val { font-size: 0.6rem !important; }
 .chart-daily-avg-kpi-badge .daily-avg-trend-pill { font-size: 0.45rem !important; padding: 0.02rem 0.25rem !important; border-width: 1px !important; }
+
+/* Insights: tighter vertical spacing between sections, titles and chart parts */
+main > .grid:has(.chart-card) { gap: 0.6rem !important; }
+main > .grid:has(.chart-card) .kpi-section { gap: 0.6rem !important; }
+main > .grid:has(.chart-card) .kpi-group { gap: 0.4rem !important; padding: 0.6rem 0.75rem !important; }
+main > .grid:has(.chart-card) .kpi-group > .kpi-group-title { margin: -0.6rem -0.75rem 0.2rem !important; padding: 0.4rem 0.6rem !important; }
+main > .grid:has(.chart-card) .stat { padding: 0.4rem 0.6rem !important; }
+main > .grid:has(.chart-card) > .card { padding: 0.55rem 0.7rem !important; }
+.chart-card { gap: 0.25rem !important; }
+.chart-header-top { margin: 0 !important; padding: 0 !important; gap: 0.2rem !important; }
+.chart-title-top { margin: 0 !important; line-height: 1.2; }
+.chart-date-span-top, .chart-date-span-bottom { margin: 0 !important; line-height: 1.2; }
+.chart-scroll-wrap { margin: 0 !important; padding: 0 !important; }
+.chart-checkbox-legend-row { margin: 0.15rem 0 0 !important; padding: 0 !important; }
