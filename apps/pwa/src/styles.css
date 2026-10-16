@@ -3390,3 +3390,7 @@ table.att-table td:nth-child(2) .muted { font-size: 0.6rem !important; }
 .att-btns button.att-save { margin-inline-start: 0.2rem; background: #16a34a; border-color: #16a34a; color: #fff; font-weight: 900; }
 .att-btns button.att-save:disabled { background: #fff; color: #cbd5e1; border-color: #e2e8f0; cursor: default; }
 .att-btns button.att-save.done:disabled { color: #16a34a; border-color: #86efac; background: #f0fdf4; }
+
+/* Worker attendance record: day list scrolls inside its own frame, header row stays visible */
+.att-record .table-wrap { max-height: 320px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; }
+.att-record .table-wrap thead th { position: sticky; top: 0; z-index: 3; }
