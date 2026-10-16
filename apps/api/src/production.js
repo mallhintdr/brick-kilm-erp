@@ -78,15 +78,22 @@ export const workDateTime = (d) => (d ? new Date(Date.UTC(d.getUTCFullYear(), d.
 
 // Shared by /inventory/summary and the stock guards below, so the number a guard
 // checks against is always the exact number the Inventory screen shows.
+// Opening stock entered once by the owner (what was on hand when the app started).
+export async function openingStock(db, user, session) {
+  const d = await db.collection('openingStock').findOne(scope(user), { session });
+  return { awwal: d?.awwal || 0, doem: d?.doem || 0, khangar: d?.khangar || 0, green: d?.green || 0, coalKg: d?.coalKg || 0, items: d?.items || {} };
+}
+
 async function getStockLevels(db, user, session) {
   const s = scope(user);
+  const open = await openingStock(db, user, session);
   const [moulded] = await db.collection('mouldingBatches').aggregate([{ $match: s }, { $group: { _id: null, net: { $sum: '$netCount' } } }], { session }).toArray();
   const [loaded] = await db.collection('sectionLoads').aggregate([{ $match: s }, { $group: { _id: null, count: { $sum: '$count' } } }], { session }).toArray();
   const [coalIn] = await db.collection('grns').aggregate([{ $match: { ...s, item: 'coal' } }, { $group: { _id: null, qty: { $sum: '$qty' } } }], { session }).toArray();
   const [coalUsedKg] = await db.collection('firingLogs').aggregate([{ $match: s }, { $group: { _id: null, kg: { $sum: '$coalKg' } } }], { session }).toArray();
   return {
-    greenStock: (moulded?.net ?? 0) - (loaded?.count ?? 0),
-    coalOnHandKg: Math.round(((coalIn?.qty ?? 0) * 1000) - (coalUsedKg?.kg ?? 0)),
+    greenStock: open.green + (moulded?.net ?? 0) - (loaded?.count ?? 0),
+    coalOnHandKg: Math.round(open.coalKg + ((coalIn?.qty ?? 0) * 1000) - (coalUsedKg?.kg ?? 0)),
   };
 }
 
@@ -300,6 +307,26 @@ export function registerProductionRoutes(app, db) {
     res.json(await db.collection('firingLogs').find(scope(req.user)).sort({ date: -1 }).limit(200).toArray());
   }));
 
+  // ---- Opening stock (owner): on-hand quantities when the kiln started using the app ----
+  app.get('/opening-stock', auth(), wrap(async (req, res) => {
+    const d = await db.collection('openingStock').findOne(scope(req.user));
+    res.json({ ...(await openingStock(db, req.user)), asOf: d?.asOf || null, updatedAt: d?.updatedAt || null });
+  }));
+  app.put('/opening-stock', auth('owner'), wrap(async (req, res) => {
+    const num = (v) => { const x = Number(v); if (!Number.isFinite(x) || x < 0) throw httpError(400, 'Quantities must be 0 or more'); return x; };
+    const b = req.body || {};
+    const items = {};
+    for (const [k, v] of Object.entries(b.items || {})) if (/^[a-z0-9_]{2,30}$/.test(k) && v !== '' && v != null) items[k] = num(v);
+    const doc = {
+      awwal: num(b.awwal || 0), doem: num(b.doem || 0), khangar: num(b.khangar || 0), green: num(b.green || 0), coalKg: num(b.coalKg || 0),
+      items, asOf: /^\d{4}-\d{2}-\d{2}$/.test(b.asOf || '') ? b.asOf : null, updatedAt: new Date(), updatedBy: req.user.sub,
+    };
+    const before = await db.collection('openingStock').findOne(scope(req.user));
+    await db.collection('openingStock').updateOne(scope(req.user), { $set: doc, $setOnInsert: scope(req.user) }, { upsert: true });
+    await audit(db, undefined, req.user, 'openingStock.save', { before, after: doc });
+    res.json({ ok: true });
+  }));
+
   // ---- Stock report: the whole flow from moulding to sale, as of now ----
   app.get('/stock-report', auth(), wrap(async (req, res) => {
     const s = scope(req.user);
@@ -326,6 +353,7 @@ export function registerProductionRoutes(app, db) {
     const itemsIn = await db.collection('grns').aggregate([
       { $match: { ...s, item: { $ne: 'coal' } } }, { $group: { _id: '$item', qty: { $sum: '$qty' } } }, { $sort: { _id: 1 } },
     ]).toArray();
+    const open = await openingStock(db, req.user);
     const st = Object.fromEntries(unitStates.map((r) => [r._id, r]));
     const soldBy = Object.fromEntries(sold.map((r) => [r._id, r.qty]));
     const n = (k) => nikasi[k] || 0;
@@ -343,12 +371,14 @@ export function registerProductionRoutes(app, db) {
       },
       nikasi: { awwal: n('awwal'), doem: n('doem'), khangar: n('khangar'), broken: n('broken') },
       sales: { awwal: soldBy.awwal || 0, doem: soldBy.doem || 0, khangar: soldBy.khangar || 0 },
-      coal: { inKg: Math.round((coalIn.qty || 0) * 1000), usedKg: Math.round(coalUsedKg), remainingKg: Math.round((coalIn.qty || 0) * 1000 - coalUsedKg) },
+      coal: { openingKg: open.coalKg, inKg: Math.round((coalIn.qty || 0) * 1000), usedKg: Math.round(coalUsedKg), remainingKg: Math.round(open.coalKg + (coalIn.qty || 0) * 1000 - coalUsedKg) },
       stock: {
-        green: (moulding.net || 0) - (loaded.count || 0),
-        awwal: n('awwal') - (soldBy.awwal || 0), doem: n('doem') - (soldBy.doem || 0), khangar: n('khangar') - (soldBy.khangar || 0),
+        green: open.green + (moulding.net || 0) - (loaded.count || 0),
+        awwal: open.awwal + n('awwal') - (soldBy.awwal || 0), doem: open.doem + n('doem') - (soldBy.doem || 0), khangar: open.khangar + n('khangar') - (soldBy.khangar || 0),
       },
-      items: itemsIn.map((r) => ({ item: r._id, received: +r.qty.toFixed(2) })),
+      // opening quantities count as received; items with only an opening quantity are listed too
+      items: [...new Set([...itemsIn.map((r) => r._id), ...Object.keys(open.items)])].filter((k) => k !== 'coal').sort()
+        .map((k) => ({ item: k, received: +((itemsIn.find((r) => r._id === k)?.qty || 0) + Number(open.items[k] || 0)).toFixed(2) })),
     });
   }));
 
@@ -395,10 +425,12 @@ export function registerProductionRoutes(app, db) {
       { $match: s }, { $group: { _id: '$grade', qty: { $sum: '$qty' } } },
     ]).toArray();
     const fired = unloaded ?? { awwal: 0, doem: 0, khangar: 0, broken: 0 };
+    const sold = Object.fromEntries(soldRows.map((r) => [r._id, r.qty]));
+    const open = await openingStock(db, req.user);
     const stockByGrade = {
-      awwal: fired.awwal - (sold.awwal || 0),
-      doem: fired.doem - (sold.doem || 0),
-      khangar: fired.khangar - (sold.khangar || 0),
+      awwal: open.awwal + fired.awwal - (sold.awwal || 0),
+      doem: open.doem + fired.doem - (sold.doem || 0),
+      khangar: open.khangar + fired.khangar - (sold.khangar || 0),
     };
     res.json({ greenStock, firedStockByGrade: stockByGrade, coalOnHandKg });
   }));

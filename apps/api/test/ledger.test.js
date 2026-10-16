@@ -667,3 +667,24 @@ test('stock report lists purchased items other than coal', async () => {
   assert.ok(r.items.some((i) => i.item === 'soil' && i.received >= 12));
   assert.ok(!r.items.some((i) => i.item === 'coal'));
 });
+
+test('opening stock is added to every stock figure', async () => {
+  await api('PUT', '/opening-stock', { awwal: 0, doem: 0, khangar: 0, green: 0, coalKg: 0, items: {} });
+  const base = (await api('GET', '/stock-report')).body;
+  const inv0 = (await api('GET', '/inventory/summary')).body;
+  assert.equal((await api('PUT', '/opening-stock', { awwal: 50000, doem: 8000, khangar: 3000, green: 120000, coalKg: 25000, items: { soil: 40 }, asOf: '2026-09-01' }, 'munshi')).status, 403);
+  assert.equal((await api('PUT', '/opening-stock', { awwal: 50000, doem: 8000, khangar: 3000, green: 120000, coalKg: 25000, items: { soil: 40 }, asOf: '2026-09-01' })).status, 200);
+  const r = (await api('GET', '/stock-report')).body;
+  assert.equal(r.stock.awwal - base.stock.awwal, 50000);
+  assert.equal(r.stock.doem - base.stock.doem, 8000);
+  assert.equal(r.stock.khangar - base.stock.khangar, 3000);
+  assert.equal(r.stock.green - base.stock.green, 120000);
+  assert.equal(r.coal.remainingKg - base.coal.remainingKg, 25000);
+  const soil0 = base.items.find((i) => i.item === 'soil')?.received || 0;
+  assert.equal(r.items.find((i) => i.item === 'soil').received - soil0, 40);
+  const inv = (await api('GET', '/inventory/summary')).body;
+  assert.equal(inv.firedStockByGrade.awwal - inv0.firedStockByGrade.awwal, 50000);
+  assert.equal(inv.greenStock - inv0.greenStock, 120000);
+  assert.equal((await api('GET', '/opening-stock')).body.asOf, '2026-09-01');
+  await api('PUT', '/opening-stock', { awwal: 0, doem: 0, khangar: 0, green: 0, coalKg: 0, items: {} }); // leave other tests as they were
+});

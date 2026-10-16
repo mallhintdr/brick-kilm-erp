@@ -4,6 +4,8 @@ import { get, put, getRole } from '../api.js';
 import TypesManager from '../components/TypesManager.jsx';
 import DeleteButton from '../components/DeleteButton.jsx';
 import LocationPicker from '../components/LocationPicker.jsx';
+import { useTypes, typeLabel } from '../useTypes.js';
+import { useLang } from '../i18n.js';
 
 const KEYS = [
   'peshgiLimit', 'munshiAdvanceLimit', 'recoveryPct', 'kharchiFloor',
@@ -56,6 +58,8 @@ export default function Settings() {
         </label>
         {msg.text && <p role={msg.bad ? 'alert' : 'status'} className={msg.bad ? 'err' : 'ok'}>{msg.text}</p>}
       </div>
+
+      <OpeningStock t={t} isOwner={isOwner} />
 
       <KilnLocation t={t} isOwner={isOwner} vals={vals} onSaved={(v) => setVals((x) => ({ ...x, ...v }))} />
       <TypesManager isOwner={isOwner} />
@@ -119,6 +123,52 @@ function KilnLocation({ t, isOwner, vals, onSaved }) {
           {set && <a className="ghost button-link" target="_blank" rel="noreferrer" href={`https://www.google.com/maps?q=${vals.kilnLat},${vals.kilnLon}`}>{t.locOnMap}</a>}
         </div>
       )}
+      {msg.text && <p role={msg.bad ? 'alert' : 'status'} className={msg.bad ? 'err' : 'ok'}>{msg.text}</p>}
+    </div>
+  );
+}
+
+// What was physically on hand when the kiln started using the app; all stock figures start from it.
+function OpeningStock({ t, isOwner }) {
+  const { lang } = useLang();
+  const items = useTypes('procurementItem');
+  const [o, setO] = useState({ awwal: '', doem: '', khangar: '', green: '', coalKg: '', asOf: '', items: {} });
+  const [msg, setMsg] = useState({ text: '', bad: false });
+  useEffect(() => {
+    get('/opening-stock').then((d) => setO({
+      awwal: d.awwal || '', doem: d.doem || '', khangar: d.khangar || '', green: d.green || '', coalKg: d.coalKg || '', asOf: d.asOf || '', items: d.items || {},
+    })).catch(() => {});
+  }, []);
+  async function save() {
+    try {
+      await put('/opening-stock', o);
+      setMsg({ text: t.savedOk, bad: false });
+    } catch (e) { setMsg({ text: e.message, bad: true }); }
+  }
+  const box = (key, label, unit) => (
+    <label key={key}>{label}{unit ? ` (${unit})` : ''}
+      <input disabled={!isOwner} inputMode="decimal" placeholder="0" value={o[key]} onChange={(e) => setO({ ...o, [key]: e.target.value.replace(/[^\d.]/g, '') })} />
+    </label>
+  );
+  return (
+    <div className="card grid">
+      <h2>{t.openingStock}</h2>
+      <p className="muted" style={{ margin: 0 }}>{t.openingStockHint}</p>
+      <div className="grid two">
+        <label>{t.openingAsOf}<input type="date" disabled={!isOwner} value={o.asOf} onChange={(e) => setO({ ...o, asOf: e.target.value })} /></label>
+        {box('awwal', t.awwal)}
+        {box('doem', t.doem)}
+        {box('khangar', t.khangar)}
+        {box('green', t.hsGreen)}
+        {box('coalKg', t.hsCoal, 'kg')}
+        {items.active.filter((i) => i.key !== 'coal').map((i) => (
+          <label key={i.key}>{typeLabel(i, lang)}
+            <input disabled={!isOwner} inputMode="decimal" placeholder="0" value={o.items[i.key] ?? ''}
+              onChange={(e) => setO({ ...o, items: { ...o.items, [i.key]: e.target.value.replace(/[^\d.]/g, '') } })} />
+          </label>
+        ))}
+      </div>
+      {isOwner && <button type="button" className="primary fit-center" onClick={save}>{t.save}</button>}
       {msg.text && <p role={msg.bad ? 'alert' : 'status'} className={msg.bad ? 'err' : 'ok'}>{msg.text}</p>}
     </div>
   );
