@@ -639,3 +639,23 @@ test('insights summary works with nikasi but no firing logs', async () => {
   assert.equal(r.status, 200, JSON.stringify(r.body));
   assert.equal(typeof r.body.coalPer1000, 'number');
 });
+
+test('stock report adds up moulding -> bharai -> nikasi -> sales and coal', async () => {
+  const before = (await api('GET', '/stock-report')).body;
+  await api('PUT', '/settings', { key: 'allowNegativeStock', value: '1' });
+  const m = (await newWorker({ name: 'Stock Moulder' })).body.id;
+  const loader = (await newWorker({ category: 'bharai' })).body.id;
+  const unloader = (await newWorker({ category: 'nikasi' })).body.id;
+  const day = new Date(Date.now() - 40 * 86400000).toISOString().slice(0, 10);
+  await api('POST', '/moulding', { workerId: m, count: 10000, deductionPct: 0, date: day, clientUuid: randomUUID() });
+  await api('POST', '/work-entries', { kind: 'bharai', workerId: loader, date: day, count: 6000, clientUuid: randomUUID() });
+  await api('POST', '/work-entries', { kind: 'nikasi', workerId: unloader, date: day, count: 5000, grade: 'awwal', clientUuid: randomUUID() });
+  const after = (await api('GET', '/stock-report')).body;
+  assert.equal(after.moulding.net - before.moulding.net, 10000);
+  assert.equal(after.kachiBharai - before.kachiBharai, 6000);
+  assert.equal(after.nikasi.awwal - before.nikasi.awwal, 5000);
+  assert.equal(after.stock.green - before.stock.green, 4000);   // 10,000 moulded - 6,000 loaded
+  assert.equal(after.stock.awwal - before.stock.awwal, 5000);
+  assert.equal(typeof after.coal.remainingKg, 'number');
+  assert.ok(['line', 'chamber'].includes(after.unit));
+});

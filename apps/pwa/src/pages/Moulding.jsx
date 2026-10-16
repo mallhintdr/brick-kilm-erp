@@ -161,7 +161,6 @@ export default function Moulding() {
   const newTotal = teams.reduce((a, tm) => a + weekDays.reduce((x, d) => x + (saved[`${tm._id}|${d}`] ? 0 : Number(grid[tm._id]?.[d]) || 0), 0), 0);
 
   const totalMoulded = list.reduce((a, b) => a + (Number(b.count) || 0), 0);
-  const totalKharaba = list.reduce((a, b) => a + (Number(b.kharaba) || 0), 0);
   const totalNet = list.reduce((a, b) => a + (Number(b.netCount) || 0), 0);
   const currentDeduction = Math.round(((Number(f.count) || 0) * (Number(f.deductionPct) || 0)) / 100);
   const currentNet = Math.max(0, (Number(f.count) || 0) - (Number(f.kharaba) || 0) - currentDeduction);
@@ -178,7 +177,6 @@ export default function Moulding() {
       <div className="kpi-grid">
         <div className="stat"><span>Total Moulded</span><strong>{totalMoulded.toLocaleString()}</strong></div>
         <div className="stat"><span>Net Accepted</span><strong className="ok">{totalNet.toLocaleString()}</strong></div>
-        <div className="stat"><span>{t.kharaba}</span><strong className={totalKharaba > 0 ? 'warn' : ''}>{totalKharaba.toLocaleString()}</strong></div>
       </div>
 
       {/* Weekly entry: every pathera team × 7 days, saved in one go */}
@@ -276,7 +274,7 @@ export default function Moulding() {
         </div>
       </details>
 
-      {/* Single batch entry (with kharaba), any past date */}
+      {/* Single batch entry, any past date */}
       <form className="card grid" onSubmit={submit}>
         <h2>{t.moulding} — {t.singleEntry}</h2>
         <div className="grid two" style={{ gap: '0.9rem' }}>
@@ -299,10 +297,6 @@ export default function Moulding() {
           <label>
             {t.count}
             <input required inputMode="numeric" placeholder="e.g. 10000" value={f.count} onChange={(e) => setF({ ...f, count: e.target.value })} />
-          </label>
-          <label>
-            {t.kharaba}
-            <input inputMode="numeric" placeholder="0" value={f.kharaba} onChange={(e) => setF({ ...f, kharaba: e.target.value })} />
           </label>
           <label>
             {t.deductionPct}
@@ -340,7 +334,6 @@ export default function Moulding() {
               <th className="sticky-col">{t.date || 'Date'}</th>
               <th>{t.team}</th>
               <th>{t.count}</th>
-              <th>{t.kharaba}</th>
               <th>{t.netCount}</th>
               <th className="actions">{t.action}</th>
             </tr>
@@ -349,7 +342,7 @@ export default function Moulding() {
               <th><input type="search" className="table-col-filter" value={filters.date || ''} onChange={(e) => setFilters({ ...filters, date: e.target.value })} /></th>
               <th><input type="search" className="table-col-filter" value={filters.team || ''} onChange={(e) => setFilters({ ...filters, team: e.target.value })} /></th>
               <th><input type="search" className="table-col-filter" value={filters.count || ''} onChange={(e) => setFilters({ ...filters, count: e.target.value })} /></th>
-              <th /><th /><th className="actions" />
+              <th /><th className="actions" />
             </tr>
           </thead>
           <tbody>
@@ -361,13 +354,12 @@ export default function Moulding() {
                   <td>{editing ? <input type="date" className="cell-input" max={todayIso()} {...editor.field('date')} /> : <strong>{fmtDate(b.date)}</strong>}</td>
                   <td>{teamName(b.teamId)}</td>
                   <td>{editing ? <input inputMode="numeric" className="cell-input" {...editor.field('count')} /> : <strong>{Number(b.count).toLocaleString()}</strong>}</td>
-                  <td>{editing ? <input inputMode="numeric" className="cell-input" {...editor.field('kharaba')} /> : Number(b.kharaba).toLocaleString()}</td>
                   <td><strong className="ok">{Number(b.netCount).toLocaleString()}</strong></td>
                   <td className="actions">
                     <RowActions
                       editor={editor} id={b._id} path={`/moulding/${b._id}`} name={`${b.netCount} — ${fmtDate(b.date)}`}
-                      initial={{ date: iso(new Date(b.date)), count: String(b.count), kharaba: String(b.kharaba) }}
-                      toPayload={(d) => ({ date: d.date, count: Number(d.count), kharaba: Number(d.kharaba || 0) })}
+                      initial={{ date: iso(new Date(b.date)), count: String(b.count) }}
+                      toPayload={(d) => ({ date: d.date, count: Number(d.count) })}
                       onSaved={() => { setMsg({ text: t.savedOk, bad: false }); load(); }}
                       onDeleted={(r) => { setMsg({ text: r?.legacyNoLedgerLink ? `${t.deleted} — ${t.legacyNote}` : t.deleted, bad: false }); load(); }}
                       onError={(m) => setMsg({ text: m, bad: true })}

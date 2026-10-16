@@ -300,6 +300,53 @@ export function registerProductionRoutes(app, db) {
     res.json(await db.collection('firingLogs').find(scope(req.user)).sort({ date: -1 }).limit(200).toArray());
   }));
 
+  // ---- Stock report: the whole flow from moulding to sale, as of now ----
+  app.get('/stock-report', auth(), wrap(async (req, res) => {
+    const s = scope(req.user);
+    const sum = async (coll, fields, match = {}) => {
+      const group = { _id: null };
+      for (const [k, v] of Object.entries(fields)) group[k] = { $sum: v };
+      const [r] = await db.collection(coll).aggregate([{ $match: { ...s, ...match } }, { $group: group }]).toArray();
+      return r || {};
+    };
+    const unit = (await getSetting(db, req.user, 'kilnUnit', SETTING_DEFAULTS)) === 'chamber' ? 'chamber' : 'line';
+    const [moulding, loaded, nikasi, sold, coalIn, shiftCoal, cycleCoal, unitStates] = await Promise.all([
+      sum('mouldingBatches', { count: '$count', net: '$netCount' }),
+      sum('sectionLoads', { count: '$count' }),
+      sum('unloadings', { awwal: '$awwal', doem: '$doem', khangar: '$khangar', broken: '$broken' }),
+      db.collection('invoices').aggregate([{ $match: s }, { $group: { _id: '$grade', qty: { $sum: '$qty' } } }]).toArray(),
+      sum('grns', { qty: '$qty' }, { item: 'coal' }),
+      sum('firingLogs', { kg: '$coalKg' }),
+      sum('kilnCycles', { kg: '$coalKg' }),
+      db.collection(unit === 'line' ? 'kilnLines' : 'kilnSections').aggregate([
+        { $match: s }, { $group: { _id: '$state', n: { $sum: 1 }, bricks: { $sum: { $ifNull: ['$currentLoad', 0] } }, coal: { $sum: { $ifNull: ['$coalKg', 0] } } } },
+      ]).toArray(),
+    ]);
+    const st = Object.fromEntries(unitStates.map((r) => [r._id, r]));
+    const soldBy = Object.fromEntries(sold.map((r) => [r._id, r.qty]));
+    const n = (k) => nikasi[k] || 0;
+    const lineCoal = unitStates.reduce((a, r) => a + (r.coal || 0), 0);
+    const coalUsedKg = (shiftCoal.kg || 0) + (cycleCoal.kg || 0) + lineCoal;
+    res.json({
+      unit,
+      moulding: { moulded: moulding.count || 0, net: moulding.net || 0 },
+      kachiBharai: loaded.count || 0,
+      jalai: {
+        // how far the fire has got: units waiting, burning, cooling, being unloaded, and bricks inside
+        preheating: st.Preheating?.n || 0, firing: st.Firing?.n || 0, cooling: st.Cooling?.n || 0,
+        unloading: st.Unloading?.n || 0, empty: st.Empty?.n || 0,
+        bricksInKiln: unitStates.filter((r) => r._id !== 'Empty').reduce((a, r) => a + r.bricks, 0),
+      },
+      nikasi: { awwal: n('awwal'), doem: n('doem'), khangar: n('khangar'), broken: n('broken') },
+      sales: { awwal: soldBy.awwal || 0, doem: soldBy.doem || 0, khangar: soldBy.khangar || 0 },
+      coal: { inKg: Math.round((coalIn.qty || 0) * 1000), usedKg: Math.round(coalUsedKg), remainingKg: Math.round((coalIn.qty || 0) * 1000 - coalUsedKg) },
+      stock: {
+        green: (moulding.net || 0) - (loaded.count || 0),
+        awwal: n('awwal') - (soldBy.awwal || 0), doem: n('doem') - (soldBy.doem || 0), khangar: n('khangar') - (soldBy.khangar || 0),
+      },
+    });
+  }));
+
   // Kachi bharai: every chamber/line load (newest first)
   app.get('/section-loads', auth(), wrap(async (req, res) => {
     res.json(await db.collection('sectionLoads').find(scope(req.user)).sort({ date: -1 }).limit(1000).toArray());

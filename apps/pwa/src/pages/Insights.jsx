@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import StockReport from '../components/StockReport.jsx';
 import { useT } from '../i18n.js';
 import { get } from '../api.js';
 import LineChart from '../components/LineChart.jsx';
@@ -158,6 +159,8 @@ export default function Insights() {
         )}
       </div>
 
+      <StockReport />
+
       {/* Info Cards Grouped by Type (Filled with 18-20% opacity matching color, swapped text sizes) */}
       <div className="kpi-section">
         {/* Group 1: Production & Quality Metrics */}
@@ -169,10 +172,6 @@ export default function Insights() {
             <div className="stat" style={{ borderInlineStartColor: 'var(--brand-dark)' }}>
               <span>{t.moulding}</span>
               <strong>{summary.moulded.toLocaleString()}</strong>
-            </div>
-            <div className="stat" style={{ borderInlineStartColor: summary.wastagePct > 5 ? 'var(--warn-dark)' : 'var(--ok-dark)' }}>
-              <span>{t.kharaba}</span>
-              <strong className={summary.wastagePct > 5 ? 'warn' : 'ok'}>{summary.wastagePct}%</strong>
             </div>
             <div className="stat" style={{ borderInlineStartColor: summary.awwalSharePct < 85 ? 'var(--warn-dark)' : 'var(--ok-dark)' }}>
               <span>{t.awwal}</span>

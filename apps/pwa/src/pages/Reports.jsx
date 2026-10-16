@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useT, useLang } from '../i18n.js';
 import { get, fmtDate, fmtDateDM } from '../api.js';
 import DateTime from '../components/DateTime.jsx';
+import StockReport from '../components/StockReport.jsx';
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const daysAgoStr = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
@@ -407,12 +408,6 @@ export default function Reports() {
                 <strong>{stats.totalMoulded.toLocaleString()}</strong>
               </div>
             )}
-            {selectedModules.moulding && (
-              <div className="stat" style={{ borderInlineStartColor: stats.wastageRate > 5 ? 'var(--warn-dark)' : 'var(--ok-dark)' }}>
-                <span>{lang === 'ur' ? 'خرابہ کی شرح' : 'Kharaba %'}</span>
-                <strong className={stats.wastageRate > 5 ? 'warn' : 'ok'}>{stats.wastageRate}%</strong>
-              </div>
-            )}
             {selectedModules.firing && (
               <div className="stat">
                 <span>{lang === 'ur' ? 'پکائی شفٹیں' : 'Firing Shifts'}</span>
@@ -473,7 +468,8 @@ export default function Reports() {
         );
       })()}
 
-      {selectedModules.stock && data.stock && (
+      {selectedModules.stock && <StockReport />}
+      {false && selectedModules.stock && data.stock && (
         <div className="kpi-section">
           <div className="kpi-group">
             <h3 className="kpi-group-title">{lang === 'ur' ? 'باقی ذخیرہ (آج تک)' : 'Remaining Stock (as of today)'}</h3>
@@ -541,7 +537,6 @@ export default function Reports() {
                 <th>{t.date}</th>
                 <th className="sticky-col">{t.team}</th>
                 <th>{lang === 'ur' ? 'کل کچی' : 'Gross Bricks'}</th>
-                <th>{t.kharaba}</th>
                 <th>{lang === 'ur' ? 'خالص کچی' : 'Net Bricks'}</th>
                 <th>{t.status}</th>
               </tr>
@@ -575,14 +570,6 @@ export default function Reports() {
                   <input
                     type="search"
                     className="table-col-filter"
-                    value={filters.moulding.kharaba || ''}
-                    onChange={(e) => updateFilter('moulding', 'kharaba', e.target.value)}
-                  />
-                </th>
-                <th>
-                  <input
-                    type="search"
-                    className="table-col-filter"
                     value={filters.moulding.netCount || ''}
                     onChange={(e) => updateFilter('moulding', 'netCount', e.target.value)}
                   />
@@ -607,7 +594,6 @@ export default function Reports() {
                     <td>{fmtDate(row.date)}</td>
                     <td>{row.teamName || row.teamId || '-'}</td>
                     <td><strong>{Number(row.count).toLocaleString()}</strong></td>
-                    <td className={row.kharaba > 0 ? 'warn' : ''}>{Number(row.kharaba).toLocaleString()}</td>
                     <td><strong className="ok">{Number(row.netCount).toLocaleString()}</strong></td>
                     <td><span className="badge green">{row.status || 'Drying'}</span></td>
                   </tr>
@@ -618,7 +604,6 @@ export default function Reports() {
               <tr>
                 <td colSpan="3">Total</td>
                 <td>{filteredMoulding.reduce((a, b) => a + (Number(b.count) || 0), 0).toLocaleString()}</td>
-                <td>{filteredMoulding.reduce((a, b) => a + (Number(b.kharaba) || 0), 0).toLocaleString()}</td>
                 <td>{filteredMoulding.reduce((a, b) => a + (Number(b.netCount) || 0), 0).toLocaleString()}</td>
                 <td />
               </tr>
