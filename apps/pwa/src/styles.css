@@ -3398,3 +3398,9 @@ table.att-table td:nth-child(2) .muted { font-size: 0.6rem !important; }
 .chart-checkbox-legend-row.legend-wrap { flex-wrap: wrap !important; overflow: visible !important; gap: 0.35rem 0.8rem !important; }
 .chart-checkbox-legend-row.legend-wrap .chart-checkbox-label { font-size: 0.72rem; }
 .chart-checkbox-legend-row.legend-wrap input[type="checkbox"] { width: 15px; height: 15px; }
+
+/* Insights: Daily Avg / Total badge with its trend pill at half size, on every chart */
+.chart-daily-avg-kpi-badge { padding: 0.12rem 0.4rem !important; gap: 0.2rem !important; border-width: 1px !important; border-radius: 999px !important; }
+.chart-daily-avg-kpi-badge .daily-avg-kpi-label { font-size: 0.5rem !important; }
+.chart-daily-avg-kpi-badge .daily-avg-kpi-val { font-size: 0.6rem !important; }
+.chart-daily-avg-kpi-badge .daily-avg-trend-pill { font-size: 0.45rem !important; padding: 0.02rem 0.25rem !important; border-width: 1px !important; }
