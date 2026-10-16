@@ -31,7 +31,7 @@ export default function Settings() {
 
   return (
     <>
-      <div className="card grid">
+      <div className="card grid settings-rates">
         <p className="muted">{t.limitNote}</p>
         {KEYS.map((k) => (
           <div className="row" key={k}>
