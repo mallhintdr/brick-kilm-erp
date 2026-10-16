@@ -3352,3 +3352,10 @@ input, select, textarea, option, td, .badge, .muted, p, .brand-user, .issues-cel
 .top button.ghost.logout-btn.with-user { flex-direction: column; gap: 0.05rem !important; height: auto !important; min-height: 40px !important; padding: 0.2rem 0.5rem !important; line-height: 1.1; }
 .logout-user { font-size: 0.66rem; max-width: 24vw; }
 .badge.att-badge.att-present { background: #dcfce7; color: #166534; } .badge.att-badge.att-absent { background: #fee2e2; color: #991b1b; } .badge.att-badge.att-leave { background: #fef3c7; color: #92400e; } .badge.att-badge.att-half { background: #e0f2fe; color: #075985; }
+/* tap a worker's name in attendance to open their record below */
+button.name-link { all: unset; cursor: pointer; text-align: inherit; border-bottom: 1px dashed #94a3b8; }
+button.name-link:hover, button.name-link.on { color: var(--brand-dark); border-bottom-color: var(--brand-dark); }
+.att-record { scroll-margin-top: 0.75rem; border-inline-start: 4px solid var(--brand-dark) !important; }
+.att-record-head { display: flex; align-items: center; justify-content: center; gap: 0.5rem; position: relative; }
+.att-record-head .close-btn { position: absolute; inset-inline-end: 0; }
+.att-record-head h2 { padding-inline: 2.5rem !important; }

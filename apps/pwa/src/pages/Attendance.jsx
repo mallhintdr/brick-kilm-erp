@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useT, useLang } from '../i18n.js';
 import { get, put, fmtDate } from '../api.js';
 import { useTypes, typeLabel } from '../useTypes.js';
-import SearchSelect from '../components/SearchSelect.jsx';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const STATUSES = ['present', 'absent', 'leave', 'half'];
@@ -20,6 +19,7 @@ export default function Attendance() {
   const [saved, setSaved] = useState({});
   const [msg, setMsg] = useState({ text: '', bad: false });
   const [busy, setBusy] = useState(false);
+  const [recordFor, setRecordFor] = useState(''); // worker whose record is open below the list
 
   useEffect(() => { get('/workers').then((w) => setWorkers(w.filter((x) => x.status !== 'inactive').sort((a, b) => a.name.localeCompare(b.name)))).catch(() => {}); }, []);
   useEffect(() => {
@@ -82,8 +82,6 @@ export default function Attendance() {
         </div>
       </div>
 
-      <WorkerRecord t={t} workers={workers} />
-
       <div className="card table-wrap">
         <h2>{t.workers} ({shown.length})</h2>
         <table>
@@ -92,7 +90,11 @@ export default function Attendance() {
             {shown.map((w, i) => (
               <tr key={w._id}>
                 <td className="rownum">{i + 1}</td>
-                <td><strong>{w.name}</strong>{w.fatherName ? <span className="muted"> — {w.fatherName}</span> : null}</td>
+                <td>
+                  <button type="button" className={`name-link${recordFor === w._id ? ' on' : ''}`} onClick={() => setRecordFor(w._id)} title={t.attRecord}>
+                    <strong>{w.name}</strong>{w.fatherName ? <span className="muted"> — {w.fatherName}</span> : null}
+                  </button>
+                </td>
                 <td>{cats.label(w.category)}</td>
                 <td>
                   <div className="att-btns" role="radiogroup" aria-label={w.name}>
@@ -110,14 +112,19 @@ export default function Attendance() {
           </tbody>
         </table>
       </div>
+      {recordFor && (
+        <WorkerRecord t={t} worker={workers.find((w) => w._id === recordFor)} onClose={() => setRecordFor('')} />
+      )}
     </div>
   );
 }
 
 // One worker's attendance over the last 7 / 15 / 30 days, day by day, with totals.
 // Days with no mark show as "not marked" so gaps are visible.
-function WorkerRecord({ t, workers }) {
-  const [workerId, setWorkerId] = useState('');
+function WorkerRecord({ t, worker, onClose }) {
+  const workerId = worker?._id || '';
+  const boxRef = useRef(null);
+  useEffect(() => { boxRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, [workerId]);
   const [days, setDays] = useState(7);
   const [rows, setRows] = useState([]);
   useEffect(() => {
@@ -130,15 +137,11 @@ function WorkerRecord({ t, workers }) {
   const list = Array.from({ length: days }, (_, i) => new Date(Date.now() - i * 86400000).toISOString().slice(0, 10));
   const n = (st) => list.filter((d) => byDate[d] === st).length;
   return (
-    <div className="card grid">
-      <h2>{t.attRecord}</h2>
-      <label>
-        {t.worker}
-        <SearchSelect
-          ariaLabel={t.worker} placeholder={t.typeToSearch} value={workerId} onChange={setWorkerId}
-          options={workers.map((w) => ({ value: w._id, label: w.fatherName ? `${w.name} — ${w.fatherName}` : w.name, search: w.cnic || '' }))}
-        />
-      </label>
+    <div className="card grid att-record" ref={boxRef}>
+      <div className="att-record-head">
+        <h2>{t.attRecord}: {worker?.name}{worker?.fatherName ? ` — ${worker.fatherName}` : ''}</h2>
+        <button type="button" className="close-btn" aria-label={t.close || 'Close'} onClick={onClose}>✕</button>
+      </div>
       <div className="wx-tabs" role="tablist">
         {[7, 15, 30].map((d) => (
           <button key={d} type="button" role="tab" aria-selected={days === d} className={days === d ? 'on' : ''} onClick={() => setDays(d)}>
