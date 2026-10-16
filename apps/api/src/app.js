@@ -268,6 +268,10 @@ export function createApp(db) {
       { $group: { _id: null, d: { $sum: { $toDouble: '$debit' } }, c: { $sum: { $toDouble: '$credit' } } } },
     ]).toArray();
     const totalUnloaded = unload ? unload.awwal + unload.doem + unload.khangar + unload.broken : 0;
+    // coal noted per line/chamber (finished cycles + ones still in the kiln) adds to the shift logs
+    const [cycleCoal] = await db.collection('kilnCycles').aggregate([{ $match: s }, { $group: { _id: null, kg: { $sum: '$coalKg' } } }]).toArray();
+    const [lineCoal] = await db.collection('kilnLines').aggregate([{ $match: s }, { $group: { _id: null, kg: { $sum: '$coalKg' } } }]).toArray();
+    const coalKg = (coal?.coalKg ?? 0) + (cycleCoal?.kg ?? 0) + (lineCoal?.kg ?? 0);
 
     res.json({
       moulded: moulding?.moulded ?? 0,
@@ -275,8 +279,9 @@ export function createApp(db) {
       wastagePct: moulding?.moulded ? +((moulding.kharaba / moulding.moulded) * 100).toFixed(1) : 0,
       unloaded: unload ?? { awwal: 0, doem: 0, khangar: 0, broken: 0 },
       awwalSharePct: totalUnloaded ? +((unload.awwal / totalUnloaded) * 100).toFixed(1) : 0,
-      coalKg: coal?.coalKg ?? 0,
-      coalPer1000: totalUnloaded ? +((coal.coalKg / totalUnloaded) * 1000).toFixed(1) : 0,
+      coalKg,
+      // a kiln with nikasi but no firing logs yet must not crash here
+      coalPer1000: totalUnloaded ? +((coalKg / totalUnloaded) * 1000).toFixed(1) : 0,
       fanOffDays: coal?.fanOffDays ?? 0,
       salesRevenue: +(sales?.revenue ?? 0).toFixed(2),
       invoiceCount: sales?.count ?? 0,

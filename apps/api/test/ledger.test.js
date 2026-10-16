@@ -629,3 +629,13 @@ test('attendance record of one worker over a period', async () => {
   const month = (await api('GET', `/attendance/worker/${w}?from=${d(29)}&to=${d(0)}`)).body;
   assert.equal(month.length, 3);
 });
+
+test('insights summary works with nikasi but no firing logs', async () => {
+  // fresh kiln data shape: nikasi recorded through the weekly grid, no firing shifts logged
+  await testDb.collection('firingLogs').deleteMany({ tenantId: ctx.tenantId });
+  const u = (await newWorker({ category: 'nikasi' })).body.id;
+  assert.equal((await api('POST', '/work-entries', { kind: 'nikasi', workerId: u, date: new Date().toISOString().slice(0, 10), count: 1000, grade: 'awwal', clientUuid: randomUUID() })).status, 201);
+  const r = await api('GET', '/insights/summary');
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(typeof r.body.coalPer1000, 'number');
+});
