@@ -3519,3 +3519,6 @@ table tbody tr.pf-editing > td { background: #eff6ff !important; }
   body.printing-pf .pf-report-head { font-size: 11pt; }
 }
 .pf-list tbody tr:nth-child(even) > td, .pf-report tbody tr:nth-child(even) > td { background: #f8fafc; }
+/* words under an amount box: a fixed one-line slot, so neighbouring boxes in the row never shift */
+.amount-hint { min-height: 1.6em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.grid.two:has(.amount-hint) { align-items: start; }

@@ -33,7 +33,7 @@ export function amountWords(value, lang = 'en') {
 // 2 لاکھ 45 ہزار 2 سو 30 روپے. Display only, nothing here is saved.
 export default function AmountHint({ value }) {
   const words = amountWords(String(value ?? '').replace(/,/g, ''), 'ur');
-  if (!words) return null;
+  // always rendered (empty when no amount) so the box keeps its height and the row never jumps
   return <span className="amount-hint" dir="rtl" lang="ur" aria-live="polite">{words}</span>;
 }
 
