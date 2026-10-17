@@ -174,7 +174,7 @@ export const SETTING_KEYS = [
   'ratePathera', 'rateBharai', 'rateNikasi', 'rateJalai', 'priceAwwal', 'priceDoem', 'priceKhangar',
   'allowNegativeStock', 'kilnUnit', 'kilnLineCount',
   'cutPathera', 'cutBharai', 'cutNikasi',
-  'kilnLat', 'kilnLon', 'kilnPlace',
+  'kilnLat', 'kilnLon', 'kilnPlace', 'hotLines',
 ];
 
 export const settingInput = z.object({
@@ -198,6 +198,7 @@ export const SETTING_DEFAULTS = {
   cutBharai: '50',
   cutNikasi: '0',
   // kiln location for the weather advisory, set by the owner (decimal degrees)
+  hotLines: '30', // lines behind the fire still too hot for nikasi
   kilnLat: '',
   kilnLon: '',
   kilnPlace: '',

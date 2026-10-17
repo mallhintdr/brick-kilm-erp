@@ -12,6 +12,7 @@ const STATE_LABEL_KEY = {
   Preheating: 'preheating',
   Firing: 'firingState',
   Cooling: 'cooling',
+  Ready: 'readyToUnload',
   Unloading: 'unloading',
 };
 
@@ -21,6 +22,7 @@ const STATE_CLASS = {
   Preheating: 'sec-preheating',
   Firing: 'sec-firing',
   Cooling: 'sec-cooling',
+  Ready: 'sec-ready',
   Unloading: 'sec-unloading',
 };
 
@@ -42,6 +44,7 @@ export default function KilnBoard({ focus } = {}) {
   const [advancing, setAdvancing] = useState(false);
   const [steps, setSteps] = useState('1');
   const [fireAt, setFireAt] = useState(''); // blank = now; a past date-time for old records
+  const [fire, setFire] = useState(null); // { index } where the fire is now (lines)
   const [workers, setWorkers] = useState([]);
   const [notes, setNotes] = useState({ coalKg: '', issues: '' });
   const [history, setHistory] = useState([]);
@@ -73,6 +76,7 @@ export default function KilnBoard({ focus } = {}) {
   const loadRows = (u = unit) => (u ? get(`/${UNIT_PATH[u]}`).then((r) => { setRows(r); return r; }) : Promise.resolve([]));
   const load = (u = unit) => {
     get('/teams').then(setTeams).catch(() => {});
+    get('/kiln-fire').then(setFire).catch(() => setFire(null));
     get('/workers').then(setWorkers).catch(() => {});
     get('/inventory/summary').then(setInventory).catch(() => {});
     return loadRows(u).catch(() => []);
@@ -87,7 +91,7 @@ export default function KilnBoard({ focus } = {}) {
     if (!unit) return;
     setSel(null); setForm({});
     load(unit).then((r) => {
-      const want = focus === 'load' ? ['Empty'] : focus === 'unload' ? ['Unloading', 'Cooling'] : null;
+      const want = focus === 'load' ? ['Empty'] : focus === 'unload' ? ['Unloading', 'Ready', 'Cooling'] : null;
       const first = want && want.map((st) => r.find((x) => x.state === st)).find(Boolean);
       if (first) setSel(first);
     });
@@ -139,6 +143,16 @@ export default function KilnBoard({ focus } = {}) {
     act(() => del(`${base}/${sel.index}/load`));
   };
   useEffect(() => { setLoadEdit(null); }, [sel?.index]);
+
+  // owner: start the fire at this line (old records: at the Fire Time chosen above), or clear it
+  const startFireHere = () => {
+    if (!window.confirm(`${t.startFireHere}: ${t.line} ${sel.index}?`)) return;
+    act(() => post('/kiln-fire/start', { index: sel.index, ...(fireAt ? { at: new Date(fireAt).toISOString() } : {}) }), { keep: true });
+  };
+  const resetFire = () => {
+    if (!window.confirm(t.resetFireConfirm)) return;
+    act(() => post('/kiln-fire/reset', {}));
+  };
 
   const saveNotes = () => act(() => put(`${base}/${sel.index}/notes`, {
     coalKg: notes.coalKg === '' ? 0 : Number(notes.coalKg), issues: notes.issues,
@@ -252,6 +266,12 @@ export default function KilnBoard({ focus } = {}) {
             <input type="datetime-local" value={fireAt} max={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
               onChange={(e) => setFireAt(e.target.value)} title={t.fireTimeHint} />
           </label>
+          {unit === 'line' && (
+            <span className="fire-pos" title={t.firePosition}>🔥 {fire?.index ? `${t.line} ${fire.index}` : t.fireNotStarted}</span>
+          )}
+          {unit === 'line' && isOwner && fire?.index && (
+            <button type="button" className="ghost danger-text" onClick={resetFire}>{t.resetFire}</button>
+          )}
           <button className="primary" disabled={advancing || !unit} onClick={fireAdvance}>
             🔥 {t.advanceFire}
           </button>
@@ -274,7 +294,7 @@ export default function KilnBoard({ focus } = {}) {
         </div>
 
         {unit === 'line'
-          ? <LineDiagram lines={rows} selected={sel} onSelect={pick} t={t} />
+          ? <LineDiagram lines={rows} selected={sel} onSelect={pick} t={t} fireIndex={fire?.index} />
           : unit && <KilnDiagram sections={rows} selected={sel} onSelect={pick} t={t} />}
 
         <div className="legend">
@@ -292,7 +312,7 @@ export default function KilnBoard({ focus } = {}) {
         const teamName = (id) => teams.find((tm) => tm._id === id)?.label || '';
         const stateText = (st) => t[STATE_LABEL_KEY[st]] || st;
         const cols = [
-          ['index', (r) => r.index], ['side', (r) => r.side || ''], ['state', (r) => stateText(r.state)],
+          ['index', (r) => r.index], ['round', (r) => r.round || ''], ['state', (r) => stateText(r.state)],
           ['count', (r) => r.currentLoad || 0], ['team', (r) => teamName(r.loadTeamId)],
           ['loaded', (r) => (r.loadedAt ? fmtDate(r.loadedAt) : '')], ['fired', (r) => (r.firedAt ? fmtDateTime(r.firedAt) : '')],
           ['coal', (r) => r.coalKg || ''], ['issues', (r) => r.issues || ''],
@@ -309,7 +329,7 @@ export default function KilnBoard({ focus } = {}) {
               <thead>
                 <tr>
                   <th className="sticky-col">{unitLabel}</th>
-                  {unit === 'line' && <th>{t.side}</th>}
+                  <th>{t.round}</th>
                   <th>{t.status}</th>
                   <th>{t.kachiBharai}</th>
                   <th>{t.team}</th>
@@ -319,7 +339,7 @@ export default function KilnBoard({ focus } = {}) {
                   <th>{t.issuesAndCauses}</th>
                 </tr>
                 <tr className="filter-row">
-                  {cols.filter(([k]) => unit === 'line' || k !== 'side').map(([k]) => (
+                  {cols.map(([k]) => (
                     <th key={k} className={k === 'index' ? 'sticky-col' : undefined}>
                       <input type="search" className="table-col-filter" aria-label={k} value={lf[k] || ''} onChange={(e) => setLf({ ...lf, [k]: e.target.value })} />
                     </th>
@@ -330,7 +350,7 @@ export default function KilnBoard({ focus } = {}) {
                 {shown.map((r) => (
                   <tr key={r.index} className={`pick-row${sel?.index === r.index ? ' picked' : ''}`} onClick={() => pick(r)}>
                     <td><strong>{r.index}</strong></td>
-                    {unit === 'line' && <td>{r.side}</td>}
+                    <td>{r.round || '—'}</td>
                     <td><span className={`badge state-badge st-${r.state}`}>{stateText(r.state)}</span></td>
                     <td>{r.currentLoad ? r.currentLoad.toLocaleString() : '—'}</td>
                     <td>{teamName(r.loadTeamId) || '—'}</td>
@@ -355,7 +375,7 @@ export default function KilnBoard({ focus } = {}) {
               <button type="button" className="ghost" aria-label={t.previous} disabled={!rows.some((x) => x.index === sel.index - 1)} onClick={() => stepSel(-1)}>‹</button>
             )}
             <h2>
-              {unitLabel} #{sel.index}{unit === 'line' && sel.side ? ` (${sel.side})` : ''} — {t[STATE_LABEL_KEY[sel.state]] || sel.state}
+              {unitLabel} #{sel.index}{sel.round ? ` · ${t.round} ${sel.round}` : ''} — {t[STATE_LABEL_KEY[sel.state]] || sel.state}
             </h2>
             {unit === 'line' && (
               <button type="button" className="ghost" aria-label={t.next} disabled={!rows.some((x) => x.index === sel.index + 1)} onClick={() => stepSel(1)}>›</button>
@@ -410,7 +430,15 @@ export default function KilnBoard({ focus } = {}) {
             </div>
           )}
 
-          {sel.state === 'Cooling' && (
+          {unit === 'line' && sel.state === 'Cooling' && (
+            <p className="muted" style={{ margin: 0, textAlign: 'center' }}>{t.stillHot}</p>
+          )}
+          {isOwner && unit === 'line' && sel.currentLoad > 0 && fire?.index !== sel.index && (
+            <div className="row" style={{ justifyContent: 'center' }}>
+              <button type="button" className="ghost fire-btn" onClick={startFireHere}>🔥 {t.startFireHere}</button>
+            </div>
+          )}
+          {(unit === 'line' ? sel.state === 'Ready' : sel.state === 'Cooling') && (
             <div className="grid two" style={{ gap: '0.85rem' }}>
               <label style={{ gridColumn: '1 / -1' }}>
                 {t.unloaderOrTeam}

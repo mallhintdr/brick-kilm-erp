@@ -26,6 +26,7 @@ import { registerEditRoutes } from './edits.js';
 import { registerWeatherRoutes } from './weather.js';
 import { registerJournalRoutes } from './journal.js';
 import { registerAttendanceRoutes } from './attendance.js';
+import { registerCorrectionRoutes } from './corrections.js';
 
 const SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 
@@ -379,6 +380,7 @@ export function createApp(db) {
   registerWeatherRoutes(app, db);
   registerJournalRoutes(app, db);
   registerAttendanceRoutes(app, db);
+  registerCorrectionRoutes(app, db);
 
   app.use((err, _req, res, _next) => {
     if (err instanceof ZodError) return res.status(400).json({ error: 'Validation failed', issues: err.issues });

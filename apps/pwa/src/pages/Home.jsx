@@ -6,7 +6,7 @@ import HomeStock from '../components/HomeStock.jsx';
 const GROUPS = [
   { titleKey: 'dailyOps', paths: ['/attendance', '/moulding', '/loading', '/kiln-board', '/firing', '/unloading'] },
   { titleKey: 'commercialAndFinance', paths: ['/cashbook', '/roznamcha', '/khata', '/sales', '/peshgi', '/kharchi', '/inventory'] },
-  { titleKey: 'managementAndReports', paths: ['/reports', '/insights', '/weather', '/activity', '/workers', '/settings', '/audit-logs', '/users'] },
+  { titleKey: 'managementAndReports', paths: ['/reports', '/insights', '/weather', '/activity', '/workers', '/settings', '/corrections', '/audit-logs', '/users'] },
 ];
 
 export default function Home({ links = [] }) {

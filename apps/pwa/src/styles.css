@@ -3452,3 +3452,13 @@ main > .card, main .card { scroll-margin-top: 0.5rem; }
 .settings-rates > label.row { display: flex !important; grid-template-columns: none; font-size: 0.8rem; border-bottom: 0; }
 /* other Settings cards: tighter too */
 main .card.grid:has(> h2 + p.muted) { gap: 0.45rem !important; }
+
+/* Line loop plan */
+.kiln.kiln-lines { max-width: 420px !important; }
+.loop-dir { font-size: 15px; font-weight: 800; fill: #92400e; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+.line-strip.fire-now { stroke: #fde047; stroke-width: 3; }
+.line-strip.st-Cooling + .line-num, .line-strip.st-Ready + .line-num { fill: #fff; }
+.line-num { font-size: 14px !important; }
+.legend-item.sec-ready { background: #ccfbf1; border-color: #14b8a6; }
+.fire-pos { font-size: 0.8rem; font-weight: 800; color: #b91c1c; background: #fee2e2; border-radius: 999px; padding: 0.2rem 0.6rem; white-space: nowrap; }
+.fire-btn { border-color: #ef4444 !important; color: #b91c1c !important; font-weight: 800; }

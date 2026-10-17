@@ -10,7 +10,7 @@ import { useLang } from '../i18n.js';
 const KEYS = [
   'peshgiLimit', 'munshiAdvanceLimit', 'recoveryPct', 'kharchiFloor',
   'ratePathera', 'cutPathera', 'rateBharai', 'cutBharai', 'rateNikasi', 'cutNikasi',
-  'rateJalai', 'priceAwwal', 'priceDoem', 'priceKhangar',
+  'rateJalai', 'priceAwwal', 'priceDoem', 'priceKhangar', 'hotLines',
 ];
 
 export default function Settings() {

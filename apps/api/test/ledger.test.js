@@ -31,6 +31,19 @@ before(async () => {
 });
 after(async () => { server.close(); await close(); });
 
+// Start the fire at `idx` and move it to the next line (loading that line first), so `idx` is
+// behind the fire; with hotLines 0 it is then Ready for nikasi.
+const fireToReady = async (idx, loaderWorkerId, at) => {
+  await api('PUT', '/settings', { key: 'hotLines', value: '0' });
+  const next = (idx % 240) + 1;
+  const lines = (await api('GET', '/kiln-lines')).body;
+  if (!lines.find((x) => x.index === next).currentLoad) {
+    assert.equal((await api('POST', `/kiln-lines/${next}/load`, { workerId: loaderWorkerId, count: 4000, clientUuid: randomUUID() })).status, 201);
+  }
+  assert.equal((await api('POST', '/kiln-fire/start', { index: idx, ...(at ? { at } : {}) })).status, 200);
+  assert.equal((await api('POST', '/fire-advance', { unit: 'line', ...(at ? { at } : {}), clientUuid: randomUUID() })).status, 201);
+};
+
 const newWorker = async (over = {}, who = 'owner') => {
   const r = await api('POST', '/workers', {
     name: 'Ali', fatherName: 'Akbar', cnic: String(Math.floor(1e12 + Math.random() * 9e12)), dob: '1990-01-01', category: 'pathera', ...over,
@@ -459,16 +472,27 @@ test('kiln lines: 240 lines, a full cycle keeps dates, coal, issues and output',
   await api('PUT', '/settings', { key: 'allowNegativeStock', value: '1' });
   const lines = (await api('GET', '/kiln-lines')).body;
   assert.equal(lines.length, 240);
-  assert.equal(lines[119].side, 'A'); assert.equal(lines[120].side, 'B');
   const w = (await newWorker()).body.id;
   const team = await testDb.collection('teams').insertOne({ tenantId: ctx.tenantId, kilnId: ctx.kilnId, category: 'bharai', label: 'Line Loaders', memberIds: [w] });
   const nteam = await testDb.collection('teams').insertOne({ tenantId: ctx.tenantId, kilnId: ctx.kilnId, category: 'nikasi', label: 'Line Unloaders', memberIds: [w] });
   assert.equal((await api('POST', '/kiln-lines/1/load', { teamId: String(team.insertedId), count: 4800, clientUuid: randomUUID() })).status, 201);
-  assert.equal((await api('POST', '/fire-advance', { unit: 'line', clientUuid: randomUUID() })).status, 201);
+  // the fire cannot move before it is started
+  await api('POST', '/kiln-fire/reset', {});
+  assert.equal((await api('POST', '/fire-advance', { unit: 'line', clientUuid: randomUUID() })).status, 422);
+  assert.equal((await api('POST', '/kiln-fire/start', { index: 1 })).status, 200);
   let l1 = (await api('GET', '/kiln-lines')).body[0];
-  assert.equal(l1.state, 'Firing'); assert.ok(l1.firedAt && l1.loadedAt);
+  assert.equal(l1.state, 'Firing'); assert.ok(l1.firedAt && l1.loadedAt); assert.equal(l1.round, 1);
   assert.equal((await api('PUT', '/kiln-lines/1/notes', { coalKg: 850, issues: 'Fan stopped 40 min; too much khangar at the top.' }, 'munshi')).status, 200);
+  // the next line is empty: the fire cannot move into it
+  assert.equal((await api('POST', '/fire-advance', { unit: 'line', clientUuid: randomUUID() })).status, 422);
+  await api('POST', '/kiln-lines/2/load', { teamId: String(team.insertedId), count: 4000, clientUuid: randomUUID() });
+  await api('PUT', '/settings', { key: 'hotLines', value: '30' });
   await api('POST', '/fire-advance', { unit: 'line', clientUuid: randomUUID() });
+  assert.equal((await api('GET', '/kiln-lines')).body[0].state, 'Cooling'); // hot: right behind the fire
+  assert.equal((await api('POST', '/kiln-lines/1/unload/start', { teamId: String(nteam.insertedId), clientUuid: randomUUID() })).status, 422);
+  await api('PUT', '/settings', { key: 'hotLines', value: '0' });
+  await api('POST', '/kiln-fire/start', { index: 2 }); // re-evaluates states
+  assert.equal((await api('GET', '/kiln-lines')).body[0].state, 'Ready');
   assert.equal((await api('POST', '/kiln-lines/1/unload/start', { teamId: String(nteam.insertedId), clientUuid: randomUUID() })).status, 201);
   assert.equal((await api('POST', '/kiln-lines/1/unload/complete', { awwal: 4000, doem: 500, khangar: 200, broken: 100, clientUuid: randomUUID() })).status, 201);
   const hist = (await api('GET', '/kiln-lines/1/history')).body;
@@ -553,12 +577,7 @@ test('loading and nikasi by worker name use their own team', async () => {
   assert.equal((await api('POST', `/kiln-lines/${idx}/load`, { workerId: loader, count: 4600, clientUuid: randomUUID() })).status, 201);
   const teams = (await api('GET', '/teams')).body;
   assert.ok(teams.some((tm) => tm.solo && tm.category === 'bharai' && tm.memberIds.includes(loader)));
-  // walk it to Cooling
-  for (let i = 0; i < 400; i++) {
-    const l = (await api('GET', '/kiln-lines')).body.find((x) => x.index === idx);
-    if (l.state === 'Cooling') break;
-    await api('POST', '/fire-advance', { unit: 'line', steps: 40, clientUuid: randomUUID() });
-  }
+  await fireToReady(idx, loader);
   assert.equal((await api('POST', `/kiln-lines/${idx}/unload/start`, { workerId: unloader, clientUuid: randomUUID() })).status, 201);
   assert.ok((await api('GET', '/teams')).body.some((tm) => tm.solo && tm.category === 'nikasi' && tm.memberIds.includes(unloader)));
   assert.ok((await api('GET', `/workers/${loader}/ledger`)).body.some((e) => e.type === 'loading_credit'));
@@ -721,16 +740,12 @@ test('legacy dates: fire advance time, firing shift day and nikasi start', async
   const idx = 210;
   const day = new Date(Date.now() - 50 * 86400000).toISOString().slice(0, 10);
   await api('POST', `/kiln-lines/${idx}/load`, { workerId: loader, count: 4500, date: day, clientUuid: randomUUID() });
-  // walk the fire to this line with back-dated advances
+  // start the fire here at an old date-time, then move it on
   const fireAt = `${day}T09:30:00.000Z`;
-  for (let i = 0; i < 300; i++) {
-    const l = (await api('GET', '/kiln-lines')).body.find((x) => x.index === idx);
-    if (l.state === 'Cooling') break;
-    assert.equal((await api('POST', '/fire-advance', { unit: 'line', steps: 40, at: fireAt, clientUuid: randomUUID() })).status, 201);
-  }
+  await fireToReady(idx, loader, fireAt);
   const line = (await api('GET', '/kiln-lines')).body.find((x) => x.index === idx);
   assert.equal(new Date(line.firedAt).toISOString(), fireAt);
-  assert.equal(new Date(line.cooledAt).toISOString(), fireAt);
+  assert.equal(new Date((await api('GET', '/kiln-lines')).body.find((x) => x.index === idx + 1).firedAt).toISOString(), fireAt);
   // a future fire time is refused
   const future = new Date(Date.now() + 3 * 86400000).toISOString();
   assert.equal((await api('POST', '/fire-advance', { unit: 'line', at: future, clientUuid: randomUUID() })).status, 400);
@@ -740,4 +755,29 @@ test('legacy dates: fire advance time, firing shift day and nikasi start', async
   assert.equal((await api('POST', '/firing-logs', { shift: 'night', teamId: String(fteam.insertedId), coalKg: 300, tempC: 900, date: day, clientUuid: randomUUID() })).status, 201);
   const log = (await api('GET', '/firing-logs')).body.find((f) => f.teamId === String(fteam.insertedId));
   assert.equal(new Date(log.date).toISOString().slice(0, 10), day);
+});
+
+test('corrections: nikasi and loading records can be edited and erased, wages follow', async () => {
+  await api('PUT', '/settings', { key: 'allowNegativeStock', value: '1' });
+  await api('PUT', '/settings', { key: 'rateNikasi', value: '250' });
+  await api('PUT', '/settings', { key: 'rateBharai', value: '510' });
+  const loader = (await newWorker({ category: 'bharai' })).body.id;
+  const unloader = (await newWorker({ category: 'nikasi' })).body.id;
+  const day = new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10);
+  const wage = async (w) => (await api('GET', `/workers/${w}/ledger`)).body.filter((e) => e.account === 'earnings').reduce((a, e) => a + Number(e.debit) - Number(e.credit), 0);
+  await api('POST', '/work-entries', { kind: 'nikasi', workerId: unloader, date: day, count: 4000, grade: 'awwal', clientUuid: randomUUID() });
+  await api('POST', '/work-entries', { kind: 'bharai', workerId: loader, date: day, count: 6000, clientUuid: randomUUID() });
+  assert.equal(await wage(unloader), 1000);   // 4,000 x 250 / 1000
+  assert.equal(await wage(loader), 3060);     // 6,000 x 510 / 1000
+  const nk = (await api('GET', `/corrections/nikasi?from=${day}&to=${day}`)).body.find((r) => r.awwal === 4000);
+  assert.equal((await api('PUT', `/unloadings/${nk._id}`, { awwal: 3000, doem: 1000 }, 'munshi')).status, 403);
+  assert.equal((await api('PUT', `/unloadings/${nk._id}`, { awwal: 3000, doem: 2000 })).status, 200);
+  assert.equal(await wage(unloader), 1250);   // 5,000 x 250 / 1000
+  assert.equal((await api('DELETE', `/unloadings/${nk._id}`)).status, 200);
+  assert.equal(await wage(unloader), 0);
+  const ld = (await api('GET', `/corrections/loads?from=${day}&to=${day}`)).body.find((r) => r.count === 6000 && r.unit === 'grid');
+  assert.equal((await api('PUT', `/section-loads/${ld._id}`, { count: 5000 })).status, 200);
+  assert.equal(await wage(loader), 2550);
+  assert.equal((await api('DELETE', `/section-loads/${ld._id}`)).status, 200);
+  assert.equal(await wage(loader), 0);
 });

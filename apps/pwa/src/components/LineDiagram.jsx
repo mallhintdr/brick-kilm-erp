@@ -1,66 +1,84 @@
 import { useMemo } from 'react';
 
-// Portrait plan of a kiln counted in lines: side A runs top -> bottom down the left (lines 1-120),
-// side B runs bottom -> top up the right (121-240), so line order == the direction the fire travels.
-// Each line is a thin strip coloured by its state; tap one to act on it.
-const STRIP_W = 120; const PITCH = 30; const STRIP_H = 24; // strips 3x thicker than before (4 -> 12)
-const PADX = 34; const CORR = 40; const TOP = 64; const BOTTOM = 24;
+// Plan of a line kiln as one continuous loop (a racetrack): line 1 sits at the middle of the top
+// curve and the lines run clockwise, evenly spaced, down the right, round the bottom and up the
+// left, so line 240 meets line 1 again. Each line is a strip across the kiln, coloured by state.
+const PITCH = 34;      // distance between line centres along the loop
+const THICK = 27;      // strip thickness (along the loop)
+const BAND = 112;      // strip length (across the kiln)
+const MARGIN = 26;
 
 export const LINE_FILL = {
   Empty: '#e2e8f0',
   Loading: '#60a5fa',
   Preheating: '#f59e0b',
   Firing: '#ef4444',
-  Cooling: '#6366f1',
+  Cooling: '#6366f1',   // hot, right behind the fire
+  Ready: '#14b8a6',     // fired and cooled enough for nikasi
   Unloading: '#22c55e',
 };
+const STATE_KEY = { Empty: 'empty', Loading: 'loading', Preheating: 'preheating', Firing: 'firingState', Cooling: 'cooling', Ready: 'readyToUnload', Unloading: 'unloading' };
 
-export default function LineDiagram({ lines, selected, onSelect, t }) {
+export default function LineDiagram({ lines, selected, onSelect, t, fireIndex }) {
   const geo = useMemo(() => {
-    const perSide = Math.ceil(lines.length / 2);
-    const xA = PADX;
-    const xB = PADX + STRIP_W + CORR;
-    const W = xB + STRIP_W + PADX;
-    const H = TOP + perSide * PITCH + BOTTOM;
-    const pos = (i) => (i < perSide
-      ? { x: xA, y: TOP + i * PITCH, side: 'A' }
-      : { x: xB, y: TOP + (perSide - 1 - (i - perSide)) * PITCH, side: 'B' });
-    return { perSide, xA, xB, W, H, pos };
+    const N = lines.length || 1;
+    const P = N * PITCH;
+    let R = 150;
+    let S = (P - 2 * Math.PI * R) / 2;
+    if (S < 0) { R = P / (2 * Math.PI); S = 0; }
+    const half = R + BAND / 2;
+    const W = 2 * (half + MARGIN);
+    const Cx = W / 2;
+    const Cy1 = MARGIN + half;
+    const Cy2 = Cy1 + S;
+    const H = Cy2 + half + MARGIN;
+    const qa = (Math.PI * R) / 2; // quarter arc
+    // centre point and the direction across the kiln (degrees) at distance d along the loop
+    const at = (d) => {
+      let x; let y; let ang;
+      if (d < qa) { ang = -90 + (d / qa) * 90; }
+      else if (d < qa + S) { return { x: Cx + R, y: Cy1 + (d - qa), ang: 0 }; }
+      else if (d < qa + S + 2 * qa) { ang = ((d - qa - S) / (2 * qa)) * 180; const r = (ang * Math.PI) / 180; return { x: Cx + R * Math.cos(r), y: Cy2 + R * Math.sin(r), ang }; }
+      else if (d < 3 * qa + 2 * S) { return { x: Cx - R, y: Cy2 - (d - 3 * qa - S), ang: 180 }; }
+      else { ang = 180 + ((d - 3 * qa - 2 * S) / qa) * 90; }
+      const r = (ang * Math.PI) / 180;
+      x = Cx + R * Math.cos(r); y = Cy1 + R * Math.sin(r);
+      return { x, y, ang };
+    };
+    const loop = (r) => `M${Cx} ${Cy1 - r}A${r} ${r} 0 0 1 ${Cx + r} ${Cy1}L${Cx + r} ${Cy2}A${r} ${r} 0 0 1 ${Cx - r} ${Cy2}L${Cx - r} ${Cy1}A${r} ${r} 0 0 1 ${Cx} ${Cy1 - r}Z`;
+    return { N, W, H, Cx, Cy1, Cy2, R, at, loop };
   }, [lines.length]);
 
   if (!lines.length) return null;
-  const { perSide, xA, xB, W, H, pos } = geo;
-  const corrX = xA + STRIP_W + 8;
-  const corrW = CORR - 16;
-  const stateLabel = (s) => t[{ Empty: 'empty', Loading: 'loading', Preheating: 'preheating', Firing: 'firingState', Cooling: 'cooling', Unloading: 'unloading' }[s]] || s;
+  const { W, H, Cx, Cy1, Cy2, R, at, loop } = geo;
+  const stateLabel = (st) => t[STATE_KEY[st]] || st;
+  const outer = R + BAND / 2 + 7;
+  const inner = Math.max(R - BAND / 2 - 7, 10);
 
   return (
     <div className="kiln-scroll">
       <div className="kiln kiln-lines">
         <svg viewBox={`0 0 ${W} ${H}`} role="group" aria-label={t.kilnBoard}>
-          {/* kiln body */}
-          <rect x={xA - 14} y={TOP - 18} width={W - 2 * xA + 28} height={perSide * PITCH + 30} rx="16" fill="#e9d8b8" stroke="#b89a68" strokeWidth="1.5" />
-          {/* fire corridor between the two sides, arrows show the fire's direction */}
-          <rect x={corrX} y={TOP - 6} width={corrW} height={perSide * PITCH + 10} rx={corrW / 2} fill="#7c5a3a" opacity=".25" />
-          <polygon points={`${corrX + 5},${TOP + perSide * PITCH / 2 - 6} ${corrX + 10},${TOP + perSide * PITCH / 2 + 4} ${corrX + 15},${TOP + perSide * PITCH / 2 - 6}`} fill="#7c5a3a" />
-          <polygon points={`${corrX + corrW - 15},${TOP + perSide * PITCH / 2 + 4} ${corrX + corrW - 10},${TOP + perSide * PITCH / 2 - 6} ${corrX + corrW - 5},${TOP + perSide * PITCH / 2 + 4}`} fill="#7c5a3a" />
-          {/* chimney */}
-          <polygon points={`${W / 2 - 9},${TOP - 18} ${W / 2 - 5},14 ${W / 2 + 5},14 ${W / 2 + 9},${TOP - 18}`} fill="#8b5e3c" stroke="#6b4423" />
-          <rect x={W / 2 - 8} y="9" width="16" height="6" rx="1.5" fill="#57534e" />
-          {/* side labels */}
-          <text x={xA + STRIP_W / 2} y={TOP - 24} textAnchor="middle" className="line-side">A · 1–{perSide}</text>
-          <text x={xB + STRIP_W / 2} y={TOP - 24} textAnchor="middle" className="line-side">B · {perSide + 1}–{lines.length}</text>
-
+          {/* kiln body: a brick ring with the open ground in the middle */}
+          <path d={loop(outer)} fill="#e9d8b8" stroke="#b89a68" strokeWidth="2" />
+          <path d={loop(inner)} fill="#f8fafc" stroke="#b89a68" strokeWidth="2" />
+          {/* chimney in the middle of the ground, with the direction of the fire */}
+          <g transform={`translate(${Cx} ${(Cy1 + Cy2) / 2})`} className="loop-centre">
+            <polygon points="-14,40 -8,-40 8,-40 14,40" fill="#8b5e3c" stroke="#6b4423" strokeWidth="2" />
+            <rect x="-11" y="-48" width="22" height="9" rx="2" fill="#57534e" />
+            <text y="74" textAnchor="middle" className="loop-dir">{t.clockwise} ↻</text>
+          </g>
           {lines.map((l, i) => {
-            const p = pos(i);
+            const p = at((i + 0.5) * PITCH);
             const sel = selected?.index === l.index;
             return (
-              <g key={l.index}>
+              <g key={l.index} transform={`translate(${p.x.toFixed(1)} ${p.y.toFixed(1)})`}>
                 <rect
-                  className={`line-strip st-${l.state}${sel ? ' line-sel' : ''}`}
-                  data-index={l.index}
-                  x={p.x} y={p.y} width={STRIP_W} height={STRIP_H} rx="1"
+                  className={`line-strip st-${l.state}${sel ? ' line-sel' : ''}${fireIndex === l.index ? ' fire-now' : ''}`}
+                  x={-BAND / 2} y={-THICK / 2} width={BAND} height={THICK} rx="3"
+                  transform={`rotate(${p.ang.toFixed(1)})`}
                   fill={LINE_FILL[l.state] || LINE_FILL.Empty}
+                  data-index={l.index}
                   role="button" tabIndex={0} aria-pressed={sel}
                   aria-label={`${t.line} ${l.index}: ${stateLabel(l.state)}`}
                   onClick={() => onSelect(l)}
@@ -68,14 +86,7 @@ export default function LineDiagram({ lines, selected, onSelect, t }) {
                 >
                   <title>{`${t.line} ${l.index} — ${stateLabel(l.state)}${l.currentLoad ? ` — ${l.currentLoad.toLocaleString()}` : ''}`}</title>
                 </rect>
-                {/* every line's number, centred inside its strip (taps go to the strip) */}
-                <text
-                  className="line-num" pointerEvents="none"
-                  x={p.x + STRIP_W / 2} y={p.y + STRIP_H / 2}
-                  textAnchor="middle" dominantBaseline="central"
-                >
-                  {l.index}
-                </text>
+                <text className="line-num" pointerEvents="none" textAnchor="middle" dominantBaseline="central">{l.index}</text>
               </g>
             );
           })}
