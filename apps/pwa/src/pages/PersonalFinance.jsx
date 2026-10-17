@@ -46,12 +46,12 @@ export default function PersonalFinance() {
   return (
     <div className="grid pf">
       <div className="pf-nav no-print" role="tablist">
-        {[['home', t.home], ['add', t.add], ['list', t.pfEntries], ['report', t.pfReport]].map(([k, label]) => (
+        {[['home', t.home], ['add', t.pfAddNew], ['list', t.pfAllEntries], ['report', t.pfGenReport]].map(([k, label]) => (
           <button key={k} type="button" role="tab" aria-selected={view === k} className={view === k ? 'on' : ''} onClick={() => { setMsg({ text: '', bad: false }); setView(k); }}>{label}</button>
         ))}
       </div>
       {msg.text && <p role={msg.bad ? 'alert' : 'status'} className={msg.bad ? 'err' : 'ok'}>{msg.text}</p>}
-      {view === 'home' && <PfHome t={t} rows={rows} parties={parties} go={setView} />}
+      {view === 'home' && <PfHome t={t} rows={rows} parties={parties} />}
       {view === 'add' && <PfAdd t={t} parties={parties} typeText={typeText} onSaved={() => { setMsg({ text: t.savedOk, bad: false }); load(); }} onError={(m) => setMsg({ text: m, bad: true })} />}
       {view === 'list' && <PfList t={t} rows={rows} parties={parties} typeText={typeText} modeText={modeText} reload={load} setMsg={setMsg} />}
       {view === 'report' && <PfReport t={t} rows={rows} parties={parties} typeText={typeText} modeText={modeText} />}
@@ -60,7 +60,7 @@ export default function PersonalFinance() {
 }
 
 // ---- Home: totals over everything, and one person's summary from the dropdown ----
-function PfHome({ t, rows, parties, go }) {
+function PfHome({ t, rows, parties }) {
   const [person, setPerson] = useState('');
   const pRows = rows.filter((r) => r.party === person);
   const allIn = sum(rows, 'in'); const allOut = sum(rows, 'out');
@@ -93,11 +93,6 @@ function PfHome({ t, rows, parties, go }) {
             </div>
           )}
         </div>
-      </div>
-      <div className="pf-modules">
-        <button type="button" onClick={() => go('add')}><span className="plus-icon" aria-hidden="true">+</span> {t.pfAddEntry}</button>
-        <button type="button" onClick={() => go('list')}>☰ {t.pfEntries}</button>
-        <button type="button" onClick={() => go('report')}>▤ {t.pfReport}</button>
       </div>
     </>
   );
