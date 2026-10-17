@@ -781,3 +781,28 @@ test('corrections: nikasi and loading records can be edited and erased, wages fo
   assert.equal((await api('DELETE', `/section-loads/${ld._id}`)).status, 200);
   assert.equal(await wage(loader), 0);
 });
+
+test('stage buttons walk a line: loading > preheating > firing > cooling > unloading', async () => {
+  await api('PUT', '/settings', { key: 'allowNegativeStock', value: '1' });
+  await api('PUT', '/settings', { key: 'hotLines', value: '30' });
+  await api('POST', '/kiln-fire/reset', {});
+  const loader = (await newWorker({ category: 'bharai' })).body.id;
+  const unloader = (await newWorker({ category: 'nikasi' })).body.id;
+  const idx = 99;
+  const state = async () => (await api('GET', '/kiln-lines')).body.find((x) => x.index === idx);
+  // cooling before firing is refused
+  await api('POST', `/kiln-lines/${idx}/load`, { workerId: loader, count: 4700, clientUuid: randomUUID() });
+  assert.equal((await state()).state, 'Preheating');
+  assert.equal((await api('POST', `/kiln-lines/${idx}/stage`, { stage: 'Cooling' })).status, 422);
+  // Firing (munshi may do it), then Cooling
+  assert.equal((await api('POST', '/kiln-fire/start', { index: idx }, 'munshi')).status, 200);
+  assert.equal((await state()).state, 'Firing');
+  assert.equal((await api('POST', `/kiln-lines/${idx}/stage`, { stage: 'Cooling' }, 'munshi')).status, 200);
+  assert.equal((await state()).state, 'Cooling');
+  // Unloading allowed straight from hand-set Cooling, then nikasi empties it
+  assert.equal((await api('POST', `/kiln-lines/${idx}/unload/start`, { workerId: unloader, clientUuid: randomUUID() })).status, 201);
+  assert.equal((await state()).state, 'Unloading');
+  assert.equal((await api('POST', `/kiln-lines/${idx}/unload/complete`, { awwal: 4000, doem: 400, khangar: 200, broken: 100, clientUuid: randomUUID() })).status, 201);
+  const l = await state();
+  assert.equal(l.state, 'Empty'); assert.ok(!l.stage);
+});

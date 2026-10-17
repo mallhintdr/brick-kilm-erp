@@ -3462,3 +3462,14 @@ main .card.grid:has(> h2 + p.muted) { gap: 0.45rem !important; }
 .legend-item.sec-ready { background: #ccfbf1; border-color: #14b8a6; }
 .fire-pos { font-size: 0.8rem; font-weight: 800; color: #b91c1c; background: #fee2e2; border-radius: 999px; padding: 0.2rem 0.6rem; white-space: nowrap; }
 .fire-btn { border-color: #ef4444 !important; color: #b91c1c !important; font-weight: 800; }
+
+/* Line stage buttons: Loading > Preheating > Firing > Cooling > Unloading, in their own colours */
+.stage-bar { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.25rem; }
+.stage-btn { min-height: 38px !important; padding: 0.2rem 0.15rem !important; border-radius: 8px; font-size: 0.68rem !important; font-weight: 800;
+  border: 2px solid var(--c); background: #fff; color: var(--c); line-height: 1.15; white-space: normal; cursor: pointer; }
+.stage-btn.st-Loading { --c: #2563eb; } .stage-btn.st-Preheating { --c: #d97706; } .stage-btn.st-Firing { --c: #dc2626; }
+.stage-btn.st-Cooling { --c: #4f46e5; } .stage-btn.st-Unloading { --c: #16a34a; }
+.stage-btn:not(:disabled) { background: var(--c); color: #fff; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18); }
+.stage-btn.now { background: color-mix(in srgb, var(--c) 18%, #fff); color: var(--c); outline: 2px solid var(--c); outline-offset: 1px; }
+.stage-btn.done { background: color-mix(in srgb, var(--c) 10%, #fff); color: var(--c); opacity: 0.75; }
+.stage-btn:disabled:not(.now):not(.done) { opacity: 0.4; cursor: default; }

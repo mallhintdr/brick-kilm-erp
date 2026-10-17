@@ -154,6 +154,21 @@ export default function KilnBoard({ focus } = {}) {
     act(() => post('/kiln-fire/reset', {}));
   };
 
+  // stage buttons: Loading > Preheating > Firing > Cooling > Unloading, one step at a time
+  const STAGES = ['Loading', 'Preheating', 'Firing', 'Cooling', 'Unloading'];
+  const stageOf = (row) => ({ Empty: 0, Loading: 0, Preheating: 1, Firing: 2, Cooling: 3, Ready: 3, Unloading: 4 }[row?.state] ?? 0);
+  const stageForm = useRef(null);
+  const goStage = (st) => {
+    if (st === 'Firing') {
+      act(() => post('/kiln-fire/start', { index: sel.index, ...(fireAt ? { at: new Date(fireAt).toISOString() } : {}) }), { keep: true });
+    } else if (st === 'Cooling') {
+      act(() => post(`${base}/${sel.index}/stage`, { stage: 'Cooling', ...(fireAt ? { at: new Date(fireAt).toISOString() } : {}) }), { keep: true });
+    } else {
+      // Loading and Unloading open their forms below
+      stageForm.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
   const saveNotes = () => act(() => put(`${base}/${sel.index}/notes`, {
     coalKg: notes.coalKg === '' ? 0 : Number(notes.coalKg), issues: notes.issues,
   }), { keep: true });
@@ -383,12 +398,35 @@ export default function KilnBoard({ focus } = {}) {
             <button type="button" className="close-btn" aria-label={t.close || 'Close'} title={t.close || 'Close'} onClick={() => setSel(null)}>✕</button>
           </div>
 
+          {unit === 'line' && (() => {
+            const cur = stageOf(sel);
+            const label = { Loading: t.loading, Preheating: t.preheating, Firing: t.firingState, Cooling: t.cooling, Unloading: t.unloading };
+            return (
+              <div className="stage-bar" role="group" aria-label={t.stages}>
+                {STAGES.map((st, i) => {
+                  const done = i < cur || (i === cur && st === 'Cooling' && sel.state === 'Ready');
+                  const now = i === cur && !done;
+                  const next = i === cur + 1 || (cur === 0 && i === 0 && !sel.currentLoad);
+                  // Preheating follows loading by itself; only Firing, Cooling and the forms are pressed
+                  const can = next && st !== 'Preheating' && !(st === 'Unloading' && cur < 3);
+                  return (
+                    <button key={st} type="button" className={`stage-btn st-${st}${now ? ' now' : ''}${done ? ' done' : ''}`}
+                      disabled={!can} aria-current={now ? 'step' : undefined} onClick={() => goStage(st)}>
+                      {done ? '✓ ' : ''}{label[st]}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
           {msg.text && (
             <p role={msg.bad ? 'alert' : 'status'} className={msg.bad ? 'err' : 'ok'} style={{ margin: 0 }}>
               {msg.text}
             </p>
           )}
 
+          <div ref={stageForm} />
           {sel.state === 'Empty' && (
             <div className="grid two" style={{ gap: '0.85rem' }}>
               {inventory?.greenStock !== undefined && (
@@ -430,7 +468,7 @@ export default function KilnBoard({ focus } = {}) {
             </div>
           )}
 
-          {unit === 'line' && sel.state === 'Cooling' && (
+          {unit === 'line' && sel.state === 'Cooling' && sel.stage !== 'Cooling' && (
             <p className="muted" style={{ margin: 0, textAlign: 'center' }}>{t.stillHot}</p>
           )}
           {isOwner && unit === 'line' && sel.currentLoad > 0 && fire?.index !== sel.index && (
@@ -438,7 +476,7 @@ export default function KilnBoard({ focus } = {}) {
               <button type="button" className="ghost fire-btn" onClick={startFireHere}>🔥 {t.startFireHere}</button>
             </div>
           )}
-          {(unit === 'line' ? sel.state === 'Ready' : sel.state === 'Cooling') && (
+          {(unit === 'line' ? (sel.state === 'Ready' || sel.stage === 'Cooling') : sel.state === 'Cooling') && (
             <div className="grid two" style={{ gap: '0.85rem' }}>
               <label style={{ gridColumn: '1 / -1' }}>
                 {t.unloaderOrTeam}

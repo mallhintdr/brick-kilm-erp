@@ -146,7 +146,7 @@ export function registerProductionRoutes(app, db) {
         await db.collection('sectionLoads').insertOne({ ...scope(req.user), unit, sectionIndex: b.sectionIndex, teamId: b.teamId, count: b.count, date: at, ledgerRef: loadRef }, { session });
         await db.collection(U.coll).updateOne(
           { ...scope(req.user), index: b.sectionIndex },
-          { $set: { state: 'Preheating', currentLoad: b.count, loadedAt: at, loadTeamId: b.teamId, loadRef, firedAt: null, cooledAt: null, coalKg: 0, issues: '' }, $inc: { round: 1 } }, { session },
+          { $set: { state: 'Preheating', currentLoad: b.count, loadedAt: at, loadTeamId: b.teamId, loadRef, firedAt: null, cooledAt: null, stage: null, coalKg: 0, issues: '' }, $inc: { round: 1 } }, { session },
         );
         const rate = await getSetting(db, req.user, 'rateBharai', SETTING_DEFAULTS, session);
         const gross = ((b.count / 1000) * Number(rate)).toFixed(2);
@@ -226,7 +226,7 @@ export function registerProductionRoutes(app, db) {
       await withTransaction(db, async (session) => {
         const sec = await db.collection(U.coll).findOne({ ...scope(req.user), index: b.sectionIndex }, { session });
         if (!sec) throw httpError(404, `${U.label} not found`);
-        const ready = unit === 'line' ? sec.state === 'Ready' : sec.state === 'Cooling';
+        const ready = unit === 'line' ? (sec.state === 'Ready' || sec.stage === 'Cooling') : sec.state === 'Cooling';
         if (!ready) throw httpError(422, unit === 'line'
           ? `Line ${b.sectionIndex} is not ready for nikasi (${sec.state === 'Cooling' ? 'still hot behind the fire' : sec.state})`
           : `Chamber ${b.sectionIndex} is not cooled yet (state: ${sec.state})`);
@@ -261,7 +261,7 @@ export function registerProductionRoutes(app, db) {
         }, { session });
         await db.collection(U.coll).updateOne(
           { ...scope(req.user), index: b.sectionIndex },
-          { $set: { state: 'Empty', currentLoad: 0, nikasiTeamId: null, loadTeamId: null, loadedAt: null, firedAt: null, cooledAt: null, coalKg: 0, issues: '' } }, { session },
+          { $set: { state: 'Empty', currentLoad: 0, nikasiTeamId: null, loadTeamId: null, loadedAt: null, firedAt: null, cooledAt: null, stage: null, coalKg: 0, issues: '' } }, { session },
         );
         const rate = await getSetting(db, req.user, 'rateNikasi', SETTING_DEFAULTS, session);
         const gross = ((total / 1000) * Number(rate)).toFixed(2);
@@ -299,7 +299,7 @@ export function registerProductionRoutes(app, db) {
     const s = scope(user);
     const [fire, lines] = await Promise.all([
       db.collection('kilnFire').findOne(s, { session }),
-      db.collection('kilnLines').find(s, { session, projection: { index: 1, state: 1, currentLoad: 1, firedAt: 1, nikasiTeamId: 1 } }).toArray(),
+      db.collection('kilnLines').find(s, { session, projection: { index: 1, state: 1, currentLoad: 1, firedAt: 1, nikasiTeamId: 1, stage: 1 } }).toArray(),
     ]);
     const N = lines.length;
     const hotRaw = Number(await getSetting(db, user, 'hotLines', SETTING_DEFAULTS, session));
@@ -310,6 +310,7 @@ export function registerProductionRoutes(app, db) {
       let st;
       if (!l.currentLoad) st = 'Empty';
       else if (l.nikasiTeamId) st = 'Unloading';
+      else if (l.stage === 'Cooling') st = 'Cooling'; // set by hand with the stage buttons
       else if (F && l.index === F) st = 'Firing';
       else if (l.firedAt) st = F && ((F - l.index + N) % N) <= hot ? 'Cooling' : 'Ready';
       else st = 'Preheating';
@@ -319,12 +320,33 @@ export function registerProductionRoutes(app, db) {
   }
   app.locals.recomputeLines = recomputeLines;
 
+  app.post('/kiln-lines/:index/stage', auth('owner', 'munshi'), wrap(async (req, res) => {
+    const b = z.object({ stage: z.enum(['Cooling']), at: z.coerce.date().optional() }).parse(req.body);
+    const when = b.at || new Date();
+    if (when.getTime() > Date.now() + 5 * 60 * 1000) throw httpError(400, 'Date cannot be in the future');
+    const index = Number(req.params.index);
+    await withTransaction(db, async (session) => {
+      const s = scope(req.user);
+      const line = await db.collection('kilnLines').findOne({ ...s, index }, { session });
+      if (!line) throw httpError(404, 'Line not found');
+      if (!line.currentLoad) throw httpError(422, `Line ${index} is not loaded`);
+      if (line.nikasiTeamId) throw httpError(422, `Line ${index} is already being unloaded`);
+      if (!line.firedAt && line.state !== 'Firing') throw httpError(422, `Line ${index} has not been fired yet; fire it first`);
+      await db.collection('kilnLines').updateOne({ _id: line._id }, { $set: { stage: 'Cooling', cooledAt: when, firedAt: line.firedAt || when } }, { session });
+      // if the fire was here, it has moved on: take the position away from this line
+      await db.collection('kilnFire').updateOne({ ...s, index }, { $set: { index: null, updatedAt: new Date() } }, { session });
+      await recomputeLines(req.user, session);
+      await audit(db, session, req.user, 'line.stage', { index, stage: b.stage, at: when });
+    });
+    res.json({ ok: true });
+  }));
+
   app.get('/kiln-fire', auth(), wrap(async (req, res) => {
     res.json(await db.collection('kilnFire').findOne(scope(req.user)) || { index: null });
   }));
 
   // Owner starts (or moves) the fire at any loaded line, at a chosen time (old records) or now.
-  app.post('/kiln-fire/start', auth('owner'), wrap(async (req, res) => {
+  app.post('/kiln-fire/start', auth('owner', 'munshi'), wrap(async (req, res) => {
     const b = z.object({ index: z.coerce.number().int().min(1), at: z.coerce.date().optional() }).parse(req.body);
     const when = b.at || new Date();
     if (when.getTime() > Date.now() + 5 * 60 * 1000) throw httpError(400, 'Date cannot be in the future');
@@ -334,7 +356,7 @@ export function registerProductionRoutes(app, db) {
       if (!line) throw httpError(404, 'Line not found');
       if (!line.currentLoad) throw httpError(422, `Line ${b.index} has no bricks; load it before starting the fire there`);
       await db.collection('kilnFire').updateOne(s, { $set: { index: b.index, startIndex: b.index, startedAt: when, updatedAt: new Date() }, $setOnInsert: s }, { upsert: true, session });
-      await db.collection('kilnLines').updateOne({ _id: line._id }, { $set: { firedAt: line.firedAt || when } }, { session });
+      await db.collection('kilnLines').updateOne({ _id: line._id }, { $set: { firedAt: line.firedAt || when, stage: null } }, { session });
       await recomputeLines(req.user, session);
       await audit(db, session, req.user, 'fire.start', { index: b.index, at: when });
     });
@@ -346,7 +368,7 @@ export function registerProductionRoutes(app, db) {
     await withTransaction(db, async (session) => {
       const s = scope(req.user);
       await db.collection('kilnFire').deleteOne(s, { session });
-      await db.collection('kilnLines').updateMany({ ...s, nikasiTeamId: { $in: [null, undefined] } }, { $set: { firedAt: null, cooledAt: null } }, { session });
+      await db.collection('kilnLines').updateMany({ ...s, nikasiTeamId: { $in: [null, undefined] } }, { $set: { firedAt: null, cooledAt: null, stage: null } }, { session });
       await recomputeLines(req.user, session);
       await audit(db, session, req.user, 'fire.reset', {});
     });
