@@ -13,6 +13,7 @@ const entryInput = z.object({
   type: z.enum(PERSONAL_TYPES),
   direction: z.enum(['in', 'out']), // in = credit (money received), out = debit (money paid / given)
   amount: z.coerce.number().positive().max(1e12),
+  mode: z.enum(['cash', 'account', 'jazzcash', 'easypaisa', 'other']).default('cash'), // how the money moved
   note: z.string().trim().max(1000).optional().default(''),
 });
 

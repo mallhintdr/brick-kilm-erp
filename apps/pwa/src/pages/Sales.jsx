@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useT } from '../i18n.js';
 import { get, post, uuid, fmtDateTime } from '../api.js';
+import AmountHint from '../components/AmountHint.jsx';
 import DateTime from '../components/DateTime.jsx';
 import SearchSelect from '../components/SearchSelect.jsx';
 import { useTypes, typeLabel } from '../useTypes.js';
@@ -245,6 +246,7 @@ export default function Sales() {
               <label>
                 {t.amount}
                 <input required inputMode="decimal" placeholder="Payment amount" value={payf.amount} onChange={(e) => setPayf({ ...payf, amount: e.target.value })} />
+                <AmountHint value={payf.amount} />
               </label>
               <label>
                 {t.entryDate}

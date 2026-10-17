@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useT } from '../i18n.js';
 import { get, post, put, del, fmtDate } from '../api.js';
+import AmountHint from '../components/AmountHint.jsx';
 import { IconBtn } from '../components/RowActions.jsx';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -8,7 +9,8 @@ const TYPES = ['borrowed', 'loanGiven', 'repaymentIn', 'repaymentOut', 'cashGive
 // usual direction for each type (it can still be changed on the form)
 const DIR = { borrowed: 'in', loanGiven: 'out', repaymentIn: 'in', repaymentOut: 'out', cashGiven: 'out', expense: 'out', income: 'in', other: 'out' };
 const rs = (n) => Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
-const blank = () => ({ date: today(), party: '', type: 'expense', direction: 'out', amount: '', note: '' });
+const MODES = ['cash', 'account', 'jazzcash', 'easypaisa', 'other'];
+const blank = () => ({ date: today(), party: '', type: 'expense', direction: 'out', amount: '', mode: 'cash', note: '' });
 
 // Running balance down a list in date order: + money in, - money out.
 const withBalance = (rows) => {
@@ -49,7 +51,7 @@ export default function PersonalFinance() {
   }
   function startEdit(r) {
     setEditId(r._id);
-    setF({ date: r.date, party: r.party, type: r.type, direction: r.direction, amount: String(r.amount), note: r.note || '' });
+    setF({ date: r.date, party: r.party, type: r.type, direction: r.direction, amount: String(r.amount), mode: r.mode || 'cash', note: r.note || '' });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -57,7 +59,7 @@ export default function PersonalFinance() {
   const listed = useMemo(() => withBalance(rows).reverse(), [rows]);
   const has = (v, q) => !q || String(v ?? '').toLowerCase().includes(q.toLowerCase());
   const shown = listed.filter((r) => has(fmtDate(r.date), lf.date) && has(r.party, lf.party) && has(typeText(r.type), lf.type) && has(r.note, lf.note)
-    && (!lf.dir || r.direction === lf.dir));
+    && (!lf.dir || r.direction === lf.dir) && (!lf.mode || (r.mode || 'cash') === lf.mode));
   const total = (list, d) => list.filter((r) => r.direction === d).reduce((a, r) => a + r.amount, 0);
   const allIn = total(rows, 'in'); const allOut = total(rows, 'out');
 
@@ -95,7 +97,13 @@ export default function PersonalFinance() {
               <option value="out">{t.pfOut}</option>
             </select>
           </label>
-          <label>{t.amount}<input required inputMode="decimal" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value.replace(/[^\d.]/g, '') })} /></label>
+          <label>{t.amount}<input required inputMode="decimal" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value.replace(/[^\d.]/g, '') })} /><AmountHint value={f.amount} /></label>
+          <label>
+            {t.pfMode}
+            <select value={f.mode} onChange={(e) => setF({ ...f, mode: e.target.value })}>
+              {MODES.map((m) => <option key={m} value={m}>{t[`pm_${m}`]}</option>)}
+            </select>
+          </label>
         </div>
         <label>{t.pfNote}<textarea rows={2} value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} /></label>
         <div className="row" style={{ justifyContent: 'center', gap: '0.4rem' }}>
@@ -124,13 +132,18 @@ export default function PersonalFinance() {
         <table>
           <thead>
             <tr>
-              <th className="sticky-col">{t.date}</th><th>{t.pfParty}</th><th>{t.pfType}</th><th>{t.pfIn}</th><th>{t.pfOut}</th>
+              <th className="sticky-col">{t.date}</th><th>{t.pfParty}</th><th>{t.pfType}</th><th>{t.pfMode}</th><th>{t.pfIn}</th><th>{t.pfOut}</th>
               <th>{t.balance}</th><th>{t.pfNote}</th><th className="actions">{t.action}</th>
             </tr>
             <tr className="filter-row">
               <th className="sticky-col"><input type="search" className="table-col-filter" aria-label={t.date} value={lf.date || ''} onChange={(e) => setLf({ ...lf, date: e.target.value })} /></th>
               <th><input type="search" className="table-col-filter" aria-label={t.pfParty} value={lf.party || ''} onChange={(e) => setLf({ ...lf, party: e.target.value })} /></th>
               <th><input type="search" className="table-col-filter" aria-label={t.pfType} value={lf.type || ''} onChange={(e) => setLf({ ...lf, type: e.target.value })} /></th>
+              <th>
+                <select className="table-col-filter" aria-label={t.pfMode} value={lf.mode || ''} onChange={(e) => setLf({ ...lf, mode: e.target.value })}>
+                  <option value="">—</option>{MODES.map((m) => <option key={m} value={m}>{t[`pm_${m}`]}</option>)}
+                </select>
+              </th>
               <th colSpan={2}>
                 <select className="table-col-filter" aria-label={t.pfDirection} value={lf.dir || ''} onChange={(e) => setLf({ ...lf, dir: e.target.value })}>
                   <option value="">—</option><option value="in">{t.pfIn}</option><option value="out">{t.pfOut}</option>
@@ -147,6 +160,7 @@ export default function PersonalFinance() {
                 <td><strong>{fmtDate(r.date)}</strong></td>
                 <td><strong>{r.party}</strong></td>
                 <td>{typeText(r.type)}</td>
+                <td>{t[`pm_${r.mode || 'cash'}`]}</td>
                 <td className="ok">{r.direction === 'in' ? rs(r.amount) : ''}</td>
                 <td className="err">{r.direction === 'out' ? rs(r.amount) : ''}</td>
                 <td><strong className={r.balance < 0 ? 'err' : 'ok'}>{rs(r.balance)}</strong></td>
@@ -157,7 +171,7 @@ export default function PersonalFinance() {
                 </div></td>
               </tr>
             ))}
-            {!shown.length && <tr><td colSpan={8} className="muted">{t.noEntries}</td></tr>}
+            {!shown.length && <tr><td colSpan={9} className="muted">{t.noEntries}</td></tr>}
           </tbody>
         </table>
       </div>
@@ -185,23 +199,23 @@ export default function PersonalFinance() {
         <div className="card table-wrap pf-report">
           <h2>{t.pfReport}{report.party ? `: ${report.party}` : ''} — {fmtDate(report.from)} → {fmtDate(report.to)}</h2>
           <table>
-            <thead><tr><th className="rownum">#</th><th>{t.date}</th><th>{t.pfParty}</th><th>{t.pfType}</th><th>{t.pfNote}</th><th>{t.pfIn}</th><th>{t.pfOut}</th><th>{t.balance}</th></tr></thead>
+            <thead><tr><th className="rownum">#</th><th>{t.date}</th><th>{t.pfParty}</th><th>{t.pfType}</th><th>{t.pfMode}</th><th>{t.pfNote}</th><th>{t.pfIn}</th><th>{t.pfOut}</th><th>{t.balance}</th></tr></thead>
             <tbody>
-              <tr><td className="rownum" /><td colSpan={6}><em>{t.pfOpening}</em></td><td><strong className={report.opening < 0 ? 'err' : 'ok'}>{rs(report.opening)}</strong></td></tr>
+              <tr><td className="rownum" /><td colSpan={7}><em>{t.pfOpening}</em></td><td><strong className={report.opening < 0 ? 'err' : 'ok'}>{rs(report.opening)}</strong></td></tr>
               {report.lines.map((r, i) => (
                 <tr key={r._id}>
                   <td className="rownum">{i + 1}</td>
-                  <td>{fmtDate(r.date)}</td><td>{r.party}</td><td>{typeText(r.type)}</td><td className="issues-cell">{r.note || ''}</td>
+                  <td>{fmtDate(r.date)}</td><td>{r.party}</td><td>{typeText(r.type)}</td><td>{t[`pm_${r.mode || 'cash'}`]}</td><td className="issues-cell">{r.note || ''}</td>
                   <td className="ok">{r.direction === 'in' ? rs(r.amount) : ''}</td>
                   <td className="err">{r.direction === 'out' ? rs(r.amount) : ''}</td>
                   <td><strong className={r.balance < 0 ? 'err' : 'ok'}>{rs(r.balance)}</strong></td>
                 </tr>
               ))}
-              {!report.lines.length && <tr><td colSpan={8} className="muted">{t.noEntries}</td></tr>}
+              {!report.lines.length && <tr><td colSpan={9} className="muted">{t.noEntries}</td></tr>}
             </tbody>
             <tfoot>
               <tr>
-                <td colSpan={5}><strong>{t.total}</strong></td>
+                <td colSpan={6}><strong>{t.total}</strong></td>
                 <td className="ok"><strong>{rs(report.tin)}</strong></td>
                 <td className="err"><strong>{rs(report.tout)}</strong></td>
                 <td><strong className={report.closing < 0 ? 'err' : 'ok'}>{rs(report.closing)}</strong></td>
