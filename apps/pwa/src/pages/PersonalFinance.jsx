@@ -55,8 +55,8 @@ export default function PersonalFinance() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  // consolidated list: balance runs over every entry, newest shown first; filters narrow the view
-  const listed = useMemo(() => withBalance(rows).reverse(), [rows]);
+  // consolidated list in date order (oldest first), balance running down the page; filters narrow the view
+  const listed = useMemo(() => withBalance(rows), [rows]);
   const has = (v, q) => !q || String(v ?? '').toLowerCase().includes(q.toLowerCase());
   const shown = listed.filter((r) => has(fmtDate(r.date), lf.date) && has(r.party, lf.party) && has(typeText(r.type), lf.type) && has(r.note, lf.note)
     && (!lf.dir || r.direction === lf.dir) && (!lf.mode || (r.mode || 'cash') === lf.mode));
