@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useT } from '../i18n.js';
 import { Link } from 'react-router-dom';
 import { get, post, uuid, getRole, fmtDateTime } from '../api.js';
-import AmountHint from '../components/AmountHint.jsx';
+import AmountHint, { fmtMoney, unfmtMoney } from '../components/AmountHint.jsx';
 import DateTime from '../components/DateTime.jsx';
 import SearchSelect from '../components/SearchSelect.jsx';
 
@@ -100,8 +100,8 @@ export default function Peshgi() {
             <input
               inputMode="decimal"
               placeholder="e.g. 5000"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              value={fmtMoney(amount)}
+              onChange={(e) => setAmount(unfmtMoney(e.target.value))}
             />
             <AmountHint value={amount} />
           </label>

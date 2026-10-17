@@ -29,15 +29,24 @@ export function amountWords(value, lang = 'en') {
   return out;
 }
 
-// Shown under an amount box while typing (245,230 — 2 Lac 45 Thousand 2 Hundred 30 Rs);
-// display only, nothing here is saved.
+// Shown under an amount box while typing, always in Urdu, right to left (largest unit on the right):
+// 2 لاکھ 45 ہزار 2 سو 30 روپے. Display only, nothing here is saved.
 export default function AmountHint({ value }) {
-  const { lang } = useLang();
-  const words = amountWords(value, lang);
+  const words = amountWords(String(value ?? '').replace(/,/g, ''), 'ur');
   if (!words) return null;
-  return (
-    <span className="amount-hint" aria-live="polite">
-      <strong>{Number(value).toLocaleString('en-US', { maximumFractionDigits: 2 })}</strong> — {words}
-    </span>
-  );
+  return <span className="amount-hint" dir="rtl" lang="ur" aria-live="polite">{words}</span>;
 }
+
+// Money box that shows thousands separators while typing (245,230) but hands back plain digits.
+export const fmtMoney = (raw) => {
+  const s = String(raw ?? '').replace(/,/g, '');
+  if (!s) return '';
+  const [int, dec] = s.split('.');
+  const g = int.replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return dec !== undefined ? `${g}.${dec.slice(0, 2)}` : g;
+};
+export const unfmtMoney = (shown) => {
+  const s = String(shown ?? '').replace(/[^\d.]/g, '');
+  const i = s.indexOf('.');
+  return i < 0 ? s : `${s.slice(0, i + 1)}${s.slice(i + 1).replace(/\./g, '').slice(0, 2)}`;
+};

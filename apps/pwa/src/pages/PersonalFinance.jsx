@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useT } from '../i18n.js';
 import { get, post, put, del, fmtDate } from '../api.js';
-import AmountHint from '../components/AmountHint.jsx';
+import AmountHint, { fmtMoney, unfmtMoney } from '../components/AmountHint.jsx';
 import { IconBtn } from '../components/RowActions.jsx';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -97,7 +97,7 @@ export default function PersonalFinance() {
               <option value="out">{t.pfOut}</option>
             </select>
           </label>
-          <label>{t.amount}<input required inputMode="decimal" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value.replace(/[^\d.]/g, '') })} /><AmountHint value={f.amount} /></label>
+          <label>{t.amount}<input required inputMode="decimal" value={fmtMoney(f.amount)} onChange={(e) => setF({ ...f, amount: unfmtMoney(e.target.value) })} /><AmountHint value={f.amount} /></label>
           <label>
             {t.pfMode}
             <select value={f.mode} onChange={(e) => setF({ ...f, mode: e.target.value })}>
