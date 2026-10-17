@@ -29,7 +29,7 @@ mkdir -p "$BACKUP_DIR"
 
 if [ "${1:-}" = "--restore" ]; then
   SRC="${2:-}"
-  [ -f "$SRC" ] || [ -f "$BACKUP_DIR/$SRC" ] && [ ! -f "$SRC" ] && SRC="$BACKUP_DIR/$SRC"
+  if [ ! -f "$SRC" ] && [ -f "$BACKUP_DIR/$SRC" ]; then SRC="$BACKUP_DIR/$SRC"; fi   # a bare file name is fine
   [ -f "$SRC" ] || { echo "Backup file not found: ${2:-<none>}"; echo "Available:"; ls -1t "$BACKUP_DIR" "$BACKUP_DIR/before-restore" 2>/dev/null; exit 1; }
   echo "This will REPLACE the live database '$DB' with: $SRC"
   read -r -p "Type YES to continue: " ok; [ "$ok" = "YES" ] || { echo "Cancelled."; exit 1; }
