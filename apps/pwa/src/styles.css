@@ -3473,3 +3473,4 @@ main .card.grid:has(> h2 + p.muted) { gap: 0.45rem !important; }
 .stage-btn.now { background: color-mix(in srgb, var(--c) 18%, #fff); color: var(--c); outline: 2px solid var(--c); outline-offset: 1px; }
 .stage-btn.done { background: color-mix(in srgb, var(--c) 10%, #fff); color: var(--c); opacity: 0.75; }
 .stage-btn:disabled:not(.now):not(.done) { opacity: 0.4; cursor: default; }
+@media print { .pf-report { max-height: none !important; overflow: visible !important; } }

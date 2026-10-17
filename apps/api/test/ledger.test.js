@@ -806,3 +806,19 @@ test('stage buttons walk a line: loading > preheating > firing > cooling > unloa
   const l = await state();
   assert.equal(l.state, 'Empty'); assert.ok(!l.stage);
 });
+
+test('personal finance: owner only; add, edit, delete', async () => {
+  assert.equal((await api('GET', '/personal', null, 'munshi')).status, 403);
+  assert.equal((await api('POST', '/personal', { date: '2026-10-01', party: 'Bank', type: 'borrowed', direction: 'in', amount: 100000 }, 'munshi')).status, 403);
+  const a = await api('POST', '/personal', { date: '2026-10-01', party: 'Bank', type: 'borrowed', direction: 'in', amount: 100000, note: 'Kiln repair loan' });
+  assert.equal(a.status, 201);
+  await api('POST', '/personal', { date: '2026-10-02', party: 'Shop', type: 'expense', direction: 'out', amount: 2500 });
+  assert.equal((await api('POST', '/personal', { date: '2026-10-03', party: 'X', type: 'expense', direction: 'out', amount: -5 })).status, 400);
+  let rows = (await api('GET', '/personal')).body;
+  assert.equal(rows.length, 2);
+  assert.equal((await api('PUT', `/personal/${a.body.id}`, { amount: 120000 })).status, 200);
+  rows = (await api('GET', '/personal?party=Bank')).body;
+  assert.equal(rows[0].amount, 120000);
+  assert.equal((await api('DELETE', `/personal/${a.body.id}`)).status, 200);
+  assert.equal((await api('GET', '/personal')).body.length, 1);
+});

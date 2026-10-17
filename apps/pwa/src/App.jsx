@@ -26,6 +26,7 @@ import Khata from './pages/Khata.jsx';
 import Roznamcha from './pages/Roznamcha.jsx';
 import Attendance from './pages/Attendance.jsx';
 import Corrections from './pages/Corrections.jsx';
+import PersonalFinance from './pages/PersonalFinance.jsx';
 import PrintWorkerSlip from './pages/PrintWorkerSlip.jsx';
 import PrintKharchiSlip from './pages/PrintKharchiSlip.jsx';
 
@@ -156,6 +157,7 @@ const ROW_2_LINKS = [
   { to: '/roznamcha', icon: 'reports', color: '#0f766e', labelKey: 'roznamcha' },
   { to: '/attendance', icon: 'workers', color: '#16a34a', labelKey: 'attendance' },
   { to: '/corrections', icon: 'settings', color: '#dc2626', labelKey: 'corrections', roles: ['owner'] },
+  { to: '/personal', icon: 'money', color: '#7c3aed', labelKey: 'personalFinance', roles: ['owner'] },
   { to: '/workers', icon: 'workers', color: '#0d9488', labelKey: 'workers' },
   { to: '/settings', icon: 'settings', color: '#78716c', labelKey: 'settings' },
   { to: '/audit-logs', icon: 'auditLogs', color: '#64748b', labelKey: 'auditLogs', roles: ['owner', 'accountant'] },
@@ -274,6 +276,7 @@ export default function App() {
         <Route path="/roznamcha" element={guard(<Roznamcha />)} />
         <Route path="/attendance" element={guard(<Attendance />)} />
         <Route path="/corrections" element={guard(<Corrections />)} />
+        <Route path="/personal" element={guard(<PersonalFinance />)} />
         <Route path="/loading" element={guard(<KilnBoard key="load" focus="load" />)} />
         <Route path="/unloading" element={guard(<KilnBoard key="unload" focus="unload" />)} />
         <Route path="/moulding" element={guard(<Moulding />)} />
