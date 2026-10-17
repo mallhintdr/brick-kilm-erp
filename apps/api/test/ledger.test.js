@@ -713,3 +713,31 @@ test('owner can edit or undo a line load; wages follow', async () => {
   // nothing to edit now
   assert.equal((await api('PUT', `/kiln-lines/${idx}/load`, { count: 100 })).status, 422);
 });
+
+test('legacy dates: fire advance time, firing shift day and nikasi start', async () => {
+  await api('PUT', '/settings', { key: 'allowNegativeStock', value: '1' });
+  const loader = (await newWorker({ category: 'bharai' })).body.id;
+  const unloader = (await newWorker({ category: 'nikasi' })).body.id;
+  const idx = 210;
+  const day = new Date(Date.now() - 50 * 86400000).toISOString().slice(0, 10);
+  await api('POST', `/kiln-lines/${idx}/load`, { workerId: loader, count: 4500, date: day, clientUuid: randomUUID() });
+  // walk the fire to this line with back-dated advances
+  const fireAt = `${day}T09:30:00.000Z`;
+  for (let i = 0; i < 300; i++) {
+    const l = (await api('GET', '/kiln-lines')).body.find((x) => x.index === idx);
+    if (l.state === 'Cooling') break;
+    assert.equal((await api('POST', '/fire-advance', { unit: 'line', steps: 40, at: fireAt, clientUuid: randomUUID() })).status, 201);
+  }
+  const line = (await api('GET', '/kiln-lines')).body.find((x) => x.index === idx);
+  assert.equal(new Date(line.firedAt).toISOString(), fireAt);
+  assert.equal(new Date(line.cooledAt).toISOString(), fireAt);
+  // a future fire time is refused
+  const future = new Date(Date.now() + 3 * 86400000).toISOString();
+  assert.equal((await api('POST', '/fire-advance', { unit: 'line', at: future, clientUuid: randomUUID() })).status, 400);
+  assert.equal((await api('POST', `/kiln-lines/${idx}/unload/start`, { workerId: unloader, date: day, clientUuid: randomUUID() })).status, 201);
+  // firing shift on an old day
+  const fteam = await testDb.collection('teams').insertOne({ tenantId: ctx.tenantId, kilnId: ctx.kilnId, category: 'jalai', label: 'Old Shift', memberIds: [loader] });
+  assert.equal((await api('POST', '/firing-logs', { shift: 'night', teamId: String(fteam.insertedId), coalKg: 300, tempC: 900, date: day, clientUuid: randomUUID() })).status, 201);
+  const log = (await api('GET', '/firing-logs')).body.find((f) => f.teamId === String(fteam.insertedId));
+  assert.equal(new Date(log.date).toISOString().slice(0, 10), day);
+});

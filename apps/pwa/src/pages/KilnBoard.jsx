@@ -41,6 +41,7 @@ export default function KilnBoard({ focus } = {}) {
   const [submitting, setSubmitting] = useState(false);
   const [advancing, setAdvancing] = useState(false);
   const [steps, setSteps] = useState('1');
+  const [fireAt, setFireAt] = useState(''); // blank = now; a past date-time for old records
   const [workers, setWorkers] = useState([]);
   const [notes, setNotes] = useState({ coalKg: '', issues: '' });
   const [history, setHistory] = useState([]);
@@ -167,7 +168,7 @@ export default function KilnBoard({ focus } = {}) {
 
   const fireAdvance = async () => {
     setAdvancing(true);
-    await act(() => post('/fire-advance', { unit, steps: unit === 'line' ? Number(steps) || 1 : 1, clientUuid: uuid() }));
+    await act(() => post('/fire-advance', { unit, steps: unit === 'line' ? Number(steps) || 1 : 1, ...(fireAt ? { at: new Date(fireAt).toISOString() } : {}), clientUuid: uuid() }));
     setAdvancing(false);
   };
 
@@ -180,6 +181,7 @@ export default function KilnBoard({ focus } = {}) {
 
   const startUnload = (row) => act(() => post(`${base}/${row.index}/unload/start`, {
     ...who(form.teamId),
+    date: form.date || new Date().toISOString().slice(0, 10),
     clientUuid: uuid(),
   }));
 
@@ -245,6 +247,11 @@ export default function KilnBoard({ focus } = {}) {
               <input inputMode="numeric" value={steps} onChange={(e) => setSteps(e.target.value.replace(/[^\d]/g, ''))} />
             </label>
           )}
+          <label className="steps-field fire-at">
+            {t.fireTime}
+            <input type="datetime-local" value={fireAt} max={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
+              onChange={(e) => setFireAt(e.target.value)} title={t.fireTimeHint} />
+          </label>
           <button className="primary" disabled={advancing || !unit} onClick={fireAdvance}>
             🔥 {t.advanceFire}
           </button>
@@ -412,6 +419,10 @@ export default function KilnBoard({ focus } = {}) {
                   onChange={(v) => setForm({ ...form, teamId: v })}
                   options={pickOptions('nikasi')}
                 />
+              </label>
+              <label>
+                {t.entryDate}
+                <input type="date" max={new Date().toISOString().slice(0, 10)} value={form.date || new Date().toISOString().slice(0, 10)} onChange={(e) => setForm({ ...form, date: e.target.value })} />
               </label>
               <button
                 className="primary"

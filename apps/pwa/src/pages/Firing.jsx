@@ -9,7 +9,7 @@ export default function Firing() {
   const editor = useRowEdit();
   const [teams, setTeams] = useState([]);
   const [list, setList] = useState([]);
-  const [f, setF] = useState({ teamId: '', shift: 'day', coalKg: '', tempC: '', fanOn: true, genHours: '0' });
+  const [f, setF] = useState({ teamId: '', shift: 'day', coalKg: '', tempC: '', fanOn: true, genHours: '0', date: new Date().toISOString().slice(0, 10) });
   const [msg, setMsg] = useState({ text: '', bad: false });
   const [submitting, setSubmitting] = useState(false);
   const [filters, setFilters] = useState({});
@@ -78,6 +78,11 @@ export default function Firing() {
               <option value="day">☀️ {t.day}</option>
               <option value="night">🌙 {t.night}</option>
             </select>
+          </label>
+
+          <label>
+            {t.entryDate}
+            <input type="date" required max={new Date().toISOString().slice(0, 10)} value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} />
           </label>
 
           <label>

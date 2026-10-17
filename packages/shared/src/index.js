@@ -292,6 +292,7 @@ export const kilnNoteInput = z.object({
 export const fireAdvanceInput = z.object({
   unit: z.enum(['chamber', 'line']).default('chamber'),
   steps: z.coerce.number().int().min(1).max(40).default(1), // lines (or chambers) the fire moves on
+  at: z.coerce.date().refine((d) => d.getTime() <= Date.now() + 5 * 60 * 1000, 'Date cannot be in the future').optional(), // when the fire moved (back-dated for old records); defaults to now
   clientUuid: z.string().uuid(),
 });
 
@@ -302,6 +303,7 @@ export const firingLogInput = z.object({
   tempC: z.coerce.number().int().min(0).max(2000),
   fanOn: z.boolean().default(true), // zig-zag kilns have no ID fan; kept for older logs
   genHours: z.coerce.number().min(0).max(24).default(0),
+  date: workDate.optional(), // day of the shift (back-dating allowed)
   clientUuid: z.string().uuid(),
 });
 
@@ -309,6 +311,7 @@ export const unloadStartInput = z.object({
   sectionIndex: positiveInt,
   teamId: z.string().optional(),
   workerId: z.string().optional(), // an unloader picked by name
+  date: workDate.optional(), // day nikasi started
   clientUuid: z.string().uuid(),
 });
 

@@ -224,7 +224,7 @@ export function registerProductionRoutes(app, db) {
         if (!sec) throw httpError(404, `${U.label} not found`);
         if (sec.state !== 'Cooling') throw httpError(422, `${U.label} ${b.sectionIndex} is not cooled yet (state: ${sec.state})`);
         await db.collection(U.coll).updateOne(
-          { ...scope(req.user), index: b.sectionIndex }, { $set: { state: 'Unloading', nikasiTeamId: b.teamId } }, { session },
+          { ...scope(req.user), index: b.sectionIndex }, { $set: { state: 'Unloading', nikasiTeamId: b.teamId, unloadStartedAt: entryAt(b.date) } }, { session },
         );
         await audit(db, session, req.user, `${unit}.unload.start`, b);
       });
@@ -287,6 +287,7 @@ export function registerProductionRoutes(app, db) {
   // In line mode the fire can move several lines in one go (`steps`).
   app.post('/fire-advance', auth('owner', 'munshi'), wrap(async (req, res) => {
     const b = fireAdvanceInput.parse(req.body);
+    const when = b.at || new Date(); // firing / cooling time stamped on the lines
     const U = KILN_UNITS[b.unit];
     const moved = await withTransaction(db, async (session) => {
       const changes = [];
@@ -299,12 +300,12 @@ export function registerProductionRoutes(app, db) {
         if (preheating) stepChanges.push({ index: preheating.index, from: 'Preheating', to: 'Firing' });
         if (!stepChanges.length) break; // nothing left to fire
         for (const c of stepChanges) {
-          const stamp = c.to === 'Firing' ? { firedAt: new Date() } : c.to === 'Cooling' ? { cooledAt: new Date() } : {};
+          const stamp = c.to === 'Firing' ? { firedAt: when } : c.to === 'Cooling' ? { cooledAt: when } : {};
           await db.collection(U.coll).updateOne({ ...scope(req.user), index: c.index }, { $set: { state: c.to, ...stamp } }, { session });
         }
         changes.push(...stepChanges);
       }
-      await db.collection('fireAdvances').insertOne({ ...scope(req.user), unit: b.unit, steps: b.steps, date: new Date(), changes, by: req.user.sub, clientUuid: b.clientUuid }, { session });
+      await db.collection('fireAdvances').insertOne({ ...scope(req.user), unit: b.unit, steps: b.steps, date: when, changes, by: req.user.sub, clientUuid: b.clientUuid }, { session });
       await audit(db, session, req.user, 'fire.advance', { unit: b.unit, steps: b.steps, changes });
       return changes;
     });
@@ -356,9 +357,10 @@ export function registerProductionRoutes(app, db) {
           throw httpError(422, `Only ${coalOnHandKg.toLocaleString()} kg coal in stock; enter ${b.coalKg.toLocaleString()} or less (or allow negative stock in Settings)`);
         }
       }
-      await db.collection('firingLogs').insertOne({ ...scope(req.user), shift: b.shift, teamId: b.teamId, coalKg: b.coalKg, tempC: b.tempC, fanOn: b.fanOn, genHours: b.genHours, date: new Date(), ledgerRef }, { session });
+      const at = entryAt(b.date);
+      await db.collection('firingLogs').insertOne({ ...scope(req.user), shift: b.shift, teamId: b.teamId, coalKg: b.coalKg, tempC: b.tempC, fanOn: b.fanOn, genHours: b.genHours, date: at, ledgerRef }, { session });
       const shiftRate = await getSetting(db, req.user, 'rateJalai', SETTING_DEFAULTS, session);
-      await creditTeam(db, session, req.user, b.teamId, shiftRate, 'shift_credit', ledgerRef, b.clientUuid);
+      await creditTeam(db, session, req.user, b.teamId, shiftRate, 'shift_credit', ledgerRef, b.clientUuid, at);
       await audit(db, session, req.user, 'firing.log', b);
     });
     res.status(201).json({ ok: true, fanAlert: !b.fanOn });
