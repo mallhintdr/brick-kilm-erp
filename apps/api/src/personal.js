@@ -40,7 +40,7 @@ export function registerPersonalRoutes(app, db) {
 
   app.put('/personal/:id', auth('owner'), wrap(async (req, res) => {
     const b = entryInput.partial().parse(req.body);
-    const r = await coll().updateOne({ _id: oidOf(req.params.id), ...scope(req.user), owner: req.user.sub }, { $set: { ...b, updatedAt: new Date() } });
+    const r = await coll().updateOne({ _id: oidOf(req.params.id), ...scope(req.user), owner: req.user.sub }, { $set: { ...b, updatedAt: new Date(), edited: true } });
     if (!r.matchedCount) throw httpError(404, 'Entry not found');
     await audit(db, undefined, req.user, 'personal.update', { id: req.params.id });
     res.json({ ok: true });

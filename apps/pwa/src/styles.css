@@ -3479,3 +3479,43 @@ main .card.grid:has(> h2 + p.muted) { gap: 0.45rem !important; }
 .amount-hint strong { color: #0f172a; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
 /* amount in Urdu words: small, right-aligned, right to left */
 .amount-hint { display: block; text-align: right; direction: rtl; font-family: 'Noori Nastaleeq', 'Jameel Noori Nastaleeq', serif; font-size: 0.78rem !important; font-weight: 500 !important; color: #0f766e; line-height: 1.6; }
+
+/* ==========================================================================
+   PERSONAL FINANCE
+   ========================================================================== */
+.pf-nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.3rem; }
+.pf-nav button { min-height: 38px !important; padding: 0 0.3rem !important; border-radius: 9px; border: 1.5px solid #cbd5e1; background: #fff; font-weight: 800; font-size: 0.8rem; color: #334155; cursor: pointer; }
+.pf-nav button.on { background: #7c3aed; border-color: #7c3aed; color: #fff; }
+.pf-modules { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; }
+.pf-modules button { min-height: 64px !important; border-radius: 12px; border: 1.5px solid #c4b5fd; background: #f5f3ff; color: #5b21b6; font-weight: 800; font-size: 0.85rem; cursor: pointer; }
+.pf-form label { font-size: 0.76rem; white-space: nowrap; }
+.pf-form label > input, .pf-form label > select, .pf-form .pf-name input { font-size: 0.85rem; }
+.pf-name { position: relative; display: block; }
+.pf-name input { width: 100%; }
+.pf-name-list { position: absolute; z-index: 40; inset-inline: 0; top: calc(100% + 2px); margin: 0; padding: 0.2rem; list-style: none; max-height: 200px; overflow-y: auto;
+  background: #fff; border: 1.5px solid #cbd5e1; border-radius: 8px; box-shadow: 0 8px 20px rgba(15, 23, 42, 0.15); white-space: normal; }
+.pf-name-list li { padding: 0.4rem 0.55rem; border-radius: 6px; cursor: pointer; font-size: 0.84rem; font-weight: 600; }
+.pf-name-list li:hover { background: #f5f3ff; }
+table tbody tr.pf-edited > td { background: #fff7ed !important; }
+table tbody tr.pf-editing > td { background: #eff6ff !important; }
+.pf-edited-tag { font-size: 0.68rem; font-weight: 800; color: #c2410c; white-space: nowrap; }
+.pf-report-head { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: nowrap; padding: 0.6rem 0.85rem; font-size: 0.85rem; white-space: nowrap; border-bottom: 1.5px solid #cbd5e1; }
+.pf-net { font-size: 0.82rem; font-weight: 700; gap: 0.4rem; }
+
+/* Export PDF: print only the report, landscape, fitted to the page, dark headers, coloured balances */
+@media print {
+  @page { size: A4 landscape; margin: 10mm; }
+  body.printing-pf * { visibility: hidden !important; }
+  body.printing-pf .print-area, body.printing-pf .print-area * { visibility: visible !important; }
+  body.printing-pf .print-area { position: absolute; inset: 0 auto auto 0; width: 100%; max-height: none !important; overflow: visible !important; border: 0 !important; box-shadow: none !important; }
+  body.printing-pf .app-shell, body.printing-pf main { position: static !important; overflow: visible !important; height: auto !important; }
+  body.printing-pf .print-area table { width: 100% !important; font-size: 9pt; table-layout: auto; }
+  body.printing-pf .print-area th, body.printing-pf .print-area td { white-space: normal !important; padding: 3px 5px !important; border: 1px solid #94a3b8 !important; }
+  body.printing-pf .print-area thead th { background: #1e293b !important; color: #fff !important; }
+  body.printing-pf .print-area tfoot td { background: #e2e8f0 !important; }
+  body.printing-pf .print-area .ok, body.printing-pf .print-area .ok * { color: #15803d !important; }
+  body.printing-pf .print-area .err, body.printing-pf .print-area .err * { color: #b91c1c !important; }
+  body.printing-pf .print-area, body.printing-pf .print-area * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body.printing-pf .pf-report-head { font-size: 11pt; }
+}
+.pf-list tbody tr:nth-child(even) > td, .pf-report tbody tr:nth-child(even) > td { background: #f8fafc; }
