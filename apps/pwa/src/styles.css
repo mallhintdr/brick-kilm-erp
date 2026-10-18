@@ -3532,3 +3532,7 @@ table tbody tr.pf-editing > td { background: #eff6ff !important; }
 .fireman-pick legend { font-size: 0.8rem; font-weight: 700; padding: 0 0.3rem; }
 .fireman-pick button { min-height: 34px !important; padding: 0 0.7rem !important; border-radius: 999px; border: 1.5px solid #fdba74; background: #fff7ed; color: #9a3412; font-weight: 700; font-size: 0.82rem; cursor: pointer; }
 .fireman-pick button.on { background: #ea580c; border-color: #ea580c; color: #fff; }
+
+/* corrections: four compact tabs in one row; long names wrap inside the button instead of overlapping */
+.wx-tabs.corr-tabs { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.25rem !important; }
+.wx-tabs.corr-tabs button { min-height: 30px !important; padding: 0.15rem 0.25rem !important; font-size: 0.68rem !important; line-height: 1.15; white-space: normal !important; overflow-wrap: anywhere; border-radius: 8px; }

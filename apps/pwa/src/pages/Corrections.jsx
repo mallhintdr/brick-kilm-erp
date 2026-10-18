@@ -56,7 +56,7 @@ export default function Corrections() {
       <div className="card grid">
         <h2>{t.corrections}</h2>
         <p className="muted" style={{ margin: 0, textAlign: 'center' }}>{t.correctionsHint}</p>
-        <div className="wx-tabs" role="tablist">
+        <div className="wx-tabs corr-tabs" role="tablist">
           {[['loads', t.loadingBharai], ['nikasi', t.unloadingNikasi], ['moulding', t.moulding], ['firing', t.firing]].map(([k, label]) => (
             <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{label}</button>
           ))}
