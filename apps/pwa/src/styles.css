@@ -3557,3 +3557,25 @@ table tbody tr.pf-editing > td { background: #eff6ff !important; }
   background: #f0fdf4; color: #15803d; border: 1.5px solid #86efac; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12); transition: background 0.15s, transform 0.15s; }
 .wx-title button.wx-refresh:hover { background: #dcfce7; transform: rotate(-20deg); }
 .wx-title button.wx-refresh .spin { animation: status-spin 0.8s linear infinite; }
+
+/* ==========================================================================
+   INFO CARDS (option A): gradient in the card's own colour, soft coloured
+   shadow, a small lift on hover/tap, bigger coloured number
+   ========================================================================== */
+.stat.stat {
+  background: linear-gradient(160deg, rgba(var(--tone, 234, 88, 12), 0.07) 0%, rgba(var(--tone, 234, 88, 12), 0.22) 100%) !important;
+  border: 1px solid rgba(var(--tone, 234, 88, 12), 0.3) !important;
+  border-radius: 14px;
+  box-shadow: 0 4px 14px -6px rgba(var(--tone, 234, 88, 12), 0.45), 0 1px 2px rgba(15, 23, 42, 0.06) !important;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.stat.stat:hover, .stat.stat:active {
+  transform: translateY(-2px);
+  border-color: rgba(var(--tone, 234, 88, 12), 0.6) !important;
+  box-shadow: 0 8px 20px -6px rgba(var(--tone, 234, 88, 12), 0.55), 0 1px 2px rgba(15, 23, 42, 0.06) !important;
+}
+.stat.stat > strong { font-size: 1.4rem; letter-spacing: -0.01em; }
+.stat.stat > strong:not(.ok):not(.warn):not(.err) { color: color-mix(in srgb, rgb(var(--tone, 234, 88, 12)) 72%, #0f172a); }
+.stat.stat > span { color: color-mix(in srgb, rgb(var(--tone, 234, 88, 12)) 35%, #334155); }
+@media (prefers-reduced-motion: reduce) { .stat.stat, .stat.stat:hover, .stat.stat:active { transition: none; transform: none; } }
+@media print { .stat.stat { box-shadow: none !important; transform: none !important; } }
