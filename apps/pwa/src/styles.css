@@ -3583,3 +3583,7 @@ table tbody tr.pf-editing > td { background: #eff6ff !important; }
 .chart-checkbox-label { font-size: 0.56rem !important; }
 .chart-checkbox-legend-row.legend-wrap .chart-checkbox-label { font-size: 0.5rem !important; }
 .chart-checkbox-label input[type="checkbox"] { width: 12px !important; height: 12px !important; min-height: 12px !important; }
+/* legend checkboxes 30% smaller too (1.1rem -> 0.77rem; 15px -> 10.5px in wrapped legends) */
+.chart-checkbox-label input[type="checkbox"] { width: 0.77rem !important; height: 0.77rem !important; min-height: 0.77rem !important; }
+.chart-checkbox-legend-row.legend-wrap .chart-checkbox-label input[type="checkbox"] { width: 10.5px !important; height: 10.5px !important; min-height: 10.5px !important; }
+.chart-checkbox-label { gap: 0.2rem !important; }
