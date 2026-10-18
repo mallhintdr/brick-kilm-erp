@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import LineDiagram from '../components/LineDiagram.jsx';
 import { useT } from '../i18n.js';
 import { get, post, uuid, fmtDateTime } from '../api.js';
 import DateTime from '../components/DateTime.jsx';
@@ -8,9 +10,11 @@ export default function Firing() {
   const t = useT();
   const editor = useRowEdit();
   const [firemen, setFiremen] = useState([]);
-  const [lines, setLines] = useState([]); // lines now firing or preheating
+  const [allLines, setAllLines] = useState([]);
+  const [params] = useSearchParams();
+  const askedLine = Number(params.get('line')) || null; // from the kiln board's Firing button
   const [list, setList] = useState([]);
-  const [f, setF] = useState({ workerIds: [], shift: 'day', coalKg: '', tempC: '', fanOn: true, genHours: '0', lineIndex: '', time: new Date(Date.now() + 5 * 3600e3).toISOString().slice(11, 16), date: new Date().toISOString().slice(0, 10) });
+  const [f, setF] = useState({ workerIds: [], shift: 'day', coalKg: '', tempC: '', fanOn: true, genHours: '0', lineIndex: askedLine ? String(askedLine) : '', time: new Date(Date.now() + 5 * 3600e3).toISOString().slice(11, 16), date: new Date().toISOString().slice(0, 10) });
   const [msg, setMsg] = useState({ text: '', bad: false });
   const [submitting, setSubmitting] = useState(false);
   const [filters, setFilters] = useState({});
@@ -18,9 +22,17 @@ export default function Firing() {
   const load = () => {
     get('/workers').then((w) => setFiremen(w.filter((x) => x.category === 'jalai' && x.status !== 'inactive').sort((a, b) => a.name.localeCompare(b.name)))).catch(() => {});
     get('/firing-logs').then(setList).catch(() => {});
-    get('/kiln-lines').then((all) => setLines(all.filter((l) => l.state === 'Firing' || l.state === 'Preheating'))).catch(() => {});
+    get('/kiln-lines').then(setAllLines).catch(() => {});
   };
   useEffect(() => { load(); }, []);
+
+  // lines now firing or preheating, plus the one asked for / chosen on the plan
+  const lines = allLines.filter((l) => l.state === 'Firing' || l.state === 'Preheating' || l.index === Number(f.lineIndex) || l.index === askedLine);
+  const pickLine = (l) => {
+    if (!l.currentLoad || l.nikasiTeamId) return;
+    setF((cur) => ({ ...cur, lineIndex: String(l.index) }));
+    document.querySelector('.firing-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   async function submit(e) {
     e.preventDefault();
@@ -65,7 +77,7 @@ export default function Firing() {
       </div>
 
       {/* Firing Entry Form */}
-      <form className="card grid" onSubmit={submit}>
+      <form className="card grid firing-form" onSubmit={submit}>
         <h2>{t.firing} — Shift & Temperature Log</h2>
 
         <div className="grid two" style={{ gap: '0.9rem' }}>
@@ -99,8 +111,9 @@ export default function Firing() {
             {t.lineNo}
             <select value={f.lineIndex} onChange={(e) => setF({ ...f, lineIndex: e.target.value })}>
               <option value="">—</option>
-              {lines.map((l) => <option key={l.index} value={l.index}>{l.index} — {l.state === 'Firing' ? `🔥 ${t.stFiring}` : t.stPreheating}</option>)}
+              {lines.map((l) => <option key={l.index} value={l.index}>{l.index} — {l.state === 'Firing' ? `🔥 ${t.stFiring}` : l.state === 'Preheating' ? t.stPreheating : t[{ Loading: 'loading', Cooling: 'cooling', Ready: 'readyToUnload' }[l.state]] || l.state}</option>)}
             </select>
+            <span className="muted" style={{ fontSize: '0.72rem' }}>{t.chooseOnPlan}</span>
           </label>
 
           <label>
@@ -120,6 +133,15 @@ export default function Firing() {
 
         {msg.text && <p role={msg.bad ? 'alert' : 'status'} className={msg.bad ? 'err' : 'ok'}>{msg.text}</p>}
       </form>
+
+      {/* firing board: loading date + bricks, firing date and coal inside each line */}
+      {allLines.length > 0 && (
+        <div className="card">
+          <h2>{t.kilnBoard} — {t.firing}</h2>
+          <LineDiagram lines={allLines} selected={allLines.find((l) => l.index === Number(f.lineIndex))} onSelect={pickLine} t={t}
+            fireIndex={allLines.find((l) => l.state === 'Firing')?.index} mode="fire" />
+        </div>
+      )}
 
       {/* Firing History Table with Column Outlines and Quick Filters */}
       <div className="card table-wrap">

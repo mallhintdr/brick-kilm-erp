@@ -137,7 +137,18 @@ export function registerProductionRoutes(app, db) {
   for (const [unit, U] of Object.entries(KILN_UNITS)) {
     app.get(`/${U.path}`, auth(), wrap(async (req, res) => {
       if (unit === 'line') { await ensureLines(req.user); await recomputeLines(req.user); } // states follow the fire position
-      res.json(await db.collection(U.coll).find(scope(req.user)).sort({ index: 1 }).toArray());
+      const rows = await db.collection(U.coll).find(scope(req.user)).sort({ index: 1 }).toArray();
+      // an empty chamber/line still shows its last finished cycle (for the nikasi board)
+      const last = await db.collection('kilnCycles').aggregate([
+        { $match: { ...scope(req.user), unit } }, { $sort: { unloadedAt: -1 } },
+        { $group: { _id: '$index', c: { $first: '$$ROOT' } } },
+      ]).toArray();
+      const lastBy = new Map(last.map((x) => [x._id, x.c]));
+      for (const r of rows) {
+        const c = !r.currentLoad && lastBy.get(r.index);
+        if (c) r.last = { loadedAt: c.loadedAt, count: c.count, firedAt: c.firedAt, unloadedAt: c.unloadedAt, coalKg: (c.coalKg || 0) + (c.logCoalKg || 0), awwal: c.awwal, doem: c.doem, khangar: c.khangar };
+      }
+      res.json(rows);
     }));
 
     app.post(`/${U.path}/:index/load`, auth('owner', 'munshi'), wrap(async (req, res) => {
@@ -220,7 +231,7 @@ export function registerProductionRoutes(app, db) {
       const index = Number(req.params.index);
       await withTransaction(db, async (session) => {
         const { sec, rec, ref } = await currentLoad(req.user, index, session);
-        if (sec.state !== 'Preheating' || sec.firedAt) throw httpError(422, `${U.label} ${index} is already ${sec.state.toLowerCase()}; only a load that has not caught fire can be undone`);
+        if (!['Preheating', 'Loading'].includes(sec.state) || sec.firedAt) throw httpError(422, `${U.label} ${index} is already ${sec.state.toLowerCase()}; only a load that has not caught fire can be undone`);
         if (ref) await reverseBySource(db, session, req.user, ref, 'loading undone');
         if (rec) await db.collection('sectionLoads').deleteOne({ _id: rec._id }, { session });
         await db.collection(U.coll).updateOne({ _id: sec._id }, {
@@ -252,6 +263,20 @@ export function registerProductionRoutes(app, db) {
       res.status(201).json({ ok: true });
     }));
 
+    // owner cancels a nikasi that was started (team assigned) but not finished
+    app.post(`/${U.path}/:index/unload/cancel`, auth('owner'), wrap(async (req, res) => {
+      const index = Number(req.params.index);
+      await withTransaction(db, async (session) => {
+        const sec = await db.collection(U.coll).findOne({ ...scope(req.user), index }, { session });
+        if (!sec) throw httpError(404, `${U.label} not found`);
+        if (!sec.nikasiTeamId) throw httpError(422, `${U.label} ${index} has no nikasi started`);
+        await db.collection(U.coll).updateOne({ _id: sec._id }, { $set: { nikasiTeamId: null, unloadStartedAt: null, state: unit === 'line' ? 'Ready' : 'Cooling' } }, { session });
+        if (unit === 'line') await recomputeLines(req.user, session);
+        await audit(db, session, req.user, `${unit}.unload.cancel`, { index });
+      });
+      res.json({ ok: true });
+    }));
+
     app.post(`/${U.path}/:index/unload/complete`, auth('owner', 'munshi', 'mistri'), wrap(async (req, res) => {
       const b = unloadCompleteInput.parse({ ...req.body, sectionIndex: req.params.index });
       await withTransaction(db, async (session) => {
@@ -270,12 +295,12 @@ export function registerProductionRoutes(app, db) {
           ...scope(req.user), unit, index: b.sectionIndex, round: sec.round || 1, count: sec.currentLoad || 0,
           loadTeamId: sec.loadTeamId ?? null, nikasiTeamId: sec.nikasiTeamId ?? null,
           loadedAt: sec.loadedAt ?? null, firedAt: sec.firedAt ?? null, cooledAt: sec.cooledAt ?? null, unloadedAt: at,
-          coalKg: sec.coalKg || 0, issues: sec.issues || '',
+          coalKg: sec.coalKg || 0, logCoalKg: sec.logCoalKg || 0, issues: sec.issues || '',
           awwal: b.awwal, doem: b.doem, khangar: b.khangar, broken: b.broken,
         }, { session });
         await db.collection(U.coll).updateOne(
           { ...scope(req.user), index: b.sectionIndex },
-          { $set: { state: 'Empty', currentLoad: 0, nikasiTeamId: null, loadTeamId: null, loadedAt: null, firedAt: null, cooledAt: null, stage: null, coalKg: 0, issues: '' } }, { session },
+          { $set: { state: 'Empty', currentLoad: 0, nikasiTeamId: null, loadTeamId: null, loadedAt: null, firedAt: null, cooledAt: null, stage: null, coalKg: 0, logCoalKg: 0, unloadStartedAt: null, issues: '' } }, { session },
         );
         const rate = await getSetting(db, req.user, 'rateNikasi', SETTING_DEFAULTS, session);
         const gross = ((total / 1000) * Number(rate)).toFixed(2);
@@ -306,36 +331,76 @@ export function registerProductionRoutes(app, db) {
     }));
   }
 
-  // ---- Line kiln fire: one position moving clockwise round the lines ----
-  // Line states follow from where the fire is: loaded lines it has not reached are Preheating, the fire
-  // line is Firing, the `hotLines` behind it are Cooling (too hot for nikasi), further back is Ready.
+  // ---- Line kiln: states of the lines ----
+  // Firing log entries (line no + time + coal) drive the board: a line is fired from its first log of
+  // this round, and the fire is at the line of the latest log. Without any line logs, the older fire
+  // position (start / advance) is used. Of the fired lines behind the fire, the nearest `hotLines`
+  // stay Cooling (still hot, inside the kiln); the rest are Ready for nikasi. Loaded lines not fired
+  // yet are just Loading, or Preheating when marked so with the stage button.
   async function recomputeLines(user, session) {
     const s = scope(user);
-    const [fire, lines] = await Promise.all([
+    const [fire, lines, logs] = await Promise.all([
       db.collection('kilnFire').findOne(s, { session }),
-      db.collection('kilnLines').find(s, { session, projection: { index: 1, state: 1, currentLoad: 1, firedAt: 1, nikasiTeamId: 1, stage: 1 } }).toArray(),
+      db.collection('kilnLines').find(s, { session, projection: { index: 1, state: 1, currentLoad: 1, loadedAt: 1, firedAt: 1, nikasiTeamId: 1, stage: 1, logCoalKg: 1 } }).toArray(),
+      db.collection('firingLogs').find({ ...s, lineIndex: { $gte: 1 } }, { session, projection: { lineIndex: 1, date: 1, coalKg: 1 } }).toArray(),
     ]);
     const N = lines.length;
     const hotRaw = Number(await getSetting(db, user, 'hotLines', SETTING_DEFAULTS, session));
     const hot = Number.isFinite(hotRaw) && hotRaw >= 0 ? hotRaw : 30; // 0 is a real choice, not blank
-    const F = fire?.index ?? null;
+    const logMode = logs.length > 0;
+    const DAY = 864e5; const PK = 5 * 3600e3; // Pakistan day
+    const pkDayStart = (d) => Math.floor((new Date(d).getTime() + PK) / DAY) * DAY - PK;
+    const byLine = new Map();
+    for (const g of logs) { if (!byLine.has(g.lineIndex)) byLine.set(g.lineIndex, []); byLine.get(g.lineIndex).push(g); }
+    const info = new Map(); // index -> { first, last, coal } from this round's logs
+    let latest = null;
+    for (const l of lines) {
+      if (!l.currentLoad || l.nikasiTeamId) continue;
+      const from = l.loadedAt ? pkDayStart(l.loadedAt) : 0;
+      const mine = (byLine.get(l.index) || []).filter((g) => new Date(g.date).getTime() >= from);
+      if (!mine.length) continue;
+      const times = mine.map((g) => new Date(g.date).getTime());
+      const it = { first: Math.min(...times), last: Math.max(...times), coal: mine.reduce((acc, g) => acc + (g.coalKg || 0), 0) };
+      info.set(l.index, it);
+      if (!latest || it.last > latest.at) latest = { index: l.index, at: it.last };
+    }
+    const F = logMode ? (latest?.index ?? null) : (fire?.index ?? null);
+    if (logMode && (fire?.index ?? null) !== F) {
+      await db.collection('kilnFire').updateOne(s, { $set: { index: F, updatedAt: new Date() }, $setOnInsert: s }, { upsert: true, session });
+    }
+    const firedAt = (l) => (logMode ? info.get(l.index)?.first ?? null : (l.firedAt ? new Date(l.firedAt).getTime() : null));
+    const lastAt = (l) => (logMode ? info.get(l.index)?.last : new Date(l.firedAt).getTime()) || 0;
+    const live = (l) => l.currentLoad && !l.nikasiTeamId;
+    const behind = lines.filter((l) => live(l) && l.stage !== 'Cooling' && l.index !== F && firedAt(l) != null);
+    behind.sort((x, y) => (F ? ((F - x.index + N) % N) - ((F - y.index + N) % N) : lastAt(y) - lastAt(x)));
+    const hotSet = new Set(behind.slice(0, hot).map((l) => l.index));
     const ops = [];
     for (const l of lines) {
       let st;
       if (!l.currentLoad) st = 'Empty';
       else if (l.nikasiTeamId) st = 'Unloading';
       else if (l.stage === 'Cooling') st = 'Cooling'; // set by hand with the stage buttons
-      else if (F && l.index === F) st = 'Firing';
-      else if (l.firedAt) st = F && ((F - l.index + N) % N) <= hot ? 'Cooling' : 'Ready';
-      else st = 'Preheating';
-      if (st !== l.state) ops.push({ updateOne: { filter: { _id: l._id }, update: { $set: { state: st } } } });
+      else if (F && l.index === F && (firedAt(l) != null || !logMode)) st = 'Firing';
+      else if (firedAt(l) != null) st = hotSet.has(l.index) ? 'Cooling' : 'Ready';
+      else if (l.stage === 'Preheating') st = 'Preheating'; // marked by hand
+      else st = 'Loading';
+      const set = {};
+      if (st !== l.state) set.state = st;
+      if (logMode && live(l)) {
+        const fa = firedAt(l);
+        const cur = l.firedAt ? new Date(l.firedAt).getTime() : null;
+        if (fa !== cur && l.stage !== 'Cooling') set.firedAt = fa == null ? null : new Date(fa);
+        const coal = info.get(l.index)?.coal || 0;
+        if ((l.logCoalKg || 0) !== coal) set.logCoalKg = coal;
+      }
+      if (Object.keys(set).length) ops.push({ updateOne: { filter: { _id: l._id }, update: { $set: set } } });
     }
     if (ops.length) await db.collection('kilnLines').bulkWrite(ops, { session });
   }
   app.locals.recomputeLines = recomputeLines;
 
   app.post('/kiln-lines/:index/stage', auth('owner', 'munshi'), wrap(async (req, res) => {
-    const b = z.object({ stage: z.enum(['Cooling']), at: z.coerce.date().optional() }).parse(req.body);
+    const b = z.object({ stage: z.enum(['Cooling', 'Preheating', 'Loading']), at: z.coerce.date().optional() }).parse(req.body);
     const when = b.at || new Date();
     if (when.getTime() > Date.now() + 5 * 60 * 1000) throw httpError(400, 'Date cannot be in the future');
     const index = Number(req.params.index);
@@ -345,6 +410,14 @@ export function registerProductionRoutes(app, db) {
       if (!line) throw httpError(404, 'Line not found');
       if (!line.currentLoad) throw httpError(422, `Line ${index} is not loaded`);
       if (line.nikasiTeamId) throw httpError(422, `Line ${index} is already being unloaded`);
+      if (b.stage !== 'Cooling') {
+        // mark (or unmark) a loaded line as preheating; only before it is fired
+        if (line.firedAt || line.state === 'Firing') throw httpError(422, `Line ${index} is already fired`);
+        await db.collection('kilnLines').updateOne({ _id: line._id }, { $set: { stage: b.stage === 'Preheating' ? 'Preheating' : null } }, { session });
+        await recomputeLines(req.user, session);
+        await audit(db, session, req.user, 'line.stage', { index, stage: b.stage });
+        return;
+      }
       if (!line.firedAt && line.state !== 'Firing') throw httpError(422, `Line ${index} has not been fired yet; fire it first`);
       await db.collection('kilnLines').updateOne({ _id: line._id }, { $set: { stage: 'Cooling', cooledAt: when, firedAt: line.firedAt || when } }, { session });
       // if the fire was here, it has moved on: take the position away from this line
@@ -494,9 +567,15 @@ export function registerProductionRoutes(app, db) {
         if (at.getTime() > Date.now() + 5 * 60 * 1000) throw httpError(400, 'Time cannot be in the future');
       }
       await db.collection('firingLogs').insertOne({ ...scope(req.user), shift: b.shift, teamId: b.teamId, lineIndex: b.lineIndex ?? null, coalKg: b.coalKg, tempC: b.tempC, fanOn: b.fanOn, genHours: b.genHours, date: at, ledgerRef }, { session });
+      if (b.lineIndex) {
+        const line = await db.collection('kilnLines').findOne({ ...scope(req.user), index: b.lineIndex }, { session });
+        if (!line) throw httpError(404, `Line ${b.lineIndex} not found`);
+        if (!line.currentLoad) throw httpError(422, `Line ${b.lineIndex} is not loaded`);
+      }
       const shiftRate = await getSetting(db, req.user, 'rateJalai', SETTING_DEFAULTS, session);
       // one shift rate per shift, paid to the fireman (he pays the helpers under him)
       await creditTeam(db, session, req.user, b.teamId, shiftRate, 'shift_credit', ledgerRef, b.clientUuid, at);
+      if (b.lineIndex) await recomputeLines(req.user, session);
       await audit(db, session, req.user, 'firing.log', b);
     });
     res.status(201).json({ ok: true, fanAlert: !b.fanOn });
@@ -564,7 +643,7 @@ export function registerProductionRoutes(app, db) {
       kachiBharai: loaded.count || 0,
       jalai: {
         // how far the fire has got: units waiting, burning, cooling, being unloaded, and bricks inside
-        preheating: st.Preheating?.n || 0, firing: st.Firing?.n || 0, cooling: st.Cooling?.n || 0,
+        preheating: (st.Preheating?.n || 0) + (st.Loading?.n || 0), firing: st.Firing?.n || 0, cooling: st.Cooling?.n || 0,
         unloading: st.Unloading?.n || 0, empty: st.Empty?.n || 0,
         bricksInKiln: unitStates.filter((r) => r._id !== 'Empty').reduce((a, r) => a + r.bricks, 0),
       },

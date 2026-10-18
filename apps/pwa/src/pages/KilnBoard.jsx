@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useT } from '../i18n.js';
 import { get, post, put, del, uuid, getRole, fmtDate, fmtDateTime } from '../api.js';
 import KilnDiagram from '../components/KilnDiagram.jsx';
@@ -33,6 +34,7 @@ const UNIT_PATH = { chamber: 'kiln-sections', line: 'kiln-lines' };
 export default function KilnBoard({ focus } = {}) {
   const t = useT();
   const isOwner = getRole() === 'owner';
+  const navigate = useNavigate();
   const [unit, setUnit] = useState(null); // null until the kiln's setting has loaded
   const [rows, setRows] = useState([]);
   const [teams, setTeams] = useState([]);
@@ -144,23 +146,17 @@ export default function KilnBoard({ focus } = {}) {
   };
   useEffect(() => { setLoadEdit(null); }, [sel?.index]);
 
-  // owner: start the fire at this line (old records: at the Fire Time chosen above), or clear it
-  const startFireHere = () => {
-    if (!window.confirm(`${t.startFireHere}: ${t.line} ${sel.index}?`)) return;
-    act(() => post('/kiln-fire/start', { index: sel.index, ...(fireAt ? { at: new Date(fireAt).toISOString() } : {}) }), { keep: true });
-  };
-  const resetFire = () => {
-    if (!window.confirm(t.resetFireConfirm)) return;
-    act(() => post('/kiln-fire/reset', {}));
-  };
-
   // stage buttons: Loading > Preheating > Firing > Cooling > Unloading, one step at a time
   const STAGES = ['Loading', 'Preheating', 'Firing', 'Cooling', 'Unloading'];
   const stageOf = (row) => ({ Empty: 0, Loading: 0, Preheating: 1, Firing: 2, Cooling: 3, Ready: 3, Unloading: 4 }[row?.state] ?? 0);
   const stageForm = useRef(null);
   const goStage = (st) => {
     if (st === 'Firing') {
-      act(() => post('/kiln-fire/start', { index: sel.index, ...(fireAt ? { at: new Date(fireAt).toISOString() } : {}) }), { keep: true });
+      // firing is entered on the firing form (line, time, coal); the board follows it
+      if (unit === 'line') navigate(`/firing?line=${sel.index}`);
+      else act(() => post('/kiln-fire/start', { index: sel.index, ...(fireAt ? { at: new Date(fireAt).toISOString() } : {}) }), { keep: true });
+    } else if (st === 'Preheating') {
+      act(() => post(`${base}/${sel.index}/stage`, { stage: 'Preheating' }), { keep: true });
     } else if (st === 'Cooling') {
       act(() => post(`${base}/${sel.index}/stage`, { stage: 'Cooling', ...(fireAt ? { at: new Date(fireAt).toISOString() } : {}) }), { keep: true });
     } else {
@@ -270,7 +266,7 @@ export default function KilnBoard({ focus } = {}) {
               </button>
             ))}
           </div>
-          {unit === 'line' && (
+          {unit === 'chamber' && (
             <label className="steps-field">
               {t.linesPerAdvance}
               <input inputMode="numeric" value={steps} onChange={(e) => setSteps(e.target.value.replace(/[^\d]/g, ''))} />
@@ -284,12 +280,11 @@ export default function KilnBoard({ focus } = {}) {
           {unit === 'line' && (
             <span className="fire-pos" title={t.firePosition}>🔥 {fire?.index ? `${t.line} ${fire.index}` : t.fireNotStarted}</span>
           )}
-          {unit === 'line' && isOwner && fire?.index && (
-            <button type="button" className="ghost danger-text" onClick={resetFire}>{t.resetFire}</button>
+          {unit === 'chamber' && (
+            <button className="primary" disabled={advancing || !unit} onClick={fireAdvance}>
+              🔥 {t.advanceFire}
+            </button>
           )}
-          <button className="primary" disabled={advancing || !unit} onClick={fireAdvance}>
-            🔥 {t.advanceFire}
-          </button>
         </div>
       </div>
 
@@ -309,7 +304,7 @@ export default function KilnBoard({ focus } = {}) {
         </div>
 
         {unit === 'line'
-          ? <LineDiagram lines={rows} selected={sel} onSelect={pick} t={t} fireIndex={fire?.index} />
+          ? <LineDiagram lines={rows} selected={sel} onSelect={pick} t={t} fireIndex={fire?.index} mode={focus === 'load' ? 'load' : focus === 'unload' ? 'unload' : 'fire'} />
           : unit && <KilnDiagram sections={rows} selected={sel} onSelect={pick} t={t} />}
 
         <div className="legend">
@@ -330,7 +325,7 @@ export default function KilnBoard({ focus } = {}) {
           ['index', (r) => r.index], ['round', (r) => r.round || ''], ['state', (r) => stateText(r.state)],
           ['count', (r) => r.currentLoad || 0], ['team', (r) => teamName(r.loadTeamId)],
           ['loaded', (r) => (r.loadedAt ? fmtDate(r.loadedAt) : '')], ['fired', (r) => (r.firedAt ? fmtDateTime(r.firedAt) : '')],
-          ['coal', (r) => r.coalKg || ''], ['issues', (r) => r.issues || ''],
+          ['coal', (r) => ((r.coalKg || 0) + (r.logCoalKg || 0)) || ''], ['issues', (r) => r.issues || ''],
         ];
         const shown = rows.filter((r) => cols.every(([k, get]) => !lf[k] || String(get(r)).toLowerCase().includes(lf[k].toLowerCase())));
         const any = Object.values(lf).some(Boolean);
@@ -371,7 +366,7 @@ export default function KilnBoard({ focus } = {}) {
                     <td>{teamName(r.loadTeamId) || '—'}</td>
                     <td>{r.loadedAt ? <strong>{fmtDate(r.loadedAt)}</strong> : '—'}</td>
                     <td>{r.firedAt ? fmtDateTime(r.firedAt) : '—'}</td>
-                    <td>{r.coalKg ? `${Number(r.coalKg).toLocaleString()} kg` : '—'}</td>
+                    <td>{(r.coalKg || 0) + (r.logCoalKg || 0) ? `${((r.coalKg || 0) + (r.logCoalKg || 0)).toLocaleString()} kg` : '—'}</td>
                     <td className="issues-cell">{r.issues || '—'}</td>
                   </tr>
                 ))}
@@ -407,8 +402,10 @@ export default function KilnBoard({ focus } = {}) {
                   const done = i < cur || (i === cur && st === 'Cooling' && sel.state === 'Ready');
                   const now = i === cur && !done;
                   const next = i === cur + 1 || (cur === 0 && i === 0 && !sel.currentLoad);
-                  // Preheating follows loading by itself; only Firing, Cooling and the forms are pressed
-                  const can = next && st !== 'Preheating' && !(st === 'Unloading' && cur < 3);
+                  // Preheating is marked by hand; Firing can follow loading or preheating
+                  const loaded = sel.currentLoad > 0;
+                  const can = (next && !(st === 'Unloading' && cur < 3) && !(st === 'Preheating' && !loaded))
+                    || (st === 'Firing' && loaded && cur <= 1);
                   return (
                     <button key={st} type="button" className={`stage-btn st-${st}${now ? ' now' : ''}${done ? ' done' : ''}`}
                       disabled={!can} aria-current={now ? 'step' : undefined} onClick={() => goStage(st)}>
@@ -471,11 +468,7 @@ export default function KilnBoard({ focus } = {}) {
           {unit === 'line' && sel.state === 'Cooling' && sel.stage !== 'Cooling' && (
             <p className="muted" style={{ margin: 0, textAlign: 'center' }}>{t.stillHot}</p>
           )}
-          {isOwner && unit === 'line' && sel.currentLoad > 0 && fire?.index !== sel.index && (
-            <div className="row" style={{ justifyContent: 'center' }}>
-              <button type="button" className="ghost fire-btn" onClick={startFireHere}>🔥 {t.startFireHere}</button>
-            </div>
-          )}
+
           {(unit === 'line' ? (sel.state === 'Ready' || sel.stage === 'Cooling') : sel.state === 'Cooling') && (
             <div className="grid two" style={{ gap: '0.85rem' }}>
               <label style={{ gridColumn: '1 / -1' }}>
@@ -528,6 +521,11 @@ export default function KilnBoard({ focus } = {}) {
               <button className="primary" onClick={() => completeUnload(sel)}>
                 {t.completeUnload}
               </button>
+              {isOwner && (
+                <button type="button" className="ghost danger-text" onClick={() => {
+                  if (window.confirm(`${t.cancelNikasi}: ${unitLabel} ${sel.index}?`)) act(() => post(`${base}/${sel.index}/unload/cancel`, {}), { keep: true });
+                }}>✕ {t.cancelNikasi}</button>
+              )}
             </div>
           )}
 
@@ -536,7 +534,7 @@ export default function KilnBoard({ focus } = {}) {
               {isOwner && sel.currentLoad > 0 && !loadEdit && (
                 <div className="row" style={{ justifyContent: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                   <button type="button" className="ghost" onClick={startLoadEdit}>✎ {t.editLoading}</button>
-                  {sel.state === 'Preheating' && <button type="button" className="ghost danger-text" onClick={undoLoad}>↺ {t.undoLoading}</button>}
+                  {['Preheating', 'Loading'].includes(sel.state) && !sel.firedAt && <button type="button" className="ghost danger-text" onClick={undoLoad}>↺ {t.undoLoading}</button>}
                 </div>
               )}
               {loadEdit && (
@@ -559,6 +557,7 @@ export default function KilnBoard({ focus } = {}) {
                 <div><span>{t.firedOn}</span><strong>{sel.firedAt ? fmtDateTime(sel.firedAt) : '—'}</strong></div>
                 <div><span>{t.cooledOn}</span><strong>{sel.cooledAt ? fmtDateTime(sel.cooledAt) : '—'}</strong></div>
                 <div><span>{t.kachiBharai}</span><strong>{(sel.currentLoad || 0).toLocaleString()}</strong></div>
+                {sel.logCoalKg > 0 && <div><span>{t.coalFromLogs}</span><strong>{sel.logCoalKg.toLocaleString()} kg</strong></div>}
               </div>
               <div className="grid two">
                 <label>
@@ -590,7 +589,7 @@ export default function KilnBoard({ focus } = {}) {
                       <td>{h.firedAt ? fmtDateTime(h.firedAt) : '—'}</td>
                       <td>{fmtDate(h.unloadedAt)}</td>
                       <td>{(h.count || 0).toLocaleString()}</td>
-                      <td>{h.coalKg ? `${Number(h.coalKg).toLocaleString()} kg` : '—'}</td>
+                      <td>{(h.coalKg || 0) + (h.logCoalKg || 0) ? `${((h.coalKg || 0) + (h.logCoalKg || 0)).toLocaleString()} kg` : '—'}</td>
                       <td>{h.awwal.toLocaleString()}</td><td>{h.doem.toLocaleString()}</td><td>{h.khangar.toLocaleString()}</td><td>{h.broken.toLocaleString()}</td>
                       <td className="issues-cell">{h.issues || '—'}</td>
                     </tr>

@@ -3587,3 +3587,16 @@ table tbody tr.pf-editing > td { background: #eff6ff !important; }
 .chart-checkbox-label input[type="checkbox"] { width: 0.77rem !important; height: 0.77rem !important; min-height: 0.77rem !important; }
 .chart-checkbox-legend-row.legend-wrap .chart-checkbox-label input[type="checkbox"] { width: 10.5px !important; height: 10.5px !important; min-height: 10.5px !important; }
 .chart-checkbox-label { gap: 0.2rem !important; }
+
+/* kiln plan: bigger lines with small writing inside (dates, bricks, coal, grades) */
+.kiln-lines { max-width: 480px; }
+.line-num { font-size: 11px; font-weight: 800; }
+.line-info { font-size: 8.5px; font-weight: 700; font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  paint-order: stroke; stroke: rgba(255, 255, 255, 0.9); stroke-width: 2.4px; stroke-linejoin: round; }
+.line-info.ld { fill: #1e3a8a; }   /* loading date + bricks */
+.line-info.ct { fill: #0f172a; }
+.line-info.fr { fill: #b91c1c; }   /* firing date */
+.line-info.cl { fill: #78350f; }   /* coal */
+.line-info.nk { fill: #166534; }   /* nikasi date */
+.line-info.gr { fill: #166534; }   /* awwal / doem / khangar */
+.line-info.old { opacity: 0.8; }

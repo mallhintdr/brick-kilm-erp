@@ -792,6 +792,9 @@ test('stage buttons walk a line: loading > preheating > firing > cooling > unloa
   const state = async () => (await api('GET', '/kiln-lines')).body.find((x) => x.index === idx);
   // cooling before firing is refused
   await api('POST', `/kiln-lines/${idx}/load`, { workerId: loader, count: 4700, clientUuid: randomUUID() });
+  assert.equal((await state()).state, 'Loading');
+  // preheating is marked by hand
+  assert.equal((await api('POST', `/kiln-lines/${idx}/stage`, { stage: 'Preheating' })).status, 200);
   assert.equal((await state()).state, 'Preheating');
   assert.equal((await api('POST', `/kiln-lines/${idx}/stage`, { stage: 'Cooling' })).status, 422);
   // Firing (munshi may do it), then Cooling
@@ -821,4 +824,31 @@ test('personal finance: owner only; add, edit, delete', async () => {
   assert.equal(rows[0].amount, 120000);
   assert.equal((await api('DELETE', `/personal/${a.body.id}`)).status, 200);
   assert.equal((await api('GET', '/personal')).body.length, 1);
+});
+
+test('firing logs with a line drive the kiln board (fire, hot lines, ready, manual preheat)', async () => {
+  await api('PUT', '/settings', { key: 'allowNegativeStock', value: '1' });
+  await api('PUT', '/settings', { key: 'hotLines', value: '1' });
+  const loader = (await newWorker({ category: 'bharai' })).body.id;
+  const fireman = (await newWorker({ category: 'jalai' })).body.id;
+  const all = (await api('GET', '/kiln-lines')).body;
+  const a0 = all.find((x) => [0, 1, 2].every((k) => all.find((y) => y.index === x.index + k)?.state === 'Empty')).index;
+  const [A, B, C] = [a0, a0 + 1, a0 + 2];
+  for (const i of [A, B, C]) {
+    const r0 = await api('POST', `/kiln-lines/${i}/load`, { workerId: loader, count: 4000, clientUuid: randomUUID() }); assert.equal(r0.status, 201, JSON.stringify(r0.body));
+  }
+  assert.equal((await api('POST', `/kiln-lines/${C}/stage`, { stage: 'Preheating' })).status, 200);
+  const log = (lineIndex) => api('POST', '/firing-logs', { shift: 'day', workerIds: [fireman], coalKg: 500, tempC: 900, lineIndex, clientUuid: randomUUID() });
+  const r1 = await log(A); assert.equal(r1.status, 201, JSON.stringify(r1.body));
+  const r2 = await log(B); assert.equal(r2.status, 201, JSON.stringify(r2.body));
+  const E = all.find((x) => x.state === 'Empty' && (x.index < A || x.index > C)).index;
+  assert.equal((await log(E)).status, 422); // not loaded
+  const st = async () => Object.fromEntries((await api('GET', '/kiln-lines')).body.filter((x) => x.index >= A && x.index <= C).map((x) => [x.index, x]));
+  let s = await st();
+  assert.equal(s[B].state, 'Firing'); assert.equal(s[A].state, 'Cooling'); assert.equal(s[C].state, 'Preheating');
+  assert.ok(s[A].firedAt); assert.equal(s[A].logCoalKg, 500);
+  assert.equal((await api('GET', '/kiln-fire')).body.index, B);
+  await api('PUT', '/settings', { key: 'hotLines', value: '0' });
+  s = await st();
+  assert.equal(s[A].state, 'Ready');
 });

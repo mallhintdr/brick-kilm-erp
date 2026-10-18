@@ -3,10 +3,35 @@ import { useMemo } from 'react';
 // Plan of a line kiln as one continuous loop (a racetrack): line 1 sits at the middle of the top
 // curve and the lines run clockwise, evenly spaced, down the right, round the bottom and up the
 // left, so line 240 meets line 1 again. Each line is a strip across the kiln, coloured by state.
-const PITCH = 34;      // distance between line centres along the loop
-const THICK = 27;      // strip thickness (along the loop)
-const BAND = 112;      // strip length (across the kiln)
-const MARGIN = 26;
+const PITCH = 40;      // distance between line centres along the loop
+const THICK = 34;      // strip thickness (along the loop)
+const BAND = 170;      // strip length (across the kiln)
+const MARGIN = 20;
+
+// short date / time for the small writing inside a line
+const dm = (x) => { if (!x) return ''; const d = new Date(x); return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
+const hm = (x) => { if (!x) return ''; const d = new Date(x); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+const n = (x) => Number(x || 0).toLocaleString();
+
+// What each board writes inside a line: mode 'load' (bharai), 'fire' (jalai), 'unload' (nikasi).
+function infoLines(l, mode) {
+  const coal = (l.coalKg || 0) + (l.logCoalKg || 0);
+  if (!l.currentLoad) {
+    const c = mode === 'unload' && l.last;
+    if (!c) return [];
+    return [
+      { c: 'ld old', t: `${dm(c.loadedAt)} · ${n(c.count)}` },
+      { c: 'fr old', t: `F ${dm(c.firedAt)}  N ${dm(c.unloadedAt)}` },
+      { c: 'gr', t: `A ${n(c.awwal)} D ${n(c.doem)} K ${n(c.khangar)}` },
+    ];
+  }
+  if (mode === 'load') return [{ c: 'ld', t: dm(l.loadedAt) }, { c: 'ct', t: n(l.currentLoad) }];
+  const head = { c: 'ld', t: `${dm(l.loadedAt)} · ${n(l.currentLoad)}` };
+  if (mode === 'unload') {
+    return [head, l.firedAt && { c: 'fr', t: `F ${dm(l.firedAt)}` }, l.unloadStartedAt && { c: 'nk', t: `N ${dm(l.unloadStartedAt)}` }].filter(Boolean);
+  }
+  return [head, l.firedAt && { c: 'fr', t: `F ${dm(l.firedAt)} ${hm(l.firedAt)}` }, coal > 0 && { c: 'cl', t: `${n(coal)} kg` }].filter(Boolean);
+}
 
 export const LINE_FILL = {
   Empty: '#e2e8f0',
@@ -19,11 +44,11 @@ export const LINE_FILL = {
 };
 const STATE_KEY = { Empty: 'empty', Loading: 'loading', Preheating: 'preheating', Firing: 'firingState', Cooling: 'cooling', Ready: 'readyToUnload', Unloading: 'unloading' };
 
-export default function LineDiagram({ lines, selected, onSelect, t, fireIndex }) {
+export default function LineDiagram({ lines, selected, onSelect, t, fireIndex, mode = 'fire' }) {
   const geo = useMemo(() => {
     const N = lines.length || 1;
     const P = N * PITCH;
-    let R = 150;
+    let R = 120;
     let S = (P - 2 * Math.PI * R) / 2;
     if (S < 0) { R = P / (2 * Math.PI); S = 0; }
     const half = R + BAND / 2;
@@ -71,12 +96,16 @@ export default function LineDiagram({ lines, selected, onSelect, t, fireIndex })
           {lines.map((l, i) => {
             const p = at((i + 0.5) * PITCH);
             const sel = selected?.index === l.index;
+            // writing runs along the line and stays upright (the strip looks the same turned round)
+            let up = ((p.ang % 360) + 360) % 360;
+            if (up > 90 && up < 270) up -= 180;
+            const info = infoLines(l, mode);
+            const y0 = -((info.length - 1) * 10) / 2;
             return (
-              <g key={l.index} transform={`translate(${p.x.toFixed(1)} ${p.y.toFixed(1)})`}>
+              <g key={l.index} transform={`translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) rotate(${up.toFixed(1)})`}>
                 <rect
                   className={`line-strip st-${l.state}${sel ? ' line-sel' : ''}${fireIndex === l.index ? ' fire-now' : ''}`}
                   x={-BAND / 2} y={-THICK / 2} width={BAND} height={THICK} rx="3"
-                  transform={`rotate(${p.ang.toFixed(1)})`}
                   fill={LINE_FILL[l.state] || LINE_FILL.Empty}
                   data-index={l.index}
                   role="button" tabIndex={0} aria-pressed={sel}
@@ -86,7 +115,10 @@ export default function LineDiagram({ lines, selected, onSelect, t, fireIndex })
                 >
                   <title>{`${t.line} ${l.index} — ${stateLabel(l.state)}${l.currentLoad ? ` — ${l.currentLoad.toLocaleString()}` : ''}`}</title>
                 </rect>
-                <text className="line-num" pointerEvents="none" textAnchor="middle" dominantBaseline="central">{l.index}</text>
+                <text className="line-num" x={-BAND / 2 + 13} pointerEvents="none" textAnchor="middle" dominantBaseline="central">{l.index}</text>
+                {info.map((r, k) => (
+                  <text key={k} className={`line-info ${r.c}`} x={-BAND / 2 + 28} y={y0 + k * 10} pointerEvents="none" dominantBaseline="central">{r.t}</text>
+                ))}
               </g>
             );
           })}
