@@ -52,10 +52,14 @@ export default function Weather() {
   return (
     <div className="grid">
       <div className="card grid wx-head">
-        <h2>{t.weather}{wx?.place ? ` — ${wx.place}` : ''}</h2>
-        <button type="button" className="wx-refresh" disabled={busy} onClick={() => load(true)} title={t.wxRefresh} aria-label={t.wxRefresh}>
-          <span className={busy ? 'spin' : undefined}>↻</span>
-        </button>
+        <div className="wx-title">
+          <h2>{t.weather}{wx?.place ? ` — ${wx.place}` : ''}</h2>
+          <button type="button" className="wx-refresh" disabled={busy} onClick={() => load(true)} title={t.wxRefresh} aria-label={t.wxRefresh}>
+            <svg className={busy ? 'spin' : undefined} viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M21 12a9 9 0 1 1-2.64-6.36" /><path d="M21 3v6h-6" />
+            </svg>
+          </button>
+        </div>
         <div className="wx-tabs" role="tablist">
           {RANGES.map((r) => (
             <button key={r} type="button" role="tab" aria-selected={range === r} className={range === r ? 'on' : ''} onClick={() => setRange(r)}>

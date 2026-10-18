@@ -3550,3 +3550,10 @@ table tbody tr.pf-editing > td { background: #eff6ff !important; }
 .stage-bar .stage-btn.now { outline: 3px solid #0f172a; outline-offset: 1px; opacity: 1; }
 .stage-bar .stage-btn.done { opacity: 0.55; }
 .stage-bar .stage-btn:disabled:not(.now):not(.done) { opacity: 0.4; }
+/* weather: title on the left, small round refresh button on the right, never over the text */
+.wx-title { display: flex; align-items: center; gap: 0.5rem; }
+.wx-title h2 { flex: 1; min-width: 0; margin: 0; }
+.wx-title button.wx-refresh { position: static; flex: none; width: 32px; height: 32px; min-height: 32px !important; border-radius: 50%;
+  background: #f0fdf4; color: #15803d; border: 1.5px solid #86efac; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12); transition: background 0.15s, transform 0.15s; }
+.wx-title button.wx-refresh:hover { background: #dcfce7; transform: rotate(-20deg); }
+.wx-title button.wx-refresh .spin { animation: status-spin 0.8s linear infinite; }
