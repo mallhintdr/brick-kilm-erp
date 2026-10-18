@@ -3526,3 +3526,9 @@ table tbody tr.pf-editing > td { background: #eff6ff !important; }
 /* personal finance top buttons: always one row; text shrinks on small phones */
 .pf-nav { grid-template-columns: 0.8fr 1.2fr 1.1fr 1.3fr; gap: 0.25rem; }
 .pf-nav button { font-size: clamp(0.62rem, 2.6vw, 0.85rem); line-height: 1.15; white-space: normal; padding: 0.2rem 0.25rem !important; }
+
+/* firing form: tap firemen by name (one or more) */
+.fireman-pick { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0.35rem; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 0.5rem; margin: 0; }
+.fireman-pick legend { font-size: 0.8rem; font-weight: 700; padding: 0 0.3rem; }
+.fireman-pick button { min-height: 34px !important; padding: 0 0.7rem !important; border-radius: 999px; border: 1.5px solid #fdba74; background: #fff7ed; color: #9a3412; font-weight: 700; font-size: 0.82rem; cursor: pointer; }
+.fireman-pick button.on { background: #ea580c; border-color: #ea580c; color: #fff; }

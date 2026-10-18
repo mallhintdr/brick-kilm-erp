@@ -75,6 +75,20 @@ export async function soloTeamFor(db, session, user, workerId, category = 'pathe
   return String(r.insertedId);
 }
 
+// A crew of several workers (e.g. 2 firemen on a shift): find or make the team with exactly these members.
+export async function crewTeamFor(db, session, user, workerIds, category) {
+  const ids = [...new Set(workerIds)].sort();
+  if (ids.length === 1) return soloTeamFor(db, session, user, ids[0], category);
+  const s = scope(user);
+  const workers = await db.collection('workers').find({ ...s, _id: { $in: ids.map(teamOid) } }, { session }).toArray();
+  if (workers.length !== ids.length) throw httpError(404, 'Worker not found');
+  const existing = await db.collection('teams').findOne({ ...s, category, crew: true, memberIds: ids }, { session });
+  if (existing) return String(existing._id);
+  const label = ids.map((id) => workers.find((w) => String(w._id) === id).name).join(' + ');
+  const r = await db.collection('teams').insertOne({ ...s, category, label, memberIds: ids, crew: true, createdAt: new Date() }, { session });
+  return String(r.insertedId);
+}
+
 export const workDateTime = (d) => (d ? new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 12)) : new Date());
 
 // Shared by /inventory/summary and the stock guards below, so the number a guard
@@ -461,6 +475,9 @@ export function registerProductionRoutes(app, db) {
   // ---- Firing (jalai) ----
   app.post('/firing-logs', auth('owner', 'munshi', 'mistri'), wrap(async (req, res) => {
     const b = firingLogInput.parse(req.body);
+    const crew = b.workerIds?.length || 0;
+    if (crew) b.teamId = await crewTeamFor(db, undefined, req.user, b.workerIds, 'jalai');
+    if (!b.teamId) throw httpError(400, 'Choose the fireman (one or more)');
     const ledgerRef = `firing:${b.clientUuid}`;
     await withTransaction(db, async (session) => {
       const allowNegative = (await getSetting(db, req.user, 'allowNegativeStock', SETTING_DEFAULTS, session)) === '1';
@@ -473,7 +490,9 @@ export function registerProductionRoutes(app, db) {
       const at = entryAt(b.date);
       await db.collection('firingLogs').insertOne({ ...scope(req.user), shift: b.shift, teamId: b.teamId, coalKg: b.coalKg, tempC: b.tempC, fanOn: b.fanOn, genHours: b.genHours, date: at, ledgerRef }, { session });
       const shiftRate = await getSetting(db, req.user, 'rateJalai', SETTING_DEFAULTS, session);
-      await creditTeam(db, session, req.user, b.teamId, shiftRate, 'shift_credit', ledgerRef, b.clientUuid, at);
+      // firemen picked by name: each one earns the full shift rate (team total = rate x firemen)
+      const gross = crew ? (Number(shiftRate) * new Set(b.workerIds).size).toFixed(2) : shiftRate;
+      await creditTeam(db, session, req.user, b.teamId, gross, 'shift_credit', ledgerRef, b.clientUuid, at);
       await audit(db, session, req.user, 'firing.log', b);
     });
     res.status(201).json({ ok: true, fanAlert: !b.fanOn });

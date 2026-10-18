@@ -7,21 +7,22 @@ import RowActions, { useRowEdit } from '../components/RowActions.jsx';
 export default function Firing() {
   const t = useT();
   const editor = useRowEdit();
-  const [teams, setTeams] = useState([]);
+  const [firemen, setFiremen] = useState([]);
   const [list, setList] = useState([]);
-  const [f, setF] = useState({ teamId: '', shift: 'day', coalKg: '', tempC: '', fanOn: true, genHours: '0', date: new Date().toISOString().slice(0, 10) });
+  const [f, setF] = useState({ workerIds: [], shift: 'day', coalKg: '', tempC: '', fanOn: true, genHours: '0', date: new Date().toISOString().slice(0, 10) });
   const [msg, setMsg] = useState({ text: '', bad: false });
   const [submitting, setSubmitting] = useState(false);
   const [filters, setFilters] = useState({});
 
   const load = () => {
-    get('/teams').then((all) => setTeams(all.filter((tm) => tm.category === 'jalai'))).catch(() => {});
+    get('/workers').then((w) => setFiremen(w.filter((x) => x.category === 'jalai' && x.status !== 'inactive').sort((a, b) => a.name.localeCompare(b.name)))).catch(() => {});
     get('/firing-logs').then(setList).catch(() => {});
   };
   useEffect(() => { load(); }, []);
 
   async function submit(e) {
     e.preventDefault();
+    if (!f.workerIds.length) { setMsg({ text: t.chooseFireman, bad: true }); return; }
     setSubmitting(true);
     try {
       const r = await post('/firing-logs', {
@@ -64,13 +65,19 @@ export default function Firing() {
         <h2>{t.firing} — Shift & Temperature Log</h2>
 
         <div className="grid two" style={{ gap: '0.9rem' }}>
-          <label>
-            {t.team} (Jalai)
-            <select required value={f.teamId} onChange={(e) => setF({ ...f, teamId: e.target.value })}>
-              <option value="" disabled>— Select Jalai Team —</option>
-              {teams.map((tm) => <option key={tm._id} value={tm._id}>{tm.label}</option>)}
-            </select>
-          </label>
+          <fieldset className="fireman-pick">
+            <legend>{t.firemen} ({f.workerIds.length})</legend>
+            {firemen.map((w) => {
+              const on = f.workerIds.includes(w._id);
+              return (
+                <button key={w._id} type="button" aria-pressed={on} className={on ? 'on' : ''}
+                  onClick={() => setF({ ...f, workerIds: on ? f.workerIds.filter((id) => id !== w._id) : [...f.workerIds, w._id] })}>
+                  {on ? '✓ ' : ''}{w.name}{w.fatherName ? ` — ${w.fatherName}` : ''}
+                </button>
+              );
+            })}
+            {!firemen.length && <span className="muted">{t.noFiremen}</span>}
+          </fieldset>
 
           <label>
             {t.shift}

@@ -299,7 +299,8 @@ export const fireAdvanceInput = z.object({
 
 export const firingLogInput = z.object({
   shift: z.enum(['day', 'night']),
-  teamId: z.string(),
+  teamId: z.string().optional(),
+  workerIds: z.array(z.string()).max(20).optional(), // firemen picked by name (one or more)
   coalKg: positiveInt,
   tempC: z.coerce.number().int().min(0).max(2000),
   fanOn: z.boolean().default(true), // zig-zag kilns have no ID fan; kept for older logs
