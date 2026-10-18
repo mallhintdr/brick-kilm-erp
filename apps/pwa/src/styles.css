@@ -3603,3 +3603,5 @@ table tbody tr.pf-editing > td { background: #eff6ff !important; }
 /* line number outside the kiln; one date (current stage) in the middle of the line */
 .line-num.line-num-out { fill: #334155 !important; font-size: 10.5px; font-weight: 800; }
 .line-info { fill: #0f172a; font-size: 9px; }
+/* line number inside the strip near the outer edge: dark with a light halo so it reads on every colour */
+.line-num.line-num-out { fill: #0f172a !important; paint-order: stroke; stroke: rgba(255, 255, 255, 0.9); stroke-width: 2.4px; stroke-linejoin: round; }

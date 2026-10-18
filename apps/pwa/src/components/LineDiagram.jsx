@@ -6,7 +6,7 @@ import { useMemo } from 'react';
 const PITCH = 40;      // distance between line centres along the loop
 const THICK = 34;      // strip thickness (along the loop)
 const BAND = 170;      // strip length (across the kiln)
-const MARGIN = 34;      // room outside the kiln for the line numbers
+const MARGIN = 20;
 
 // short date / time for the small writing inside a line
 const dm = (x) => { if (!x) return ''; const d = new Date(x); return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
@@ -91,9 +91,9 @@ export default function LineDiagram({ lines, selected, onSelect, t, fireIndex, m
             let up = ((p.ang % 360) + 360) % 360;
             if (up > 90 && up < 270) up -= 180;
             const date = stageDate(l, mode);
-            // line number just outside the kiln, at the outer end of its strip
+            // line number inside the strip, close to the outer edge of the kiln
             const r = (p.ang * Math.PI) / 180;
-            const off = BAND / 2 + 17;
+            const off = BAND / 2 - 13; // inside the strip, near its outer end
             return (
               <g key={l.index} transform={`translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) rotate(${up.toFixed(1)})`}>
                 <rect
