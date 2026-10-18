@@ -378,6 +378,7 @@ export const grnInput = z.object({
   item: z.string().min(1),
   supplierName: z.string().min(2),
   vehicleNo: z.string().optional(),
+  description: z.string().max(500).optional(), // what was bought (items other than coal)
   qty: z.coerce.number().positive(), // tonnes for coal/soil, litres for diesel
   rate: moneyString, // per tonne / per litre
   freight: nonNegMoneyString.optional(), // 0 = delivered free

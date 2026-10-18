@@ -21,10 +21,9 @@ export default function Inventory() {
       setF((x) => ({ ...x, item: r.key }));
     } catch (e) { setMsg({ text: e.message, bad: true }); }
   }
-  const [summary, setSummary] = useState(null);
   const [unloadings, setUnloadings] = useState([]);
   const [grns, setGrns] = useState([]);
-  const [f, setF] = useState({ item: 'coal', supplierName: '', vehicleNo: '', qty: '', rate: '', freight: '0', date: new Date().toISOString().slice(0, 10) });
+  const [f, setF] = useState({ item: 'coal', supplierName: '', vehicleNo: '', description: '', qty: '', rate: '', freight: '0', date: new Date().toISOString().slice(0, 10) });
   const [lab, setLab] = useState({ calorificValue: '', ashPct: '', volatileMatterPct: '', silicaPct: '', aluminaPct: '', ironOxidePct: '' });
   const [msg, setMsg] = useState({ text: '', bad: false });
   const [submitting, setSubmitting] = useState(false);
@@ -35,7 +34,6 @@ export default function Inventory() {
     && has(g.supplierName, filters.supplier) && has(g.qty, filters.qty) && has(g.landedUnitCost, filters.cost));
 
   const load = () => {
-    get('/inventory/summary').then(setSummary).catch(() => {});
     get('/unloadings').then(setUnloadings).catch(() => {});
     get('/grns').then(setGrns).catch(() => {});
   };
@@ -46,9 +44,12 @@ export default function Inventory() {
     setSubmitting(true);
     try {
       const labFields = Object.fromEntries(Object.entries(lab).filter(([, v]) => v !== ''));
-      const r = await post('/grns', { ...f, labFields, clientUuid: uuid() });
+      const isCoal = f.item === 'coal';
+      // coal: vehicle + freight; other items: a description instead
+      const body = isCoal ? { ...f, description: '' } : { ...f, vehicleNo: '', freight: '0' };
+      const r = await post('/grns', { ...body, labFields: isCoal ? labFields : {}, clientUuid: uuid() });
       setMsg({ text: r.queued ? t.queued : `${t.savedOk} — ${t.landedCost}: ${r.landedUnitCost}`, bad: false });
-      setF({ ...f, supplierName: '', vehicleNo: '', qty: '', rate: '' });
+      setF({ ...f, supplierName: '', vehicleNo: '', description: '', qty: '', rate: '' });
       setLab({ calorificValue: '', ashPct: '', volatileMatterPct: '', silicaPct: '', aluminaPct: '', ironOxidePct: '' });
       load();
     } catch (e2) {
@@ -60,49 +61,6 @@ export default function Inventory() {
 
   return (
     <div className="grid">
-      {/* Stock on Hand Grouped Cards */}
-      {summary && (
-        <div className="kpi-section">
-          {/* Group 1: Brick Stock by Grade */}
-          <div className="kpi-group">
-            <h3 className="kpi-group-title">
-              Manufactured Brick Stock by Grade (اینٹوں کا ذخیرہ)
-            </h3>
-            <div className="kpi-grid">
-              <div className="stat" style={{ borderInlineStartColor: 'var(--brand-dark)' }}>
-                <span>{t.greenStock}</span>
-                <strong>{summary.greenStock.toLocaleString()}</strong>
-              </div>
-              <div className="stat" style={{ borderInlineStartColor: 'var(--ok-dark)' }}>
-                <span>{t.awwal}</span>
-                <strong className="ok">{summary.firedStockByGrade.awwal.toLocaleString()}</strong>
-              </div>
-              <div className="stat" style={{ borderInlineStartColor: 'var(--info)' }}>
-                <span>{t.doem}</span>
-                <strong>{summary.firedStockByGrade.doem.toLocaleString()}</strong>
-              </div>
-              <div className="stat" style={{ borderInlineStartColor: 'var(--warn-dark)' }}>
-                <span>{t.khangar}</span>
-                <strong>{summary.firedStockByGrade.khangar.toLocaleString()}</strong>
-              </div>
-            </div>
-          </div>
-
-          {/* Group 2: Fuel & Raw Material Inventory */}
-          <div className="kpi-group">
-            <h3 className="kpi-group-title">
-              Fuel & Raw Material Storage (ایندھن اور کوئلہ ذخیرہ)
-            </h3>
-            <div className="kpi-grid">
-              <div className="stat" style={{ borderInlineStartColor: '#334155' }}>
-                <span>⚫ {t.coalOnHand}</span>
-                <strong>{summary.coalOnHandKg.toLocaleString()} kg</strong>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Procurement (GRN) Form */}
       <form className="card grid" onSubmit={submitGrn}>
         <h2>{t.grnTitle} — Goods Receipt Note</h2>
@@ -124,10 +82,17 @@ export default function Inventory() {
             <input required placeholder="Supplier or source name" value={f.supplierName} onChange={(e) => setF({ ...f, supplierName: e.target.value })} />
           </label>
 
-          <label>
-            {t.vehicle}
-            <input placeholder="e.g. LES-4920" value={f.vehicleNo} onChange={(e) => setF({ ...f, vehicleNo: e.target.value })} />
-          </label>
+          {f.item === 'coal' ? (
+            <label>
+              {t.vehicle}
+              <input placeholder="e.g. LES-4920" value={f.vehicleNo} onChange={(e) => setF({ ...f, vehicleNo: e.target.value })} />
+            </label>
+          ) : (
+            <label>
+              {t.description}
+              <input placeholder={t.descriptionHint} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} />
+            </label>
+          )}
 
           <label>
             {t.quantity}
@@ -144,10 +109,12 @@ export default function Inventory() {
             <input type="date" required max={new Date().toISOString().slice(0, 10)} value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} />
           </label>
 
-          <label>
-            {t.freight}
-            <input inputMode="decimal" placeholder="Freight / Kiraya" value={f.freight} onChange={(e) => setF({ ...f, freight: e.target.value })} />
-          </label>
+          {f.item === 'coal' && (
+            <label>
+              {t.freight}
+              <input inputMode="decimal" placeholder="Freight / Kiraya" value={f.freight} onChange={(e) => setF({ ...f, freight: e.target.value })} />
+            </label>
+          )}
         </div>
 
         {/* Optional Lab Tests */}
@@ -168,24 +135,6 @@ export default function Inventory() {
               <label style={{ gridColumn: '1 / -1' }}>
                 {t.volatileMatterPct}
                 <input inputMode="decimal" placeholder="Volatile %" value={lab.volatileMatterPct} onChange={(e) => setLab({ ...lab, volatileMatterPct: e.target.value })} />
-              </label>
-            </div>
-          </details>
-        )}
-
-        {f.item === 'soil' && (
-          <details className="lab-box">
-            <summary>
-              {t.labFieldsOptional} (Soil Composition)
-            </summary>
-            <div className="grid two" style={{ gap: '0.75rem' }}>
-              <label>
-                {t.silicaPct}
-                <input inputMode="decimal" placeholder="Silica %" value={lab.silicaPct} onChange={(e) => setLab({ ...lab, silicaPct: e.target.value })} />
-              </label>
-              <label>
-                {t.aluminaPct}
-                <input inputMode="decimal" placeholder="Alumina %" value={lab.aluminaPct} onChange={(e) => setLab({ ...lab, aluminaPct: e.target.value })} />
               </label>
             </div>
           </details>
@@ -232,6 +181,7 @@ export default function Inventory() {
                 <td>
                   <span className="badge" style={{ background: '#f1f5f9', color: '#1e293b' }}>
                     {items.label(g.item)}
+                    {g.description ? <div className="muted" style={{ fontSize: '0.75rem' }}>{g.description}</div> : null}
                   </span>
                 </td>
                 <td>{editing ? <input className="cell-input" {...editor.field('supplierName')} /> : <strong>{g.supplierName}</strong>}</td>

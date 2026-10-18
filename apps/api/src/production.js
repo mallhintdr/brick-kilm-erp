@@ -680,7 +680,7 @@ export function registerProductionRoutes(app, db) {
     await withTransaction(db, async (session) => {
       const exp = await db.collection('expenses').insertOne({ ...scope(req.user), category: b.item, amount: landedTotal, payee: b.supplierName, date: at }, { session });
       await db.collection('grns').insertOne({
-        ...scope(req.user), item: b.item, supplierName: b.supplierName, vehicleNo: b.vehicleNo,
+        ...scope(req.user), item: b.item, supplierName: b.supplierName, vehicleNo: b.vehicleNo, description: b.description || '',
         qty: b.qty, rate: b.rate, freight, landedTotal, landedUnitCost, labFields: b.labFields ?? {}, date: at, expenseId: exp.insertedId,
       }, { session });
       await audit(db, session, req.user, 'grn.create', b);
