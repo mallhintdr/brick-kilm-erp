@@ -65,19 +65,13 @@ export default function Firing() {
         <h2>{t.firing} — Shift & Temperature Log</h2>
 
         <div className="grid two" style={{ gap: '0.9rem' }}>
-          <fieldset className="fireman-pick">
-            <legend>{t.firemen} ({f.workerIds.length})</legend>
-            {firemen.map((w) => {
-              const on = f.workerIds.includes(w._id);
-              return (
-                <button key={w._id} type="button" aria-pressed={on} className={on ? 'on' : ''}
-                  onClick={() => setF({ ...f, workerIds: on ? f.workerIds.filter((id) => id !== w._id) : [...f.workerIds, w._id] })}>
-                  {on ? '✓ ' : ''}{w.name}{w.fatherName ? ` — ${w.fatherName}` : ''}
-                </button>
-              );
-            })}
-            {!firemen.length && <span className="muted">{t.noFiremen}</span>}
-          </fieldset>
+          <label>
+            {t.fireman}
+            <select required value={f.workerIds[0] || ''} onChange={(e) => setF({ ...f, workerIds: [e.target.value] })}>
+              <option value="" disabled>— {firemen.length ? t.chooseFireman : t.noFiremen} —</option>
+              {firemen.map((w) => <option key={w._id} value={w._id}>{w.name}{w.fatherName ? ` — ${w.fatherName}` : ''}</option>)}
+            </select>
+          </label>
 
           <label>
             {t.shift}

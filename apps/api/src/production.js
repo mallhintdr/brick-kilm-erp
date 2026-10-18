@@ -477,7 +477,7 @@ export function registerProductionRoutes(app, db) {
     const b = firingLogInput.parse(req.body);
     const crew = b.workerIds?.length || 0;
     if (crew) b.teamId = await crewTeamFor(db, undefined, req.user, b.workerIds, 'jalai');
-    if (!b.teamId) throw httpError(400, 'Choose the fireman (one or more)');
+    if (!b.teamId) throw httpError(400, 'Choose the fireman');
     const ledgerRef = `firing:${b.clientUuid}`;
     await withTransaction(db, async (session) => {
       const allowNegative = (await getSetting(db, req.user, 'allowNegativeStock', SETTING_DEFAULTS, session)) === '1';
@@ -490,9 +490,8 @@ export function registerProductionRoutes(app, db) {
       const at = entryAt(b.date);
       await db.collection('firingLogs').insertOne({ ...scope(req.user), shift: b.shift, teamId: b.teamId, coalKg: b.coalKg, tempC: b.tempC, fanOn: b.fanOn, genHours: b.genHours, date: at, ledgerRef }, { session });
       const shiftRate = await getSetting(db, req.user, 'rateJalai', SETTING_DEFAULTS, session);
-      // firemen picked by name: each one earns the full shift rate (team total = rate x firemen)
-      const gross = crew ? (Number(shiftRate) * new Set(b.workerIds).size).toFixed(2) : shiftRate;
-      await creditTeam(db, session, req.user, b.teamId, gross, 'shift_credit', ledgerRef, b.clientUuid, at);
+      // one shift rate per shift, paid to the fireman (he pays the helpers under him)
+      await creditTeam(db, session, req.user, b.teamId, shiftRate, 'shift_credit', ledgerRef, b.clientUuid, at);
       await audit(db, session, req.user, 'firing.log', b);
     });
     res.status(201).json({ ok: true, fanAlert: !b.fanOn });
