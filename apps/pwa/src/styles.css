@@ -3543,3 +3543,10 @@ table tbody tr.pf-editing > td { background: #eff6ff !important; }
 .stage-bar { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; gap: 0.3rem !important; }
 .stage-bar .stage-btn { grid-column: span 2; font-size: 0.74rem !important; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis; padding: 0.2rem 0.3rem !important; }
 .stage-bar .stage-btn.st-Cooling, .stage-bar .stage-btn.st-Unloading { grid-column: span 3; }
+/* stage buttons use the same colours as the lines on the kiln plan */
+.stage-bar .stage-btn.st-Loading { --c: #60a5fa; } .stage-bar .stage-btn.st-Preheating { --c: #f59e0b; }
+.stage-bar .stage-btn.st-Firing { --c: #ef4444; } .stage-bar .stage-btn.st-Cooling { --c: #6366f1; } .stage-bar .stage-btn.st-Unloading { --c: #22c55e; }
+.stage-bar .stage-btn { background: var(--c) !important; border-color: var(--c) !important; color: #fff !important; text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25); }
+.stage-bar .stage-btn.now { outline: 3px solid #0f172a; outline-offset: 1px; opacity: 1; }
+.stage-bar .stage-btn.done { opacity: 0.55; }
+.stage-bar .stage-btn:disabled:not(.now):not(.done) { opacity: 0.4; }
