@@ -487,8 +487,13 @@ export function registerProductionRoutes(app, db) {
           throw httpError(422, `Only ${coalOnHandKg.toLocaleString()} kg coal in stock; enter ${b.coalKg.toLocaleString()} or less (or allow negative stock in Settings)`);
         }
       }
-      const at = entryAt(b.date);
-      await db.collection('firingLogs').insertOne({ ...scope(req.user), shift: b.shift, teamId: b.teamId, coalKg: b.coalKg, tempC: b.tempC, fanOn: b.fanOn, genHours: b.genHours, date: at, ledgerRef }, { session });
+      let at = entryAt(b.date);
+      if (b.time) {
+        const day = b.date ? new Date(b.date).toISOString().slice(0, 10) : new Date(Date.now() + 5 * 3600e3).toISOString().slice(0, 10);
+        at = new Date(`${day}T${b.time}:00+05:00`); // time is entered in Pakistan time
+        if (at.getTime() > Date.now() + 5 * 60 * 1000) throw httpError(400, 'Time cannot be in the future');
+      }
+      await db.collection('firingLogs').insertOne({ ...scope(req.user), shift: b.shift, teamId: b.teamId, lineIndex: b.lineIndex ?? null, coalKg: b.coalKg, tempC: b.tempC, fanOn: b.fanOn, genHours: b.genHours, date: at, ledgerRef }, { session });
       const shiftRate = await getSetting(db, req.user, 'rateJalai', SETTING_DEFAULTS, session);
       // one shift rate per shift, paid to the fireman (he pays the helpers under him)
       await creditTeam(db, session, req.user, b.teamId, shiftRate, 'shift_credit', ledgerRef, b.clientUuid, at);

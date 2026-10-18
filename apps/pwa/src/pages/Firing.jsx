@@ -8,8 +8,9 @@ export default function Firing() {
   const t = useT();
   const editor = useRowEdit();
   const [firemen, setFiremen] = useState([]);
+  const [lines, setLines] = useState([]); // lines now firing or preheating
   const [list, setList] = useState([]);
-  const [f, setF] = useState({ workerIds: [], shift: 'day', coalKg: '', tempC: '', fanOn: true, genHours: '0', date: new Date().toISOString().slice(0, 10) });
+  const [f, setF] = useState({ workerIds: [], shift: 'day', coalKg: '', tempC: '', fanOn: true, genHours: '0', lineIndex: '', time: new Date(Date.now() + 5 * 3600e3).toISOString().slice(11, 16), date: new Date().toISOString().slice(0, 10) });
   const [msg, setMsg] = useState({ text: '', bad: false });
   const [submitting, setSubmitting] = useState(false);
   const [filters, setFilters] = useState({});
@@ -17,6 +18,7 @@ export default function Firing() {
   const load = () => {
     get('/workers').then((w) => setFiremen(w.filter((x) => x.category === 'jalai' && x.status !== 'inactive').sort((a, b) => a.name.localeCompare(b.name)))).catch(() => {});
     get('/firing-logs').then(setList).catch(() => {});
+    get('/kiln-lines').then((all) => setLines(all.filter((l) => l.state === 'Firing' || l.state === 'Preheating'))).catch(() => {});
   };
   useEffect(() => { load(); }, []);
 
@@ -30,6 +32,8 @@ export default function Firing() {
         coalKg: Number(f.coalKg),
         tempC: Number(f.tempC),
         genHours: Number(f.genHours),
+        lineIndex: f.lineIndex ? Number(f.lineIndex) : undefined,
+        time: f.time || undefined,
         clientUuid: uuid(),
       });
       const fanWarn = r.fanAlert ? ` — ⚠️ ${t.fanAlertMsg}` : '';
@@ -87,6 +91,19 @@ export default function Firing() {
           </label>
 
           <label>
+            {t.time}
+            <input type="time" required value={f.time} onChange={(e) => setF({ ...f, time: e.target.value })} />
+          </label>
+
+          <label>
+            {t.lineNo}
+            <select value={f.lineIndex} onChange={(e) => setF({ ...f, lineIndex: e.target.value })}>
+              <option value="">—</option>
+              {lines.map((l) => <option key={l.index} value={l.index}>{l.index} — {l.state === 'Firing' ? `🔥 ${t.stFiring}` : t.stPreheating}</option>)}
+            </select>
+          </label>
+
+          <label>
             {t.coalKg}
             <input required inputMode="numeric" placeholder="e.g. 1200" value={f.coalKg} onChange={(e) => setF({ ...f, coalKg: e.target.value })} />
           </label>
@@ -127,6 +144,7 @@ export default function Firing() {
               <th className="rownum">#</th>
               <th>{t.dateTime}</th>
               <th>{t.shift}</th>
+              <th>{t.lineNo}</th>
               <th>{t.coalKg}</th>
               <th>{t.tempC}</th>
               <th className="actions">{t.action}</th>
@@ -135,6 +153,7 @@ export default function Firing() {
               <th className="rownum" />
               <th><input type="search" className="table-col-filter" value={filters.date || ''} onChange={(e) => setFilters({ ...filters, date: e.target.value })} /></th>
               <th><input type="search" className="table-col-filter" value={filters.shift || ''} onChange={(e) => setFilters({ ...filters, shift: e.target.value })} /></th>
+              <th />
               <th><input type="search" className="table-col-filter" value={filters.coalKg || ''} onChange={(e) => setFilters({ ...filters, coalKg: e.target.value })} /></th>
               <th><input type="search" className="table-col-filter" value={filters.tempC || ''} onChange={(e) => setFilters({ ...filters, tempC: e.target.value })} /></th>
               <th className="actions" />
@@ -167,6 +186,7 @@ export default function Firing() {
                       </span>
                     )}
                   </td>
+                  <td>{f2.lineIndex || '—'}</td>
                   <td>{editing ? <input inputMode="numeric" className="cell-input" {...editor.field('coalKg')} /> : <strong>{Number(f2.coalKg).toLocaleString()} kg</strong>}</td>
                   <td>{editing ? <input inputMode="numeric" className="cell-input" {...editor.field('tempC')} /> : <strong>{f2.tempC} °C</strong>}</td>
                   <td className="actions">

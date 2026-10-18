@@ -306,6 +306,8 @@ export const firingLogInput = z.object({
   fanOn: z.boolean().default(true), // zig-zag kilns have no ID fan; kept for older logs
   genHours: z.coerce.number().min(0).max(24).default(0),
   date: workDate.optional(), // day of the shift (back-dating allowed)
+  time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(), // Pakistan time of the reading, HH:MM
+  lineIndex: z.coerce.number().int().positive().optional(), // line being fired / preheated
   clientUuid: z.string().uuid(),
 });
 
