@@ -413,7 +413,7 @@ export function registerProductionRoutes(app, db) {
       if (b.stage !== 'Cooling') {
         // mark (or unmark) a loaded line as preheating; only before it is fired
         if (line.firedAt || line.state === 'Firing') throw httpError(422, `Line ${index} is already fired`);
-        await db.collection('kilnLines').updateOne({ _id: line._id }, { $set: { stage: b.stage === 'Preheating' ? 'Preheating' : null } }, { session });
+        await db.collection('kilnLines').updateOne({ _id: line._id }, { $set: { stage: b.stage === 'Preheating' ? 'Preheating' : null, preheatedAt: b.stage === 'Preheating' ? when : null } }, { session });
         await recomputeLines(req.user, session);
         await audit(db, session, req.user, 'line.stage', { index, stage: b.stage });
         return;

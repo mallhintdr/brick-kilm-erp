@@ -6,43 +6,23 @@ import { useMemo } from 'react';
 const PITCH = 40;      // distance between line centres along the loop
 const THICK = 34;      // strip thickness (along the loop)
 const BAND = 170;      // strip length (across the kiln)
-const MARGIN = 20;
+const MARGIN = 34;      // room outside the kiln for the line numbers
 
 // short date / time for the small writing inside a line
 const dm = (x) => { if (!x) return ''; const d = new Date(x); return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
-const hm = (x) => { if (!x) return ''; const d = new Date(x); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
-const n = (x) => Number(x || 0).toLocaleString();
 
-// What each board writes inside a line: mode 'load' (bharai), 'fire' (jalai), 'unload' (nikasi).
-function infoLines(l, mode) {
-  const coal = (l.coalKg || 0) + (l.logCoalKg || 0);
-  if (!l.currentLoad) {
-    const c = mode === 'unload' && l.last;
-    if (!c) return [];
-    return [
-      { c: 'ld old', t: `${dm(c.loadedAt)} · ${n(c.count)}` },
-      { c: 'fr old', t: `F ${dm(c.firedAt)}  N ${dm(c.unloadedAt)}` },
-      { c: 'gr', t: `A ${n(c.awwal)} D ${n(c.doem)} K ${n(c.khangar)}` },
-    ];
+// The one date written inside a line: when its current stage started.
+function stageDate(l, mode) {
+  switch (l.state) {
+    case 'Loading': return l.loadedAt;
+    case 'Preheating': return l.preheatedAt || l.loadedAt;
+    case 'Firing': return l.firedAt;
+    case 'Cooling': return l.cooledAt || l.firedAt;
+    case 'Ready': return l.cooledAt || l.firedAt;
+    case 'Unloading': return l.unloadStartedAt;
+    default: return mode === 'unload' ? l.last?.unloadedAt : null; // empty: when it was emptied
   }
-  if (mode === 'load') return [{ c: 'ld', t: dm(l.loadedAt) }, { c: 'ct', t: n(l.currentLoad) }];
-  const head = { c: 'ld', t: `${dm(l.loadedAt)} · ${n(l.currentLoad)}` };
-  if (mode === 'unload') {
-    return [head, l.firedAt && { c: 'fr', t: `F ${dm(l.firedAt)}` }, l.unloadStartedAt && { c: 'nk', t: `N ${dm(l.unloadStartedAt)}` }].filter(Boolean);
-  }
-  return [head, l.firedAt && { c: 'fr', t: `F ${dm(l.firedAt)} ${hm(l.firedAt)}` }, coal > 0 && { c: 'cl', t: `${n(coal)} kg` }].filter(Boolean);
 }
-
-export const LINE_FILL = {
-  Empty: '#e2e8f0',
-  Loading: '#60a5fa',
-  Preheating: '#f59e0b',
-  Firing: '#ef4444',
-  Cooling: '#6366f1',   // hot, right behind the fire
-  Ready: '#14b8a6',     // fired and cooled enough for nikasi
-  Unloading: '#22c55e',
-};
-const STATE_KEY = { Empty: 'empty', Loading: 'loading', Preheating: 'preheating', Firing: 'firingState', Cooling: 'cooling', Ready: 'readyToUnload', Unloading: 'unloading' };
 
 export default function LineDiagram({ lines, selected, onSelect, t, fireIndex, mode = 'fire' }) {
   const geo = useMemo(() => {
@@ -99,8 +79,10 @@ export default function LineDiagram({ lines, selected, onSelect, t, fireIndex, m
             // writing runs along the line and stays upright (the strip looks the same turned round)
             let up = ((p.ang % 360) + 360) % 360;
             if (up > 90 && up < 270) up -= 180;
-            const info = infoLines(l, mode);
-            const y0 = -((info.length - 1) * 10) / 2;
+            const date = stageDate(l, mode);
+            // line number just outside the kiln, at the outer end of its strip
+            const r = (p.ang * Math.PI) / 180;
+            const off = BAND / 2 + 17;
             return (
               <g key={l.index} transform={`translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) rotate(${up.toFixed(1)})`}>
                 <rect
@@ -115,10 +97,9 @@ export default function LineDiagram({ lines, selected, onSelect, t, fireIndex, m
                 >
                   <title>{`${t.line} ${l.index} — ${stateLabel(l.state)}${l.currentLoad ? ` — ${l.currentLoad.toLocaleString()}` : ''}`}</title>
                 </rect>
-                <text className="line-num" x={-BAND / 2 + 13} pointerEvents="none" textAnchor="middle" dominantBaseline="central">{l.index}</text>
-                {info.map((r, k) => (
-                  <text key={k} className={`line-info ${r.c}`} x={-BAND / 2 + 28} y={y0 + k * 10} pointerEvents="none" dominantBaseline="central">{r.t}</text>
-                ))}
+                {date && <text className="line-info" x="0" y="0" textAnchor="middle" pointerEvents="none" dominantBaseline="central">{dm(date)}</text>}
+                <text className="line-num line-num-out" pointerEvents="none" textAnchor="middle" dominantBaseline="central"
+                  transform={`rotate(${(-up).toFixed(1)}) translate(${(Math.cos(r) * off).toFixed(1)} ${(Math.sin(r) * off).toFixed(1)})`}>{l.index}</text>
               </g>
             );
           })}

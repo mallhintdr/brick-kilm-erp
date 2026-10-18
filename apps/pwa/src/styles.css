@@ -3600,3 +3600,6 @@ table tbody tr.pf-editing > td { background: #eff6ff !important; }
 .line-info.nk { fill: #166534; }   /* nikasi date */
 .line-info.gr { fill: #166534; }   /* awwal / doem / khangar */
 .line-info.old { opacity: 0.8; }
+/* line number outside the kiln; one date (current stage) in the middle of the line */
+.line-num.line-num-out { fill: #334155 !important; font-size: 10.5px; font-weight: 800; }
+.line-info { fill: #0f172a; font-size: 9px; }
