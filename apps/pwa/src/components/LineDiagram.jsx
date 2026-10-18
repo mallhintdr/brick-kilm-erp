@@ -11,6 +11,17 @@ const MARGIN = 34;      // room outside the kiln for the line numbers
 // short date / time for the small writing inside a line
 const dm = (x) => { if (!x) return ''; const d = new Date(x); return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
 
+export const LINE_FILL = {
+  Empty: '#e2e8f0',
+  Loading: '#60a5fa',
+  Preheating: '#f59e0b',
+  Firing: '#ef4444',
+  Cooling: '#6366f1',   // hot, right behind the fire
+  Ready: '#14b8a6',     // fired and cooled enough for nikasi
+  Unloading: '#22c55e',
+};
+const STATE_KEY = { Empty: 'empty', Loading: 'loading', Preheating: 'preheating', Firing: 'firingState', Cooling: 'cooling', Ready: 'readyToUnload', Unloading: 'unloading' };
+
 // The one date written inside a line: when its current stage started.
 function stageDate(l, mode) {
   switch (l.state) {
