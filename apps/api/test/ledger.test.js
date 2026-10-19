@@ -852,3 +852,12 @@ test('firing logs with a line drive the kiln board (fire, hot lines, ready, manu
   s = await st();
   assert.equal(s[A].state, 'Ready');
 });
+
+test('roznamcha lists the day entries', async () => {
+  const day = new Date().toISOString().slice(0, 10);
+  const r = await api('GET', `/roznamcha?date=${day}`);
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.ok(r.body.rows.length > 0, 'expected entries today');
+  const past = await api('GET', '/roznamcha?date=2026-09-29');
+  assert.equal(past.status, 200, JSON.stringify(past.body));
+});

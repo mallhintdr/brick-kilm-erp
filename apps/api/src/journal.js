@@ -4,8 +4,10 @@ const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res)).catch(nex
 const num = (d) => Number(d?.toString?.() ?? d ?? 0);
 const dayRange = (q) => {
   const day = /^\d{4}-\d{2}-\d{2}$/.test(q || '') ? q : new Date().toISOString().slice(0, 10);
-  return { day, start: new Date(`${day}T00:00:00.000Z`), end: new Date(`${day}T23:59:59.999Z`) };
+  // a Pakistan day (UTC+5), so entries made after midnight or before 5 am land on the right day
+  return { day, start: new Date(`${day}T00:00:00.000+05:00`), end: new Date(`${day}T23:59:59.999+05:00`) };
 };
+const fmt = (x) => Number(x || 0).toLocaleString(); // old records may miss a number
 const WAGE_LABEL = {
   moulding_credit: 'Moulding wages', loading_credit: 'Bharai wages', unloading_credit: 'Nikasi wages', shift_credit: 'Firing shift wages',
 };
@@ -91,13 +93,13 @@ export function registerJournalRoutes(app, db) {
     const cname = Object.fromEntries(customers.map((c) => [String(c._id), c.name]));
     const unitName = (r) => (r.unit === 'grid' ? 'Weekly entry' : `${r.unit === 'line' ? 'Line' : 'Chamber'} ${r.sectionIndex}`);
     const ev = [];
-    for (const m of moulding) ev.push({ at: m.date, type: 'moulding', detail: `${team[m.teamId] || '—'}: ${m.count.toLocaleString()} moulded, net ${m.netCount.toLocaleString()}${m.quality ? ` (${m.quality})` : ''}`, qty: m.netCount });
-    for (const l of loads) ev.push({ at: l.date, type: 'bharai', detail: `${unitName(l)} loaded by ${team[l.teamId] || '—'}: ${l.count.toLocaleString()} kachi bricks`, qty: l.count });
-    for (const u of unloads) ev.push({ at: u.date, type: 'nikasi', detail: `${unitName(u)} by ${team[u.nikasiTeamId] || '—'}: awwal ${u.awwal.toLocaleString()}, doem ${u.doem.toLocaleString()}, khangar ${u.khangar.toLocaleString()}, broken ${u.broken.toLocaleString()}`, qty: u.awwal + u.doem + u.khangar });
-    for (const i of invoices) ev.push({ at: i.date, type: 'sale', detail: `${cname[i.customerId] || '—'}: ${i.qty.toLocaleString()} ${i.grade}`, amount: num(i.amount) + num(i.tax) });
+    for (const m of moulding) ev.push({ at: m.date, type: 'moulding', detail: `${team[m.teamId] || '—'}: ${fmt(m.count)} moulded, net ${fmt(m.netCount)}${m.quality ? ` (${m.quality})` : ''}`, qty: m.netCount });
+    for (const l of loads) ev.push({ at: l.date, type: 'bharai', detail: `${unitName(l)} loaded by ${team[l.teamId] || '—'}: ${fmt(l.count)} kachi bricks`, qty: l.count });
+    for (const u of unloads) ev.push({ at: u.date, type: 'nikasi', detail: `${unitName(u)} by ${team[u.nikasiTeamId] || '—'}: awwal ${fmt(u.awwal)}, doem ${fmt(u.doem)}, khangar ${fmt(u.khangar)}, broken ${fmt(u.broken)}`, qty: (u.awwal || 0) + (u.doem || 0) + (u.khangar || 0) });
+    for (const i of invoices) ev.push({ at: i.date, type: 'sale', detail: `${cname[i.customerId] || '—'}: ${fmt(i.qty)} ${i.grade}`, amount: num(i.amount) + num(i.tax) });
     for (const p of payments) ev.push({ at: p.date, type: 'payment', detail: `Received from ${cname[p.partyId] || '—'} (${p.mode})`, amount: num(p.amount) });
     for (const g of grns) ev.push({ at: g.date, type: g.item === 'coal' ? 'coalArrival' : 'purchase', detail: `${g.item}: ${g.qty} from ${g.supplierName || '—'}${g.vehicleNo ? ` (${g.vehicleNo})` : ''}`, amount: num(g.landedTotal) });
-    for (const f of firing) ev.push({ at: f.date, type: 'coalUse', detail: `${f.shift} shift, ${team[f.teamId] || '—'}: ${f.coalKg.toLocaleString()} kg coal, ${f.tempC} °C`, qty: f.coalKg });
+    for (const f of firing) ev.push({ at: f.date, type: 'coalUse', detail: `${f.shift} shift, ${team[f.teamId] || '—'}: ${fmt(f.coalKg)} kg coal, ${f.tempC ?? '—'} °C${f.lineIndex ? `, line ${f.lineIndex}` : ''}`, qty: f.coalKg });
     for (const a of advances) ev.push({ at: a.createdAt, type: 'peshgi', detail: `Peshgi to ${wname[a.partyId] || '—'}${a.reason ? ` — ${a.reason}` : ''}`, amount: num(a.debit) });
     for (const k of dasti) ev.push({ at: k.date, type: 'dasti', detail: `Dasti to ${wname[k.workerId] || '—'}`, amount: num(k.amount) });
     for (const n of notes) {

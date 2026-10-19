@@ -6,8 +6,8 @@ import { useTypes, typeLabel } from '../useTypes.js';
 
 const n = (v) => Math.round(Number(v || 0)).toLocaleString();
 
-// Front-page stock box: fired bricks by grade, green bricks waiting for the kiln, coal left,
-// and every other purchased item, so supplies can be kept up at a glance.
+// Front-page stock box: fired bricks by grade, green bricks, bricks in the kiln and coal left.
+// Other purchased items are in the goods receipt list on the Inventory page.
 export default function HomeStock() {
   const t = useT();
   const { lang } = useLang();
@@ -24,7 +24,6 @@ export default function HomeStock() {
     { label: t.hsGreen, value: n(r.stock.green), tone: 'orange' },
     { label: t.hsInKiln, value: n(r.jalai.bricksInKiln), tone: 'pink' },
     { label: t.hsCoal, value: `${n(r.coal.remainingKg)} kg`, tone: r.coal.remainingKg < 0 ? 'pink' : 'teal', warn: r.coal.remainingKg < 0 },
-    ...r.items.map((it) => ({ label: itemName(it.item), value: `${Number(it.received).toLocaleString()}`, tone: 'blue', sub: t.hsReceived })),
   ];
 
   return (

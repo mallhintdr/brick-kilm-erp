@@ -303,10 +303,6 @@ export default function KilnBoard({ focus } = {}) {
           </span>
         </div>
 
-        {unit === 'line'
-          ? <LineDiagram lines={rows} selected={sel} onSelect={pick} t={t} fireIndex={fire?.index} mode={focus === 'load' ? 'load' : focus === 'unload' ? 'unload' : 'fire'} />
-          : unit && <KilnDiagram sections={rows} selected={sel} onSelect={pick} t={t} />}
-
         <div className="legend">
           {Object.entries(STATE_LABEL_KEY).map(([state, key]) => (
             <span key={state} className={`legend-item ${STATE_CLASS[state]}`}>
@@ -315,6 +311,11 @@ export default function KilnBoard({ focus } = {}) {
             </span>
           ))}
         </div>
+
+        {unit === 'line'
+          ? <LineDiagram lines={rows} selected={sel} onSelect={pick} t={t} fireIndex={fire?.index} mode={focus === 'load' ? 'load' : focus === 'unload' ? 'unload' : 'fire'} />
+          : unit && <KilnDiagram sections={rows} selected={sel} onSelect={pick} t={t} />}
+
       </div>
 
       {/* Every chamber / line as a list */}

@@ -138,6 +138,14 @@ export default function Firing() {
       {allLines.length > 0 && (
         <div className="card">
           <h2>{t.kilnBoard} — {t.firing}</h2>
+          <div className="legend">
+            {[['Empty', 'empty'], ['Loading', 'loading'], ['Preheating', 'preheating'], ['Firing', 'firingState'], ['Cooling', 'cooling'], ['Ready', 'readyToUnload'], ['Unloading', 'unloading']].map(([st, key]) => (
+              <span key={st} className={`legend-item sec-${st.toLowerCase()}`}>
+                <span>{t[key]}</span>
+                <b>{allLines.filter((l) => l.state === st).length}</b>
+              </span>
+            ))}
+          </div>
           <LineDiagram lines={allLines} selected={allLines.find((l) => l.index === Number(f.lineIndex))} onSelect={pickLine} t={t}
             fireIndex={allLines.find((l) => l.state === 'Firing')?.index} mode="fire" />
         </div>
