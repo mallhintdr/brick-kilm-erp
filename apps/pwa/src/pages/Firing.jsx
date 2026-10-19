@@ -27,7 +27,18 @@ export default function Firing() {
   useEffect(() => { load(); }, []);
 
   // lines now firing or preheating, plus the one asked for / chosen on the plan
-  const lines = allLines.filter((l) => l.state === 'Firing' || l.state === 'Preheating' || l.index === Number(f.lineIndex) || l.index === askedLine);
+  // the next 10 loaded lines after the fire (in firing order) can be fired next
+  const N = allLines.length;
+  const fireAt = allLines.find((l) => l.state === 'Firing')?.index;
+  const ahead = new Set();
+  if (fireAt && N) {
+    for (let k = 1; k <= N && ahead.size < 10; k++) {
+      const l = allLines.find((x) => x.index === ((fireAt - 1 + k) % N) + 1);
+      if (l && ['Loading', 'Preheating'].includes(l.state)) ahead.add(l.index);
+    }
+  }
+  const lines = allLines.filter((l) => l.state === 'Firing' || l.state === 'Preheating' || ahead.has(l.index)
+    || (!fireAt && l.state === 'Loading') || l.index === Number(f.lineIndex) || l.index === askedLine);
   const pickLine = (l) => {
     if (!l.currentLoad || l.nikasiTeamId) return;
     setF((cur) => ({ ...cur, lineIndex: String(l.index) }));
