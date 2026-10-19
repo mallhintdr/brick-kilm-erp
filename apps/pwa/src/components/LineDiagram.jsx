@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 
 // Plan of a line kiln as one continuous loop (a racetrack): line 1 sits at the middle of the top
-// curve and the lines run clockwise, evenly spaced, down the right, round the bottom and up the
+// curve and the lines run counter-clockwise, evenly spaced, down the left, round the bottom and up the
 // left, so line 240 meets line 1 again. Each line is a strip across the kiln, coloured by state.
 const PITCH = 40;      // distance between line centres along the loop
 const THICK = 34;      // strip thickness (along the loop)
@@ -82,10 +82,11 @@ export default function LineDiagram({ lines, selected, onSelect, t, fireIndex, m
           <g transform={`translate(${Cx} ${(Cy1 + Cy2) / 2})`} className="loop-centre">
             <polygon points="-14,40 -8,-40 8,-40 14,40" fill="#8b5e3c" stroke="#6b4423" strokeWidth="2" />
             <rect x="-11" y="-48" width="22" height="9" rx="2" fill="#57534e" />
-            <text y="74" textAnchor="middle" className="loop-dir">{t.clockwise} ↻</text>
+            <text y="74" textAnchor="middle" className="loop-dir">{t.clockwise} ↺</text>
           </g>
           {lines.map((l, i) => {
-            const p = at((i + 0.5) * PITCH);
+            const q = at((i + 0.5) * PITCH);
+            const p = { x: 2 * Cx - q.x, y: q.y, ang: 180 - q.ang }; // mirrored: lines run counter-clockwise
             const sel = selected?.index === l.index;
             // writing runs along the line and stays upright (the strip looks the same turned round)
             let up = ((p.ang % 360) + 360) % 360;
