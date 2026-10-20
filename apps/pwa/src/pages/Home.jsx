@@ -29,8 +29,8 @@ export default function Home({ links = [] }) {
               {items.map((l) => (
                 <Link key={l.to} to={l.to}
                   className="flex min-h-13 items-center gap-2.5 rounded-lg bg-white px-3 py-2 text-md font-semibold leading-tight text-n-900 no-underline ring-1 ring-n-200 transition hover:bg-brand-50 hover:ring-brand-300">
-                  <span className="grid size-8 shrink-0 place-items-center rounded-md" style={{ background: `color-mix(in srgb, ${l.color} 12%, #fff)` }}>
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke={l.color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-md leading-none" style={{ background: `color-mix(in srgb, ${l.color} 12%, #fff)` }}>
+                    <svg className="block" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke={l.color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       {l.iconGlyph}
                     </svg>
                   </span>

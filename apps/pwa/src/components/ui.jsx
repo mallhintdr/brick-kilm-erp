@@ -49,7 +49,7 @@ export const CardBody = ({ className, children }) => <div className={cx('grid ga
 // section title: plain (no fill, so it never mixes with the coloured number cards), bold and a step
 // larger than the card text, with a thin line underneath
 export const SectionTitle = ({ children, className }) => (
-  <h3 className={cx('m-0 border-b border-n-200 pb-1.5 text-start text-base font-extrabold text-n-900', className)}>{children}</h3>
+  <h3 className={cx('m-0 border-b border-n-200 pb-1.5 text-center text-base font-extrabold text-n-900', className)}>{children}</h3>
 );
 export const Section = ({ title, children, className }) => (
   <section className={cx('grid gap-3', className)}>
