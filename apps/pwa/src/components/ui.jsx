@@ -59,7 +59,7 @@ export const Section = ({ title, children, className }) => (
 );
 
 /* ---------- Form fields ---------- */
-const BOX = 'w-full max-w-none min-h-11 rounded-lg bg-white px-3.5 py-2 text-[16px] font-normal text-n-900 ring-1 ring-n-300 border-0 outline-none placeholder:text-n-400 focus:ring-2 focus:ring-brand-500 disabled:bg-n-100 disabled:opacity-70';
+const BOX = 'w-full min-h-11 rounded-lg bg-white px-3.5 py-2 text-[16px] font-normal text-n-900 ring-1 ring-n-300 border-0 outline-none placeholder:text-n-400 focus:ring-2 focus:ring-brand-500 disabled:bg-n-100 disabled:opacity-70';
 export const Field = ({ label, hint, error, className, children }) => (
   <label className={cx('flex min-w-0 flex-col gap-1.5 text-md font-medium text-n-700', className)}>
     <span className="truncate text-md font-medium">{label}</span>
