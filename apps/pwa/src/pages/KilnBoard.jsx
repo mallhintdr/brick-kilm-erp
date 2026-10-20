@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useT } from '../i18n.js';
 import { get, post, put, del, uuid, getRole, fmtDate, fmtDateTime } from '../api.js';
 import KilnDiagram from '../components/KilnDiagram.jsx';
-import LineDiagram from '../components/LineDiagram.jsx';
+import LineDiagram, { LINE_FILL } from '../components/LineDiagram.jsx';
+import KilnLegend from '../components/KilnLegend.jsx';
+import { Card, CardHeader, CardBody, Field, Input, Textarea, FormGrid, Button, IconButton, Alert, Muted, Tabs, TableCard, tbl, FilterInput, ClearFilters, Empty, cx } from '../components/ui.jsx';
 import SearchSelect from '../components/SearchSelect.jsx';
 import WorkWeekGrid from '../components/WorkWeekGrid.jsx';
 
@@ -17,15 +19,6 @@ const STATE_LABEL_KEY = {
   Unloading: 'unloading',
 };
 
-const STATE_CLASS = {
-  Empty: 'sec-empty',
-  Loading: 'sec-loading',
-  Preheating: 'sec-preheating',
-  Firing: 'sec-firing',
-  Cooling: 'sec-cooling',
-  Ready: 'sec-ready',
-  Unloading: 'sec-unloading',
-};
 
 // A kiln is counted either by chambers or by lines (the owner picks); both run the same cycle.
 const UNIT_PATH = { chamber: 'kiln-sections', line: 'kiln-lines' };
@@ -228,385 +221,298 @@ export default function KilnBoard({ focus } = {}) {
   const firing = rows.filter((s) => s.state === 'Firing');
   const totalInKiln = rows.reduce((acc, s) => acc + (s.currentLoad || 0), 0);
 
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const dateBox = (k = 'date') => (
+    <Input type="date" required max={todayIso} value={form[k] || todayIso} onChange={(e) => setForm({ ...form, [k]: e.target.value })} />
+  );
+  const teamName = (id) => teams.find((tm) => tm._id === id)?.label || '';
+  const stateText = (st) => t[STATE_LABEL_KEY[st]] || st;
+  const coalOf = (r) => (r.coalKg || 0) + (r.logCoalKg || 0);
+  const cols = [
+    ['index', (r) => r.index, unitLabel], ['round', (r) => r.round || '', t.round], ['state', (r) => stateText(r.state), t.status],
+    ['count', (r) => r.currentLoad || 0, t.kachiBharai], ['team', (r) => teamName(r.loadTeamId), t.team],
+    ['loaded', (r) => (r.loadedAt ? fmtDate(r.loadedAt) : ''), t.loadedOn], ['fired', (r) => (r.firedAt ? fmtDateTime(r.firedAt) : ''), t.firedOn],
+    ['coal', (r) => coalOf(r) || '', t.coalUsed], ['issues', (r) => r.issues || '', t.issuesAndCauses],
+  ];
+  const shownRows = rows.filter((r) => cols.every(([k, g]) => !lf[k] || String(g(r)).toLowerCase().includes(lf[k].toLowerCase())));
+
   return (
-    <div className="grid">
+    <div className="grid gap-4">
       {/* Loading / Unloading pages: weekly entry per worker, like moulding */}
       {focus === 'load' && <WorkWeekGrid kind="bharai" />}
       {focus === 'unload' && <WorkWeekGrid kind="nikasi" />}
 
-      {/* Hero Control Card */}
-      <div className="card" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', background: '#ffffff', border: '1px solid var(--line)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-          <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'var(--brand-tint)', border: '1.5px solid rgba(234, 88, 12, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--brand)' }}>
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2c1.5 3-1.5 4.5-1.5 7.5a4 4 0 0 0 7.5 2c0-2-1-3-1-4.5 3.5 2.5 4.5 6 4 9A8 8 0 0 1 4 14c0-4.5 4-6.5 4-10 1.5 0 2 1 2.5 2 0-2 1-3.5 1.5-4z" />
-            </svg>
-          </div>
-          <div>
-            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              {t.firingState} {firing.length ? `— ${unitLabel} #${firing.map((f) => f.index).join(', ')}` : '—'}
+      {/* what is burning and how much is in the kiln; how the kiln is counted */}
+      <Card>
+        <CardBody className="gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
+          <div className="flex items-center gap-3">
+            <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-brand-200">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 2c1.5 3-1.5 4.5-1.5 7.5a4 4 0 0 0 7.5 2c0-2-1-3-1-4.5 3.5 2.5 4.5 6 4 9A8 8 0 0 1 4 14c0-4.5 4-6.5 4-10 1.5 0 2 1 2.5 2 0-2 1-3.5 1.5-4z" />
+              </svg>
             </div>
-            <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--ink)' }}>
-              {totalInKiln.toLocaleString()} {t.count} in Kiln
+            <div className="min-w-0">
+              <div className="truncate text-xs font-semibold text-n-500">
+                🔥 {t.firingState}: {firing.length ? `${unitLabel} ${firing.map((f) => f.index).join(', ')}` : t.fireNotStarted}
+              </div>
+              <div className="text-lg font-extrabold text-n-900 tabular-nums">{totalInKiln.toLocaleString()} <span className="text-sm font-semibold text-n-500">{t.srBricksInKiln}</span></div>
             </div>
           </div>
-        </div>
-
-        <div className="kiln-hero-actions">
-          {/* how this kiln is counted: owner switches, others see it */}
-          <div className="unit-switch" role="group" aria-label={t.countBy}>
-            <span className="unit-switch-label">{t.countBy}</span>
-            {['chamber', 'line'].map((u) => (
-              <button
-                key={u} type="button" className={unit === u ? 'on' : ''} aria-pressed={unit === u}
-                disabled={!isOwner && unit !== u} onClick={() => switchUnit(u)}
-                title={isOwner ? '' : t.ownerOnly}
-              >
-                {u === 'line' ? t.lines : t.chambers}
-              </button>
-            ))}
-          </div>
-          {unit === 'chamber' && (
-            <label className="steps-field">
-              {t.linesPerAdvance}
-              <input inputMode="numeric" value={steps} onChange={(e) => setSteps(e.target.value.replace(/[^\d]/g, ''))} />
-            </label>
-          )}
-          <label className="steps-field fire-at">
-            {t.fireTime}
-            <input type="datetime-local" value={fireAt} max={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
-              onChange={(e) => setFireAt(e.target.value)} title={t.fireTimeHint} />
-          </label>
-          {unit === 'line' && (
-            <span className="fire-pos" title={t.firePosition}>🔥 {fire?.index ? `${t.line} ${fire.index}` : t.fireNotStarted}</span>
-          )}
-          {unit === 'chamber' && (
-            <button className="primary" disabled={advancing || !unit} onClick={fireAdvance}>
-              🔥 {t.advanceFire}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {msg.text && !sel && (
-        <p role={msg.bad ? 'alert' : 'status'} className={msg.bad ? 'err' : 'ok'}>
-          {msg.text}
-        </p>
-      )}
-
-      {/* Main Diagram Card */}
-      <div className="card" ref={planRef}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <h2>{t.kilnBoard} — {unit === 'line' ? t.lines : t.chambers}</h2>
-          <span style={{ fontSize: '0.8rem', color: 'var(--muted)', fontWeight: 600 }}>
-            {unit === 'line' ? t.kilnLinesHint : t.kilnHint}
-          </span>
-        </div>
-
-        <div className="legend">
-          {Object.entries(STATE_LABEL_KEY).map(([state, key]) => (
-            <span key={state} className={`legend-item ${STATE_CLASS[state]}`}>
-              <span>{t[key]}</span>
-              <b>{rows.filter((s) => s.state === state).length}</b>
-            </span>
-          ))}
-        </div>
-
-        {unit === 'line'
-          ? <LineDiagram lines={rows} selected={sel} onSelect={pick} t={t} fireIndex={fire?.index} mode={focus === 'load' ? 'load' : focus === 'unload' ? 'unload' : 'fire'} />
-          : unit && <KilnDiagram sections={rows} selected={sel} onSelect={pick} t={t} />}
-
-      </div>
-
-      {/* Every chamber / line as a list */}
-      {(() => {
-        const teamName = (id) => teams.find((tm) => tm._id === id)?.label || '';
-        const stateText = (st) => t[STATE_LABEL_KEY[st]] || st;
-        const cols = [
-          ['index', (r) => r.index], ['round', (r) => r.round || ''], ['state', (r) => stateText(r.state)],
-          ['count', (r) => r.currentLoad || 0], ['team', (r) => teamName(r.loadTeamId)],
-          ['loaded', (r) => (r.loadedAt ? fmtDate(r.loadedAt) : '')], ['fired', (r) => (r.firedAt ? fmtDateTime(r.firedAt) : '')],
-          ['coal', (r) => ((r.coalKg || 0) + (r.logCoalKg || 0)) || ''], ['issues', (r) => r.issues || ''],
-        ];
-        const shown = rows.filter((r) => cols.every(([k, get]) => !lf[k] || String(get(r)).toLowerCase().includes(lf[k].toLowerCase())));
-        const any = Object.values(lf).some(Boolean);
-        return (
-          <div className="card table-wrap">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.65rem 0.85rem' }}>
-              <h2 style={{ margin: 0, border: 'none', padding: 0 }}>{unit === 'line' ? t.lines : t.chambers} ({shown.length} / {rows.length})</h2>
-              {any && <button type="button" className="clear-filter-btn" onClick={() => setLf({})}>✕ {t.clearAll}</button>}
+          <div className="grid gap-2 sm:min-w-64">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-n-500">{t.countBy}</span>
+              <div className="flex-1">
+                <Tabs size="sm" value={unit} onChange={(u) => switchUnit(u)} options={[['chamber', t.chambers], ['line', t.lines]]} />
+              </div>
             </div>
-            <table>
-              <thead>
-                <tr>
-                  <th className="sticky-col">{unitLabel}</th>
-                  <th>{t.round}</th>
-                  <th>{t.status}</th>
-                  <th>{t.kachiBharai}</th>
-                  <th>{t.team}</th>
-                  <th>{t.loadedOn}</th>
-                  <th>{t.firedOn}</th>
-                  <th>{t.coalUsed}</th>
-                  <th>{t.issuesAndCauses}</th>
-                </tr>
-                <tr className="filter-row">
-                  {cols.map(([k]) => (
-                    <th key={k} className={k === 'index' ? 'sticky-col' : undefined}>
-                      <input type="search" className="table-col-filter" aria-label={k} value={lf[k] || ''} onChange={(e) => setLf({ ...lf, [k]: e.target.value })} />
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {shown.map((r) => (
-                  <tr key={r.index} className={`pick-row${sel?.index === r.index ? ' picked' : ''}`} onClick={() => pick(r)}>
-                    <td><strong>{r.index}</strong></td>
-                    <td>{r.round || '—'}</td>
-                    <td><span className={`badge state-badge st-${r.state}`}>{stateText(r.state)}</span></td>
-                    <td>{r.currentLoad ? r.currentLoad.toLocaleString() : '—'}</td>
-                    <td>{teamName(r.loadTeamId) || '—'}</td>
-                    <td>{r.loadedAt ? <strong>{fmtDate(r.loadedAt)}</strong> : '—'}</td>
-                    <td>{r.firedAt ? fmtDateTime(r.firedAt) : '—'}</td>
-                    <td>{(r.coalKg || 0) + (r.logCoalKg || 0) ? `${((r.coalKg || 0) + (r.logCoalKg || 0)).toLocaleString()} kg` : '—'}</td>
-                    <td className="issues-cell">{r.issues || '—'}</td>
-                  </tr>
-                ))}
-                {!shown.length && <tr><td colSpan={9} className="muted">{t.noEntries}</td></tr>}
-              </tbody>
-            </table>
-          </div>
-        );
-      })()}
-
-      {/* Chamber / line action panel */}
-      {sel && (
-        <div ref={panelRef} className="card grid kiln-panel" style={{ borderInlineStart: '5px solid var(--brand)', animation: 'slide-up 0.2s ease' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
-            {unit === 'line' && (
-              <button type="button" className="ghost" aria-label={t.previous} disabled={!rows.some((x) => x.index === sel.index - 1)} onClick={() => stepSel(-1)}>‹</button>
+            {unit === 'chamber' && (
+              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-2">
+                <Field label={t.linesPerAdvance}><Input inputMode="numeric" className="min-h-10" value={steps} onChange={(e) => setSteps(e.target.value.replace(/[^\d]/g, ''))} /></Field>
+                <Field label={t.fireTime}>
+                  <Input type="datetime-local" className="min-h-10" value={fireAt} title={t.fireTimeHint} onChange={(e) => setFireAt(e.target.value)}
+                    max={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)} />
+                </Field>
+                <Button size="sm" className="min-h-10" loading={advancing} disabled={!unit} onClick={fireAdvance}>🔥 {t.advanceFire}</Button>
+              </div>
             )}
-            <h2>
-              {unitLabel} #{sel.index}{sel.round ? ` · ${t.round} ${sel.round}` : ''} — {t[STATE_LABEL_KEY[sel.state]] || sel.state}
-            </h2>
-            {unit === 'line' && (
-              <button type="button" className="ghost" aria-label={t.next} disabled={!rows.some((x) => x.index === sel.index + 1)} onClick={() => stepSel(1)}>›</button>
-            )}
-            <button type="button" className="close-btn" aria-label={t.close || 'Close'} title={t.close || 'Close'} onClick={() => setSel(null)}>✕</button>
           </div>
+        </CardBody>
+      </Card>
 
-          {unit === 'line' && (() => {
-            const cur = stageOf(sel);
-            const label = { Loading: t.loading, Preheating: t.preheating, Firing: t.firingState, Cooling: t.cooling, Unloading: t.unloading };
-            return (
-              <div className="stage-bar" role="group" aria-label={t.stages}>
-                {STAGES.map((st, i) => {
-                  const done = i < cur || (i === cur && st === 'Cooling' && sel.state === 'Ready');
-                  const now = i === cur && !done;
-                  const next = i === cur + 1 || (cur === 0 && i === 0 && !sel.currentLoad);
-                  // Preheating is marked by hand; Firing can follow loading or preheating
-                  const loaded = sel.currentLoad > 0;
-                  const can = (next && !(st === 'Unloading' && cur < 3) && !(st === 'Preheating' && !loaded))
-                    || (st === 'Firing' && loaded && cur <= 1);
+      {msg.text && !sel && <Alert tone={msg.bad ? 'err' : 'ok'}>{msg.text}</Alert>}
+
+      {/* the plan and, beside it on wide screens, the panel for the chosen line */}
+      <div className={cx('grid items-start gap-4', sel && 'xl:grid-cols-2')}>
+        <div ref={planRef}>
+          <Card>
+            <CardHeader title={`${t.kilnBoard} — ${unit === 'line' ? t.lines : t.chambers}`} />
+            <CardBody>
+              <p className="m-0 text-center text-xs text-n-500">{unit === 'line' ? t.kilnLinesHint : t.kilnHint}</p>
+              <KilnLegend rows={rows} t={t} states={unit === 'line' ? undefined : ['Empty', 'Loading', 'Preheating', 'Firing', 'Cooling', 'Unloading']} />
+              {unit === 'line'
+                ? <LineDiagram lines={rows} selected={sel} onSelect={pick} t={t} fireIndex={fire?.index} mode={focus === 'load' ? 'load' : focus === 'unload' ? 'unload' : 'fire'} />
+                : unit && <KilnDiagram sections={rows} selected={sel} onSelect={pick} t={t} />}
+            </CardBody>
+          </Card>
+        </div>
+
+        {sel && (
+          <div ref={panelRef} className="xl:sticky xl:top-20">
+            <Card className="overflow-hidden ring-2 ring-brand-300">
+              {/* ‹  Line 131 · Round 2 — Firing  ›  ✕ */}
+              <div className="flex items-center gap-1.5 border-b border-n-100 bg-brand-50 px-2 py-2">
+                {unit === 'line' && <IconButton label={t.previous} disabled={!rows.some((x) => x.index === sel.index - 1)} onClick={() => stepSel(-1)} className="bg-white text-lg ring-1 ring-n-300 disabled:opacity-40">‹</IconButton>}
+                <h2 className="m-0 min-w-0 flex-1 truncate text-center text-base font-bold text-n-900">
+                  {unitLabel} {sel.index}{sel.round ? ` · ${t.round} ${sel.round}` : ''} — {stateText(sel.state)}
+                </h2>
+                {unit === 'line' && <IconButton label={t.next} disabled={!rows.some((x) => x.index === sel.index + 1)} onClick={() => stepSel(1)} className="bg-white text-lg ring-1 ring-n-300 disabled:opacity-40">›</IconButton>}
+                <IconButton label={t.close || 'Close'} onClick={() => setSel(null)} className="bg-white ring-1 ring-n-300">✕</IconButton>
+              </div>
+
+              <CardBody>
+                {/* stage buttons, in the colours of the plan: Loading > Preheating > Firing > Cooling > Unloading */}
+                {unit === 'line' && (() => {
+                  const cur = stageOf(sel);
+                  const label = { Loading: t.loading, Preheating: t.preheating, Firing: t.firingState, Cooling: t.cooling, Unloading: t.unloading };
                   return (
-                    <button key={st} type="button" className={`stage-btn st-${st}${now ? ' now' : ''}${done ? ' done' : ''}`}
-                      disabled={!can} aria-current={now ? 'step' : undefined} onClick={() => goStage(st)}>
-                      {done ? '✓ ' : ''}{label[st]}
-                    </button>
+                    <div className="grid grid-cols-6 gap-1.5" role="group" aria-label={t.stages}>
+                      {STAGES.map((st, i) => {
+                        const done = i < cur || (i === cur && st === 'Cooling' && sel.state === 'Ready');
+                        const now = i === cur && !done;
+                        const next = i === cur + 1 || (cur === 0 && i === 0 && !sel.currentLoad);
+                        // Preheating is marked by hand; Firing can follow loading or preheating
+                        const loaded = sel.currentLoad > 0;
+                        const can = (next && !(st === 'Unloading' && cur < 3) && !(st === 'Preheating' && !loaded)) || (st === 'Firing' && loaded && cur <= 1);
+                        return (
+                          <button key={st} type="button" disabled={!can} aria-current={now ? 'step' : undefined} onClick={() => goStage(st)}
+                            className={cx('min-h-9 truncate rounded-md border-0 px-1 text-xs font-bold text-white transition', i < 3 ? 'col-span-2' : 'col-span-3',
+                              now && 'ring-2 ring-n-900 ring-offset-1', done && 'opacity-55', !can && !now && !done && 'opacity-40')}
+                            style={{ background: LINE_FILL[st], textShadow: '0 1px 1px rgba(0,0,0,.25)' }}>
+                            {done ? '✓ ' : ''}{label[st]}
+                          </button>
+                        );
+                      })}
+                    </div>
                   );
-                })}
-              </div>
-            );
-          })()}
+                })()}
 
-          {msg.text && (
-            <p role={msg.bad ? 'alert' : 'status'} className={msg.bad ? 'err' : 'ok'} style={{ margin: 0 }}>
-              {msg.text}
-            </p>
-          )}
+                {msg.text && <Alert tone={msg.bad ? 'err' : 'ok'}>{msg.text}</Alert>}
+                <div ref={stageForm} />
 
-          <div ref={stageForm} />
-          {sel.state === 'Empty' && (
-            <div className="grid two" style={{ gap: '0.85rem' }}>
-              {inventory?.greenStock !== undefined && (
-                <div style={{ gridColumn: '1 / -1', padding: '0.5rem 0.75rem', background: 'var(--brand-tint)', borderRadius: '8px', border: '1px solid rgba(234, 88, 12, 0.25)', fontSize: '0.86rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: 'var(--ink)' }}>Available Green Stock:</span>
-                  <strong style={{ color: 'var(--brand)', fontSize: '0.96rem' }}>{(inventory.greenStock ?? 0).toLocaleString()} bricks</strong>
-                </div>
-              )}
-              <label>
-                {t.loaderOrTeam}
-                <SearchSelect
-                  required ariaLabel={t.loaderOrTeam} placeholder={t.typeToSearch} value={form.teamId || ''}
-                  onChange={(v) => setForm({ ...form, teamId: v })}
-                  options={pickOptions('bharai')}
-                />
-              </label>
-              <label>
-                {t.kachiBharai}
-                <input
-                  inputMode="numeric"
-                  placeholder={unit === 'line' ? 'e.g. 4000' : 'e.g. 45000'}
-                  value={form.count || ''}
-                  onChange={(e) => setForm({ ...form, count: e.target.value })}
-                />
-              </label>
-              <label>
-                {t.entryDate}
-                <input type="date" required max={new Date().toISOString().slice(0, 10)} value={form.date || new Date().toISOString().slice(0, 10)} onChange={(e) => setForm({ ...form, date: e.target.value })} />
-              </label>
-              <button
-                className="primary"
-                disabled={!form.teamId || !form.count || submitting}
-                onClick={() => loadRow(sel)}
-                style={{ gridColumn: '1 / -1' }}
-              >
-                {submitting ? '...' : (unit === 'line' ? t.loadLine : t.loadSection)}
-              </button>
-              {unit === 'line' && <p className="muted" style={{ gridColumn: '1 / -1', margin: 0, fontSize: '0.8rem' }}>{t.nextLineHint}</p>}
-            </div>
-          )}
-
-          {unit === 'line' && sel.state === 'Cooling' && sel.stage !== 'Cooling' && (
-            <p className="muted" style={{ margin: 0, textAlign: 'center' }}>{t.stillHot}</p>
-          )}
-
-          {(unit === 'line' ? (sel.state === 'Ready' || sel.stage === 'Cooling') : sel.state === 'Cooling') && (
-            <div className="grid two" style={{ gap: '0.85rem' }}>
-              <label style={{ gridColumn: '1 / -1' }}>
-                {t.unloaderOrTeam}
-                <SearchSelect
-                  required ariaLabel={t.unloaderOrTeam} placeholder={t.typeToSearch} value={form.teamId || ''}
-                  onChange={(v) => setForm({ ...form, teamId: v })}
-                  options={pickOptions('nikasi')}
-                />
-              </label>
-              <label>
-                {t.entryDate}
-                <input type="date" max={new Date().toISOString().slice(0, 10)} value={form.date || new Date().toISOString().slice(0, 10)} onChange={(e) => setForm({ ...form, date: e.target.value })} />
-              </label>
-              <button
-                className="primary"
-                disabled={!form.teamId}
-                onClick={() => startUnload(sel)}
-                style={{ gridColumn: '1 / -1' }}
-              >
-                {t.assignNikasi}
-              </button>
-            </div>
-          )}
-
-          {sel.state === 'Unloading' && (
-            <div className="grid" style={{ gap: '0.85rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem' }}>
-                <label>
-                {t.entryDate}
-                <input type="date" required max={new Date().toISOString().slice(0, 10)} value={form.date || new Date().toISOString().slice(0, 10)} onChange={(e) => setForm({ ...form, date: e.target.value })} />
-              </label>
-                <label>
-                  {t.awwal}
-                  <input inputMode="numeric" placeholder="0" value={form.awwal || ''} onChange={(e) => setForm({ ...form, awwal: e.target.value })} />
-                </label>
-                <label>
-                  {t.doem}
-                  <input inputMode="numeric" placeholder="0" value={form.doem || ''} onChange={(e) => setForm({ ...form, doem: e.target.value })} />
-                </label>
-                <label>
-                  {t.khangar}
-                  <input inputMode="numeric" placeholder="0" value={form.khangar || ''} onChange={(e) => setForm({ ...form, khangar: e.target.value })} />
-                </label>
-                <label>
-                  {t.broken}
-                  <input inputMode="numeric" placeholder="0" value={form.broken || ''} onChange={(e) => setForm({ ...form, broken: e.target.value })} />
-                </label>
-              </div>
-              <button className="primary" onClick={() => completeUnload(sel)}>
-                {t.completeUnload}
-              </button>
-              {isOwner && (
-                <button type="button" className="ghost danger-text" onClick={() => {
-                  if (window.confirm(`${t.cancelNikasi}: ${unitLabel} ${sel.index}?`)) act(() => post(`${base}/${sel.index}/unload/cancel`, {}), { keep: true });
-                }}>✕ {t.cancelNikasi}</button>
-              )}
-            </div>
-          )}
-
-          {sel.state !== 'Empty' && (
-            <div className="cycle-register">
-              {isOwner && sel.currentLoad > 0 && !loadEdit && (
-                <div className="row" style={{ justifyContent: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                  <button type="button" className="ghost" onClick={startLoadEdit}>✎ {t.editLoading}</button>
-                  {['Preheating', 'Loading'].includes(sel.state) && !sel.firedAt && <button type="button" className="ghost danger-text" onClick={undoLoad}>↺ {t.undoLoading}</button>}
-                </div>
-              )}
-              {loadEdit && (
-                <div className="grid two load-edit">
-                  <label>
-                    {t.loaderOrTeam}
-                    <SearchSelect ariaLabel={t.loaderOrTeam} placeholder={t.typeToSearch} value={loadEdit.who}
-                      onChange={(v) => setLoadEdit({ ...loadEdit, who: v })} options={pickOptions('bharai')} />
-                  </label>
-                  <label>{t.kachiBharai}<input inputMode="numeric" value={loadEdit.count} onChange={(e) => setLoadEdit({ ...loadEdit, count: e.target.value.replace(/[^\d]/g, '') })} /></label>
-                  <label>{t.entryDate}<input type="date" max={new Date().toISOString().slice(0, 10)} value={loadEdit.date} onChange={(e) => setLoadEdit({ ...loadEdit, date: e.target.value })} /></label>
-                  <div className="row" style={{ gridColumn: '1 / -1', justifyContent: 'center', gap: '0.4rem' }}>
-                    <button type="button" className="primary fit-center" disabled={submitting || !Number(loadEdit.count)} onClick={saveLoadEdit}>{t.save}</button>
-                    <button type="button" className="ghost" onClick={() => setLoadEdit(null)}>{t.cancel}</button>
+                {/* load an empty line */}
+                {sel.state === 'Empty' && (
+                  <div className="grid gap-3">
+                    {inventory?.greenStock !== undefined && (
+                      <div className="flex items-center justify-between rounded-md bg-brand-50 px-3 py-2 text-md ring-1 ring-brand-200">
+                        <span className="text-n-700">{t.greenStock}</span>
+                        <strong className="text-brand-700 tabular-nums">{(inventory.greenStock ?? 0).toLocaleString()}</strong>
+                      </div>
+                    )}
+                    <FormGrid>
+                      <Field label={t.loaderOrTeam} className="sm:col-span-2">
+                        <SearchSelect required ariaLabel={t.loaderOrTeam} placeholder={t.typeToSearch} value={form.teamId || ''}
+                          onChange={(v) => setForm({ ...form, teamId: v })} options={pickOptions('bharai')} />
+                      </Field>
+                      <Field label={t.kachiBharai}><Input inputMode="numeric" placeholder={unit === 'line' ? '4000' : '45000'} value={form.count || ''} onChange={(e) => setForm({ ...form, count: e.target.value })} /></Field>
+                      <Field label={t.entryDate}>{dateBox()}</Field>
+                    </FormGrid>
+                    <Button block loading={submitting} disabled={!form.teamId || !form.count} onClick={() => loadRow(sel)}>{unit === 'line' ? t.loadLine : t.loadSection}</Button>
+                    {unit === 'line' && <Muted className="text-xs">{t.nextLineHint}</Muted>}
                   </div>
-                </div>
-              )}
-              <div className="cycle-dates">
-                <div><span>{t.loadedOn}</span><strong>{sel.loadedAt ? fmtDate(sel.loadedAt) : '—'}</strong></div>
-                <div><span>{t.firedOn}</span><strong>{sel.firedAt ? fmtDateTime(sel.firedAt) : '—'}</strong></div>
-                <div><span>{t.cooledOn}</span><strong>{sel.cooledAt ? fmtDateTime(sel.cooledAt) : '—'}</strong></div>
-                <div><span>{t.kachiBharai}</span><strong>{(sel.currentLoad || 0).toLocaleString()}</strong></div>
-                {sel.logCoalKg > 0 && <div><span>{t.coalFromLogs}</span><strong>{sel.logCoalKg.toLocaleString()} kg</strong></div>}
-              </div>
-              <div className="grid two">
-                <label>
-                  {t.coalUsed}
-                  <input inputMode="decimal" placeholder={t.coalUsedHint} value={notes.coalKg} onChange={(e) => setNotes({ ...notes, coalKg: e.target.value.replace(/[^\d.]/g, '') })} />
-                </label>
-              </div>
-              <label>
-                {t.issuesAndCauses}
-                <textarea rows={5} className="issues-box" placeholder={t.issuesHint} value={notes.issues} onChange={(e) => setNotes({ ...notes, issues: e.target.value })} />
-              </label>
-              <button type="button" className="ghost" disabled={submitting} onClick={saveNotes}>{t.saveNotes}</button>
-            </div>
-          )}
+                )}
 
-          {history.length > 0 && (
-            <div className="table-wrap cycle-history">
-              <table>
-                <thead>
-                  <tr>
-                    <th>{t.loadedOn}</th><th>{t.firedOn}</th><th>{t.unloadedOn}</th><th>{t.kachiBharai}</th>
-                    <th>{t.coalUsed}</th><th>{t.awwal}</th><th>{t.doem}</th><th>{t.khangar}</th><th>{t.broken}</th><th>{t.issuesAndCauses}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {history.map((h) => (
-                    <tr key={h._id}>
-                      <td>{h.loadedAt ? fmtDate(h.loadedAt) : '—'}</td>
-                      <td>{h.firedAt ? fmtDateTime(h.firedAt) : '—'}</td>
-                      <td>{fmtDate(h.unloadedAt)}</td>
-                      <td>{(h.count || 0).toLocaleString()}</td>
-                      <td>{(h.coalKg || 0) + (h.logCoalKg || 0) ? `${((h.coalKg || 0) + (h.logCoalKg || 0)).toLocaleString()} kg` : '—'}</td>
-                      <td>{h.awwal.toLocaleString()}</td><td>{h.doem.toLocaleString()}</td><td>{h.khangar.toLocaleString()}</td><td>{h.broken.toLocaleString()}</td>
-                      <td className="issues-cell">{h.issues || '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                {unit === 'line' && sel.state === 'Cooling' && sel.stage !== 'Cooling' && <Muted>{t.stillHot}</Muted>}
 
-          {['Loading', 'Preheating', 'Firing'].includes(sel.state) && (
-            <div style={{ padding: '0.75rem 1rem', background: '#f8fafc', borderRadius: '10px', color: 'var(--muted)', fontSize: '0.88rem' }}>
-              <span>{t.inCycleHint}</span>
-            </div>
-          )}
-        </div>
-      )}
+                {/* start nikasi */}
+                {(unit === 'line' ? (sel.state === 'Ready' || sel.stage === 'Cooling') : sel.state === 'Cooling') && (
+                  <div className="grid gap-3">
+                    <FormGrid>
+                      <Field label={t.unloaderOrTeam} className="sm:col-span-2">
+                        <SearchSelect required ariaLabel={t.unloaderOrTeam} placeholder={t.typeToSearch} value={form.teamId || ''}
+                          onChange={(v) => setForm({ ...form, teamId: v })} options={pickOptions('nikasi')} />
+                      </Field>
+                      <Field label={t.entryDate}>{dateBox()}</Field>
+                    </FormGrid>
+                    <Button block disabled={!form.teamId} onClick={() => startUnload(sel)}>{t.assignNikasi}</Button>
+                  </div>
+                )}
+
+                {/* finish nikasi: bricks by grade */}
+                {sel.state === 'Unloading' && (
+                  <div className="grid gap-3">
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                      <Field label={t.entryDate} className="col-span-2 sm:col-span-1">{dateBox()}</Field>
+                      {['awwal', 'doem', 'khangar', 'broken'].map((k) => (
+                        <Field key={k} label={t[k]}><Input inputMode="numeric" placeholder="0" value={form[k] || ''} onChange={(e) => setForm({ ...form, [k]: e.target.value })} /></Field>
+                      ))}
+                    </div>
+                    <Button block onClick={() => completeUnload(sel)}>{t.completeUnload}</Button>
+                    {isOwner && (
+                      <Button variant="dangerGhost" onClick={() => {
+                        if (window.confirm(`${t.cancelNikasi}: ${unitLabel} ${sel.index}?`)) act(() => post(`${base}/${sel.index}/unload/cancel`, {}), { keep: true });
+                      }}>✕ {t.cancelNikasi}</Button>
+                    )}
+                  </div>
+                )}
+
+                {/* this cycle: dates, coal and issues; owner can correct the load */}
+                {sel.state !== 'Empty' && (
+                  <div className="grid gap-3 border-t border-n-100 pt-3">
+                    {isOwner && sel.currentLoad > 0 && !loadEdit && (
+                      <div className="flex flex-wrap justify-center gap-2">
+                        <Button size="sm" variant="secondary" onClick={startLoadEdit}>✎ {t.editLoading}</Button>
+                        {['Preheating', 'Loading'].includes(sel.state) && !sel.firedAt && <Button size="sm" variant="dangerGhost" onClick={undoLoad}>↺ {t.undoLoading}</Button>}
+                      </div>
+                    )}
+                    {loadEdit && (
+                      <div className="grid gap-3 rounded-lg bg-amber-50 p-3 ring-1 ring-amber-200">
+                        <FormGrid>
+                          <Field label={t.loaderOrTeam} className="sm:col-span-2">
+                            <SearchSelect ariaLabel={t.loaderOrTeam} placeholder={t.typeToSearch} value={loadEdit.who}
+                              onChange={(v) => setLoadEdit({ ...loadEdit, who: v })} options={pickOptions('bharai')} />
+                          </Field>
+                          <Field label={t.kachiBharai}><Input inputMode="numeric" value={loadEdit.count} onChange={(e) => setLoadEdit({ ...loadEdit, count: e.target.value.replace(/[^\d]/g, '') })} /></Field>
+                          <Field label={t.entryDate}><Input type="date" max={todayIso} value={loadEdit.date} onChange={(e) => setLoadEdit({ ...loadEdit, date: e.target.value })} /></Field>
+                        </FormGrid>
+                        <div className="flex justify-center gap-2">
+                          <Button disabled={submitting || !Number(loadEdit.count)} onClick={saveLoadEdit}>{t.save}</Button>
+                          <Button variant="secondary" onClick={() => setLoadEdit(null)}>{t.cancel}</Button>
+                        </div>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {[
+                        [t.loadedOn, sel.loadedAt ? fmtDate(sel.loadedAt) : '—'],
+                        [t.firedOn, sel.firedAt ? fmtDateTime(sel.firedAt) : '—'],
+                        [t.cooledOn, sel.cooledAt ? fmtDateTime(sel.cooledAt) : '—'],
+                        [t.kachiBharai, (sel.currentLoad || 0).toLocaleString()],
+                        ...(sel.logCoalKg > 0 ? [[t.coalFromLogs, `${sel.logCoalKg.toLocaleString()} kg`]] : []),
+                      ].map(([k, v]) => (
+                        <div key={k} className="grid gap-0.5 rounded-md bg-n-50 px-2.5 py-2 text-center ring-1 ring-n-200">
+                          <span className="truncate text-xs font-semibold text-n-500">{k}</span>
+                          <strong className="text-md text-n-900 tabular-nums">{v}</strong>
+                        </div>
+                      ))}
+                    </div>
+                    <Field label={t.coalUsed}>
+                      <Input inputMode="decimal" placeholder={t.coalUsedHint} value={notes.coalKg} onChange={(e) => setNotes({ ...notes, coalKg: e.target.value.replace(/[^\d.]/g, '') })} />
+                    </Field>
+                    <Field label={t.issuesAndCauses}>
+                      <Textarea rows={4} placeholder={t.issuesHint} value={notes.issues} onChange={(e) => setNotes({ ...notes, issues: e.target.value })} />
+                    </Field>
+                    <Button variant="secondary" disabled={submitting} onClick={saveNotes}>{t.saveNotes}</Button>
+                  </div>
+                )}
+
+                {['Loading', 'Preheating', 'Firing'].includes(sel.state) && <Muted className="rounded-md bg-n-50 px-3 py-2">{t.inCycleHint}</Muted>}
+
+                {/* earlier rounds of this line */}
+                {history.length > 0 && (
+                  <div className="table-wrap overflow-x-auto rounded-lg ring-1 ring-n-200">
+                    <table className={cx(tbl.table, 'text-sm')}>
+                      <thead>
+                        <tr>{[t.loadedOn, t.firedOn, t.unloadedOn, t.kachiBharai, t.coalUsed, t.awwal, t.doem, t.khangar, t.broken, t.issuesAndCauses].map((h) => <th key={h} className={tbl.th}>{h}</th>)}</tr>
+                      </thead>
+                      <tbody>
+                        {history.map((h) => (
+                          <tr key={h._id} className={tbl.tr}>
+                            <td className={tbl.td}>{h.loadedAt ? fmtDate(h.loadedAt) : '—'}</td>
+                            <td className={tbl.td}>{h.firedAt ? fmtDateTime(h.firedAt) : '—'}</td>
+                            <td className={tbl.td}>{fmtDate(h.unloadedAt)}</td>
+                            <td className={tbl.td}>{(h.count || 0).toLocaleString()}</td>
+                            <td className={tbl.td}>{coalOf(h) ? `${coalOf(h).toLocaleString()} kg` : '—'}</td>
+                            <td className={tbl.td}>{(h.awwal || 0).toLocaleString()}</td><td className={tbl.td}>{(h.doem || 0).toLocaleString()}</td>
+                            <td className={tbl.td}>{(h.khangar || 0).toLocaleString()}</td><td className={tbl.td}>{(h.broken || 0).toLocaleString()}</td>
+                            <td className={cx(tbl.td, 'min-w-40 whitespace-normal text-start')}>{h.issues || '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardBody>
+            </Card>
+          </div>
+        )}
+      </div>
+
+      {/* every chamber / line as a list (tap a row to open it) */}
+      <TableCard
+        title={`${unit === 'line' ? t.lines : t.chambers} (${shownRows.length} / ${rows.length})`}
+        actions={<ClearFilters show={Object.values(lf).some(Boolean)} onClick={() => setLf({})} label={t.clearAll} />}
+      >
+        <table className={tbl.table}>
+          <thead>
+            <tr>{cols.map(([k, , label]) => <th key={k} className={cx(k === 'index' && 'sticky-col', tbl.th)}>{label}</th>)}</tr>
+            <tr className="filter-row">
+              {cols.map(([k, , label]) => (
+                <th key={k} className={cx(k === 'index' && 'sticky-col', tbl.fth)}><FilterInput aria-label={label} value={lf[k] || ''} onChange={(e) => setLf({ ...lf, [k]: e.target.value })} /></th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {shownRows.map((r) => (
+              <tr key={r.index} className={cx(tbl.tr, 'cursor-pointer', sel?.index === r.index && 'bg-amber-100!')} onClick={() => pick(r)}>
+                <td className={cx(tbl.td, 'font-bold')}>{r.index}</td>
+                <td className={tbl.td}>{r.round || '—'}</td>
+                <td className={tbl.td}>
+                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold"
+                    style={{ background: `color-mix(in srgb, ${LINE_FILL[r.state] || LINE_FILL.Empty} 18%, #fff)`, color: `color-mix(in srgb, ${LINE_FILL[r.state] || LINE_FILL.Empty} 70%, #1c1917)` }}>
+                    <span className="size-2 rounded-full" style={{ background: LINE_FILL[r.state] || LINE_FILL.Empty }} />{stateText(r.state)}
+                  </span>
+                </td>
+                <td className={tbl.td}>{r.currentLoad ? r.currentLoad.toLocaleString() : '—'}</td>
+                <td className={tbl.td}>{teamName(r.loadTeamId) || '—'}</td>
+                <td className={cx(tbl.td, 'font-semibold')}>{r.loadedAt ? fmtDate(r.loadedAt) : '—'}</td>
+                <td className={tbl.td}>{r.firedAt ? fmtDateTime(r.firedAt) : '—'}</td>
+                <td className={tbl.td}>{coalOf(r) ? `${coalOf(r).toLocaleString()} kg` : '—'}</td>
+                <td className={cx(tbl.td, 'min-w-40 whitespace-normal text-start')}>{r.issues || '—'}</td>
+              </tr>
+            ))}
+            {!shownRows.length && <Empty cols={9}>{t.noEntries}</Empty>}
+          </tbody>
+        </table>
+      </TableCard>
     </div>
   );
 }
