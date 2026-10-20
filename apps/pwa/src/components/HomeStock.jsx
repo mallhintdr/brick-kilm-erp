@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useT, useLang } from '../i18n.js';
+import { useT } from '../i18n.js';
 import { get } from '../api.js';
-import { useTypes, typeLabel } from '../useTypes.js';
+import { SectionTitle, StatCard } from './ui.jsx';
 
 const n = (v) => Math.round(Number(v || 0)).toLocaleString();
 
@@ -10,12 +10,9 @@ const n = (v) => Math.round(Number(v || 0)).toLocaleString();
 // Other purchased items are in the goods receipt list on the Inventory page.
 export default function HomeStock() {
   const t = useT();
-  const { lang } = useLang();
-  const items = useTypes('procurementItem');
   const [r, setR] = useState(null);
   useEffect(() => { get('/stock-report').then(setR).catch(() => {}); }, []);
   if (!r) return null;
-  const itemName = (key) => { const ty = items.types.find((x) => x.key === key); return ty ? typeLabel(ty, lang) : key; };
 
   const cells = [
     { label: t.awwal, value: n(r.stock.awwal), tone: 'teal' },
@@ -27,17 +24,10 @@ export default function HomeStock() {
   ];
 
   return (
-    <section className="home-group home-stock" aria-label={t.hsTitle}>
-      <h2 className="home-group-title">
-        <Link to="/inventory" className="home-stock-link">{t.hsTitle}</Link>
-      </h2>
-      <div className="home-stock-grid">
-        {cells.map((c) => (
-          <div key={c.label} className={`stat tone-${c.tone}`}>
-            <span>{c.label}{c.sub ? ` (${c.sub})` : ''}</span>
-            <strong className={c.warn ? 'err' : undefined}>{c.value}</strong>
-          </div>
-        ))}
+    <section className="grid gap-3 rounded-lg bg-white p-3.5 ring-1 ring-n-200" aria-label={t.hsTitle}>
+      <SectionTitle><Link to="/inventory" className="text-n-900 no-underline">{t.hsTitle}</Link></SectionTitle>
+      <div className="grid grid-cols-3 gap-2 lg:grid-cols-6">
+        {cells.map((c) => <StatCard key={c.label} label={c.label} value={c.value} tone={c.tone} valueClass={c.warn ? 'text-loss text-lg' : undefined} className="px-1.5" />)}
       </div>
     </section>
   );

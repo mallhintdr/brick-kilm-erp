@@ -33,3 +33,23 @@
   html[lang='ur'] .text-lg { font-size: 18.5px !important; }
   html[lang='ur'] .text-xl { font-size: 22px !important; }
 }
+
+/* Personal Finance "Export PDF": only the report prints, landscape, fitted, dark headers, red/green balances.
+   In the utilities layer with higher specificity so it wins over the Tailwind classes on the page. */
+@layer utilities {
+  @media print {
+    body.printing-pf * { visibility: hidden !important; }
+    body.printing-pf .print-area, body.printing-pf .print-area * { visibility: visible !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body.printing-pf .print-area { position: absolute !important; inset: 0 auto auto 0 !important; width: 100% !important; max-height: none !important; overflow: visible !important; box-shadow: none !important; --tw-ring-shadow: 0 0 #0000 !important; }
+    body.printing-pf .print-area .table-wrap { overflow: visible !important; }
+    body.printing-pf .app-shell, body.printing-pf main { position: static !important; overflow: visible !important; height: auto !important; }
+    body.printing-pf .tabbar, body.printing-pf .sticky-header-wrapper { display: none !important; }
+    body.printing-pf .print-area table { width: 100% !important; font-size: 9pt !important; }
+    body.printing-pf .print-area th, body.printing-pf .print-area td { white-space: normal !important; padding: 3px 5px !important; border: 1px solid #94a3b8 !important; }
+    body.printing-pf .print-area thead th { background: #1e293b !important; color: #fff !important; }
+    body.printing-pf .print-area tfoot td { background: #e2e8f0 !important; }
+    body.printing-pf .print-area .text-gain, body.printing-pf .print-area .text-gain * { color: #15803d !important; }
+    body.printing-pf .print-area .text-loss, body.printing-pf .print-area .text-loss * { color: #b91c1c !important; }
+    body.printing-pf .pf-report-head { font-size: 11pt !important; }
+  }
+}

@@ -3,6 +3,8 @@ import { useT } from '../i18n.js';
 import { get, post, put, del, uuid, fmtDate, getRole } from '../api.js';
 import SearchSelect from '../components/SearchSelect.jsx';
 import RowActions, { useRowEdit, IconBtn } from '../components/RowActions.jsx';
+import { WeekNav } from '../components/WorkWeekGrid.jsx';
+import { Card, CardHeader, CardBody, Field, Input, Select, FormGrid, Button, Alert, StatGrid, StatCard, TableCard, tbl, FilterInput, ClearFilters, Empty, cx } from '../components/ui.jsx';
 
 const iso = (d) => d.toISOString().slice(0, 10);
 const todayIso = () => iso(new Date());
@@ -172,33 +174,30 @@ export default function Moulding() {
     return true;
   });
 
+  const cellInput = 'mx-auto block h-8 min-h-0 w-16 rounded-md border-0 bg-white px-1 text-center text-sm ring-1 ring-n-300 outline-none focus:ring-2 focus:ring-brand-500 disabled:bg-n-100';
+
   return (
-    <div className="grid">
-      <div className="kpi-grid">
-        <div className="stat"><span>Total Moulded</span><strong>{totalMoulded.toLocaleString()}</strong></div>
-        <div className="stat"><span>Net Accepted</span><strong className="ok">{totalNet.toLocaleString()}</strong></div>
-      </div>
+    <div className="grid gap-4">
+      <StatGrid className="grid-cols-2 sm:grid-cols-2 lg:grid-cols-2">
+        <StatCard label={t.srMoulded} value={totalMoulded.toLocaleString()} tone="orange" />
+        <StatCard label={t.netCount} value={totalNet.toLocaleString()} tone="green" />
+      </StatGrid>
 
       {/* Weekly entry: every pathera team × 7 days, saved in one go */}
-      <details className="card week-card">
-        <summary className="week-summary"><h2>{t.weeklyEntry}</h2></summary>
-        <div className="grid week-body">
-        <div className="week-controls">
-          <div className="row" style={{ alignItems: 'center', gap: '0.35rem' }}>
-            <button type="button" className="ghost" onClick={() => setWeekStart(addDays(weekStart, -7))} aria-label="Previous week">‹</button>
-            <div className="week-range">
-              <span>{t.fromDate}</span><span>{t.toDate}</span>
-              <strong>{fmtDate(weekDays[0])}</strong><strong>{fmtDate(weekDays[6])}</strong>
-            </div>
-            <button type="button" className="ghost" disabled={weekDays[6] >= todayIso()} onClick={() => setWeekStart(addDays(weekStart, 7))} aria-label="Next week">›</button>
-          </div>
-          <div className="row week-tools" style={{ alignItems: 'center', gap: '0.35rem' }}>
-            <select className="week-select" aria-label={t.weeklyEntry} value={weekStart} onChange={(e) => setWeekStart(e.target.value)}>
+      <details className="group overflow-hidden rounded-lg bg-white shadow-[0_1px_2px_rgba(28,25,23,.05)] ring-1 ring-n-200">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3">
+          <h2 className="m-0 text-lg font-bold text-n-900">{t.weeklyEntry}</h2>
+          <span className="text-n-500 transition group-open:rotate-180" aria-hidden="true">▾</span>
+        </summary>
+        <div className="grid gap-3 border-t border-n-100 p-4">
+          <WeekNav t={t} days={weekDays} onPrev={() => setWeekStart(addDays(weekStart, -7))} onNext={() => setWeekStart(addDays(weekStart, 7))} />
+          <div className="flex items-center justify-center gap-2">
+            <Select aria-label={t.weeklyEntry} value={weekStart} onChange={(e) => setWeekStart(e.target.value)} className="min-h-10 max-w-72">
               {!weekOptions.includes(weekStart) && <option value={weekStart}>{fmtDate(weekStart)} — {fmtDate(addDays(weekStart, 6))}</option>}
               {weekOptions.map((w) => <option key={w} value={w}>{fmtDate(w)} — {fmtDate(addDays(w, 6))}</option>)}
-            </select>
+            </Select>
             {isOwner && weekBatches.length > 0 && (
-              <div className="row-actions">
+              <div className="inline-flex gap-1.5">
                 {weekEdit ? (
                   <>
                     <IconBtn kind="save" title={t.save} onClick={saveWeekEdits} disabled={weekBusy} />
@@ -210,152 +209,131 @@ export default function Moulding() {
               </div>
             )}
           </div>
-        </div>
-        <div className="table-wrap">
-          <table className="week-grid">
-            <thead>
-              <tr>
-                <th className="sticky-col">{t.team}</th>
-                {weekDays.map((d) => <th key={d}>{fmtDate(d).slice(0, 5)}</th>)}
-                <th>{t.total || 'Total'}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {teams.map((tm) => (
-                <tr key={tm._id}>
-                  <td><strong>{tm.label}</strong></td>
-                  {weekDays.map((d) => {
-                    const bs = saved[`${tm._id}|${d}`];
-                    if (bs) {
-                      // Saved cell: plain value; editable in edit mode when it holds a single batch
-                      if (weekEdit && bs.length === 1) {
+          <div className="table-wrap overflow-x-auto rounded-lg ring-1 ring-n-200">
+            <table className={cx(tbl.table, 'text-sm')}>
+              <thead>
+                <tr>
+                  <th className={cx('sticky-col', tbl.th)}>{t.team}</th>
+                  {weekDays.map((d) => <th key={d} className={tbl.th}>{fmtDate(d).slice(0, 5)}</th>)}
+                  <th className={tbl.th}>{t.total}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {teams.map((tm) => (
+                  <tr key={tm._id} className={tbl.tr}>
+                    <td className={cx(tbl.td, 'px-2 text-start font-semibold')}>{tm.label}</td>
+                    {weekDays.map((d) => {
+                      const bs = saved[`${tm._id}|${d}`];
+                      if (bs) {
+                        // saved cell: plain value; editable in edit mode when it holds a single batch
+                        if (weekEdit && bs.length === 1) {
+                          return (
+                            <td key={d} className={cx(tbl.td, 'bg-amber-50! px-1')}>
+                              <input inputMode="numeric" aria-label={`${tm.label} ${d}`} className={cx(cellInput, 'ring-amber-400')}
+                                value={editVals[bs[0]._id] ?? ''} onChange={(e) => setEditVals((v) => ({ ...v, [bs[0]._id]: e.target.value.replace(/[^\d]/g, '') }))} />
+                            </td>
+                          );
+                        }
                         return (
-                          <td key={d} className="week-cell-edit">
-                            <input
-                              inputMode="numeric" aria-label={`${tm.label} ${d}`}
-                              value={editVals[bs[0]._id] ?? ''}
-                              onChange={(e) => setEditVals((v) => ({ ...v, [bs[0]._id]: e.target.value.replace(/[^\d]/g, '') }))}
-                            />
+                          <td key={d} className={cx(tbl.td, 'bg-green-50! px-1 font-semibold text-gain')} title={bs.length > 1 ? t.multipleEntries : undefined}>
+                            {savedCount(tm._id, d).toLocaleString()}{bs.length > 1 && <sup>×{bs.length}</sup>}
                           </td>
                         );
                       }
                       return (
-                        <td key={d} className="week-cell-saved" title={bs.length > 1 ? t.multipleEntries : undefined}>
-                          {savedCount(tm._id, d).toLocaleString()}{bs.length > 1 && <sup>×{bs.length}</sup>}
+                        <td key={d} className={cx(tbl.td, 'px-1')}>
+                          <input inputMode="numeric" aria-label={`${tm.label} ${d}`} disabled={d > todayIso() || weekEdit} className={cellInput}
+                            value={grid[tm._id]?.[d] ?? ''} onChange={(e) => setCell(tm._id, d, e.target.value)} />
                         </td>
                       );
-                    }
-                    return (
-                      <td key={d}>
-                        <input
-                          inputMode="numeric" aria-label={`${tm.label} ${d}`} disabled={d > todayIso() || weekEdit}
-                          value={grid[tm._id]?.[d] ?? ''} onChange={(e) => setCell(tm._id, d, e.target.value)}
-                        />
-                      </td>
-                    );
-                  })}
-                  <td><strong>{rowTotal(tm._id).toLocaleString()}</strong></td>
+                    })}
+                    <td className={cx(tbl.td, 'font-bold')}>{rowTotal(tm._id).toLocaleString()}</td>
+                  </tr>
+                ))}
+                {!teams.length && <Empty cols={9}>{t.noEntries}</Empty>}
+              </tbody>
+              <tfoot>
+                <tr className="bg-n-100 font-bold">
+                  <td className={tbl.td}>{t.total}</td>
+                  {weekDays.map((d) => <td key={d} className={tbl.td}>{dayTotal(d).toLocaleString()}</td>)}
+                  <td className={tbl.td}>{weekTotal.toLocaleString()}</td>
                 </tr>
-              ))}
-              {!teams.length && <tr><td colSpan={9} className="muted">{t.noEntries}</td></tr>}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td>{t.total || 'Total'}</td>
-                {weekDays.map((d) => <td key={d}>{dayTotal(d).toLocaleString()}</td>)}
-                <td>{weekTotal.toLocaleString()}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-        <button type="button" className="primary fit-center" disabled={weekBusy || weekEdit || !newTotal} onClick={saveWeek}>
-          {weekBusy ? '...' : `💾 ${t.saveWeek}`}
-        </button>
+              </tfoot>
+            </table>
+          </div>
+          <Button loading={weekBusy} disabled={weekEdit || !newTotal} onClick={saveWeek} className="justify-self-center sm:min-w-48">💾 {t.saveWeek}</Button>
         </div>
       </details>
 
       {/* Single batch entry, any past date */}
-      <form className="card grid" onSubmit={submit}>
-        <h2>{t.moulding} — {t.singleEntry}</h2>
-        <div className="grid two" style={{ gap: '0.9rem' }}>
-          <label>
-            {t.moulderOrTeam}
-            <SearchSelect
-              required ariaLabel={t.moulderOrTeam} placeholder={t.typeToSearch} value={f.teamId}
-              onChange={(v) => setF({ ...f, teamId: v })}
-              options={[
-                // every registered moulder (w:<id>), then teams of several moulders (t:<id>)
-                ...moulders.map((w) => ({ value: `w:${w._id}`, label: w.fatherName ? `${w.name} — ${w.fatherName}` : w.name, search: `${w.cnic || ''} ${w.phone || ''}` })),
-                ...teams.filter((tm) => !tm.solo).map((tm) => ({ value: `t:${tm._id}`, label: `${t.team}: ${tm.label}`, search: '' })),
-              ]}
-            />
-          </label>
-          <label>
-            {t.date || 'Date'}
-            <input type="date" required max={todayIso()} value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} />
-          </label>
-          <label>
-            {t.count}
-            <input required inputMode="numeric" placeholder="e.g. 10000" value={f.count} onChange={(e) => setF({ ...f, count: e.target.value })} />
-          </label>
-          <label>
-            {t.deductionPct}
-            <input inputMode="decimal" value={f.deductionPct} onChange={(e) => setF({ ...f, deductionPct: e.target.value.replace(/[^\d.]/g, '') })} />
-          </label>
-          <label>
-            {t.quality}
-            <select value={f.quality} onChange={(e) => setF({ ...f, quality: e.target.value })}>
-              <option value="good">{t.qGood}</option>
-              <option value="satisfactory">{t.qSatisfactory}</option>
-              <option value="poor">{t.qPoor}</option>
-            </select>
-          </label>
-        </div>
-        {f.count && (
-          <p className="muted" style={{ margin: 0, textAlign: 'center' }}>
-            {t.deductionPct}: <strong>{currentDeduction.toLocaleString()}</strong> · {t.netCount}: <strong>{currentNet.toLocaleString()}</strong>
-          </p>
-        )}
-        <button className="primary fit-center" disabled={submitting}><span className="plus-icon" aria-hidden="true">+</span> {t.add}</button>
-        {msg.text && <p role={msg.bad ? 'alert' : 'status'} className={msg.bad ? 'err' : 'ok'}>{msg.text}</p>}
-      </form>
+      <Card>
+        <CardHeader title={`${t.moulding} — ${t.singleEntry}`} />
+        <form onSubmit={submit}>
+          <CardBody>
+            <FormGrid className="lg:grid-cols-3">
+              <Field label={t.moulderOrTeam} className="sm:col-span-2 lg:col-span-1">
+                <SearchSelect
+                  required ariaLabel={t.moulderOrTeam} placeholder={t.typeToSearch} value={f.teamId}
+                  onChange={(v) => setF({ ...f, teamId: v })}
+                  options={[
+                    // every registered moulder (w:<id>), then teams of several moulders (t:<id>)
+                    ...moulders.map((w) => ({ value: `w:${w._id}`, label: w.fatherName ? `${w.name} — ${w.fatherName}` : w.name, search: `${w.cnic || ''} ${w.phone || ''}` })),
+                    ...teams.filter((tm) => !tm.solo).map((tm) => ({ value: `t:${tm._id}`, label: `${t.team}: ${tm.label}`, search: '' })),
+                  ]}
+                />
+              </Field>
+              <Field label={t.date}><Input type="date" required max={todayIso()} value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></Field>
+              <Field label={t.count}><Input required inputMode="numeric" placeholder="10000" value={f.count} onChange={(e) => setF({ ...f, count: e.target.value })} /></Field>
+              <Field label={t.deductionPct}><Input inputMode="decimal" value={f.deductionPct} onChange={(e) => setF({ ...f, deductionPct: e.target.value.replace(/[^\d.]/g, '') })} /></Field>
+              <Field label={t.quality}>
+                <Select value={f.quality} onChange={(e) => setF({ ...f, quality: e.target.value })}>
+                  <option value="good">{t.qGood}</option>
+                  <option value="satisfactory">{t.qSatisfactory}</option>
+                  <option value="poor">{t.qPoor}</option>
+                </Select>
+              </Field>
+            </FormGrid>
+            {f.count && (
+              <p className="m-0 rounded-md bg-n-50 px-3 py-2 text-center text-md text-n-600">
+                {t.deductionPct}: <strong className="text-n-900">{currentDeduction.toLocaleString()}</strong> · {t.netCount}: <strong className="text-gain">{currentNet.toLocaleString()}</strong>
+              </p>
+            )}
+            <Button type="submit" loading={submitting} className="justify-self-center sm:min-w-40">＋ {t.add}</Button>
+            {msg.text && <Alert tone={msg.bad ? 'err' : 'ok'}>{msg.text}</Alert>}
+          </CardBody>
+        </form>
+      </Card>
 
-      <div className="card table-wrap">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.65rem 0.85rem' }}>
-          <h2 style={{ margin: 0, border: 'none', padding: 0 }}>{t.moulding} ({shown.length} / {list.length})</h2>
-          {Object.values(filters).some(Boolean) && (
-            <button type="button" className="clear-filter-btn" onClick={() => setFilters({})}>✕</button>
-          )}
-        </div>
-        <table>
+      <TableCard
+        title={`${t.moulding} (${shown.length} / ${list.length})`}
+        actions={<ClearFilters show={Object.values(filters).some(Boolean)} onClick={() => setFilters({})} label={t.clearAll} />}
+      >
+        <table className={tbl.table}>
           <thead>
             <tr>
-              <th className="rownum">#</th>
-              <th className="sticky-col">{t.date || 'Date'}</th>
-              <th>{t.team}</th>
-              <th>{t.count}</th>
-              <th>{t.netCount}</th>
-              <th className="actions">{t.action}</th>
+              <th className={cx('rownum', tbl.th)}>#</th><th className={cx('sticky-col', tbl.th)}>{t.date}</th>
+              <th className={tbl.th}>{t.team}</th><th className={tbl.th}>{t.count}</th><th className={tbl.th}>{t.netCount}</th>
+              <th className={cx('actions', tbl.th)}>{t.action}</th>
             </tr>
             <tr className="filter-row">
-              <th className="rownum" />
-              <th><input type="search" className="table-col-filter" value={filters.date || ''} onChange={(e) => setFilters({ ...filters, date: e.target.value })} /></th>
-              <th><input type="search" className="table-col-filter" value={filters.team || ''} onChange={(e) => setFilters({ ...filters, team: e.target.value })} /></th>
-              <th><input type="search" className="table-col-filter" value={filters.count || ''} onChange={(e) => setFilters({ ...filters, count: e.target.value })} /></th>
-              <th /><th className="actions" />
+              <th className={cx('rownum', tbl.fth)} />
+              {['date', 'team', 'count'].map((k) => (
+                <th key={k} className={tbl.fth}><FilterInput aria-label={k} value={filters[k] || ''} onChange={(e) => setFilters({ ...filters, [k]: e.target.value })} /></th>
+              ))}
+              <th className={tbl.fth} /><th className={cx('actions', tbl.fth)} />
             </tr>
           </thead>
           <tbody>
             {shown.map((b, i) => {
               const editing = editor.isEditing(b._id);
               return (
-                <tr key={b._id}>
-                  <td className="rownum">{i + 1}</td>
-                  <td>{editing ? <input type="date" className="cell-input" max={todayIso()} {...editor.field('date')} /> : <strong>{fmtDate(b.date)}</strong>}</td>
-                  <td>{teamName(b.teamId)}</td>
-                  <td>{editing ? <input inputMode="numeric" className="cell-input" {...editor.field('count')} /> : <strong>{Number(b.count).toLocaleString()}</strong>}</td>
-                  <td><strong className="ok">{Number(b.netCount).toLocaleString()}</strong></td>
-                  <td className="actions">
+                <tr key={b._id} className={cx(tbl.tr, editing && 'bg-amber-50!')}>
+                  <td className={cx('rownum', tbl.td, 'text-n-500')}>{i + 1}</td>
+                  <td className={cx(tbl.td, 'font-semibold')}>{editing ? <input type="date" className={tbl.cell} max={todayIso()} {...editor.field('date')} /> : fmtDate(b.date)}</td>
+                  <td className={tbl.td}>{teamName(b.teamId)}</td>
+                  <td className={cx(tbl.td, 'font-bold')}>{editing ? <input inputMode="numeric" className={tbl.cell} {...editor.field('count')} /> : Number(b.count).toLocaleString()}</td>
+                  <td className={cx(tbl.td, 'font-bold text-gain')}>{Number(b.netCount).toLocaleString()}</td>
+                  <td className={cx('actions', tbl.td)}>
                     <RowActions
                       editor={editor} id={b._id} path={`/moulding/${b._id}`} name={`${b.netCount} — ${fmtDate(b.date)}`}
                       initial={{ date: iso(new Date(b.date)), count: String(b.count) }}
@@ -368,10 +346,10 @@ export default function Moulding() {
                 </tr>
               );
             })}
-            {!shown.length && <tr><td colSpan={7} className="muted" style={{ textAlign: 'center', padding: '1.5rem' }}>{t.noEntries}</td></tr>}
+            {!shown.length && <Empty cols={6}>{t.noEntries}</Empty>}
           </tbody>
         </table>
-      </div>
+      </TableCard>
     </div>
   );
 }

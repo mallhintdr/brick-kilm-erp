@@ -4,6 +4,7 @@ import { useT } from '../i18n.js';
 import { get } from '../api.js';
 import LineChart from '../components/LineChart.jsx';
 import BarChart from '../components/BarChart.jsx';
+import { Card, CardBody, Field, Input, Select, Button, Section, StatGrid, StatCard, Muted, Badge, TableCard, tbl, cx } from '../components/ui.jsx';
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const daysAgoStr = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
@@ -64,7 +65,7 @@ export default function Insights() {
 
   const bucketed = useMemo(() => rollup(daily, dayCount > 90 ? 7 : dayCount > 30 ? 3 : 1), [daily, dayCount]);
 
-  if (!summary) return <p className="muted" style={{ textAlign: 'center', padding: '2rem' }}>Loading Insights…</p>;
+  if (!summary) return <Muted className="py-8">…</Muted>;
   const u = summary.unloaded;
 
   const RANGES = [
@@ -77,250 +78,104 @@ export default function Insights() {
     { key: 'custom', label: t.customRange },
   ];
 
+  const chart = (y, label, color, format) => (
+    <Card className="p-3"><LineChart data={bucketed} x="date" y={y} label={label} color={color} format={format} /></Card>
+  );
+
   return (
-    <div className="grid">
-      {/* Timeline Filter Toolbar with 7d, 15d, 30d, 90d, 180d, 365d and Custom Range */}
-      <div className="card" style={{ display: 'grid', gap: '0.65rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            {t.insights}
-          </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <label htmlFor="insights-range-select" className="visually-hidden">
-              {t.insights}
-            </label>
-            <select
-              id="insights-range-select"
-              value={range}
+    <div className="grid gap-4">
+      <Card>
+        <CardBody>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="m-0 text-lg font-bold text-n-900">{t.insights}</h2>
+            <Select
+              aria-label={t.insights} value={range} className="min-h-10 max-w-56"
               onChange={(e) => {
                 const val = e.target.value === 'custom' ? 'custom' : Number(e.target.value);
                 setRange(val);
-                if (val !== 'custom') {
-                  setFromDate(daysAgoStr(val));
-                  setToDate(todayStr());
-                }
-              }}
-              style={{
-                minHeight: '38px',
-                padding: '0.35rem 0.9rem',
-                fontSize: '0.92rem',
-                fontWeight: 700,
-                color: '#0f172a',
-                background: '#ffffff',
-                border: '1.5px solid #cbd5e1',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
-                minWidth: '180px',
+                if (val !== 'custom') { setFromDate(daysAgoStr(val)); setToDate(todayStr()); }
               }}
             >
-              {RANGES.map((r) => (
-                <option key={r.key} value={r.key}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
+              {RANGES.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
+            </Select>
           </div>
-        </div>
+          {range === 'custom' && (
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-2">
+              <Field label={t.fromDate}><Input type="date" value={fromDate} max={toDate} onChange={(e) => setFromDate(e.target.value)} className="min-h-10" /></Field>
+              <Field label={t.toDate}><Input type="date" value={toDate} min={fromDate} max={todayStr()} onChange={(e) => setToDate(e.target.value)} className="min-h-10" /></Field>
+              <Button size="sm" className="min-h-10" onClick={handleApplyCustom}>{t.save}</Button>
+            </div>
+          )}
+        </CardBody>
+      </Card>
 
-        {/* Custom Date Range Picker */}
-        {range === 'custom' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', paddingTop: '0.5rem', borderTop: '1px solid var(--line-subtle)' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: 800 }}>{t.fromDate}:</span>
-              <input
-                type="date"
-                value={fromDate}
-                max={toDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                style={{ minHeight: '34px', padding: '0.2rem 0.5rem', fontSize: '0.84rem' }}
-              />
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: 800 }}>{t.toDate}:</span>
-              <input
-                type="date"
-                value={toDate}
-                min={fromDate}
-                max={todayStr()}
-                onChange={(e) => setToDate(e.target.value)}
-                style={{ minHeight: '34px', padding: '0.2rem 0.5rem', fontSize: '0.84rem' }}
-              />
-            </label>
-            <button
-              type="button"
-              className="primary"
-              style={{ minHeight: '34px', padding: '0.25rem 0.85rem', fontSize: '0.82rem' }}
-              onClick={handleApplyCustom}
-            >
-              {t.save}
-            </button>
-          </div>
-        )}
-      </div>
+      <Card className="p-4"><StockReport /></Card>
 
-      <StockReport />
+      <Card className="grid gap-4 p-4">
+        <Section title={t.groupProd}>
+          <StatGrid className="sm:grid-cols-3 lg:grid-cols-3">
+            <StatCard label={t.moulding} value={summary.moulded.toLocaleString()} tone="orange" />
+            <StatCard label={t.awwal} value={`${summary.awwalSharePct}%`} tone={summary.awwalSharePct < 85 ? 'amber' : 'green'} />
+            <StatCard label={t.coalKg} value={`${summary.coalPer1000} kg`} tone={summary.coalPer1000 > 130 ? 'red' : 'slate'} className="col-span-2 sm:col-span-1" />
+          </StatGrid>
+        </Section>
+        <Section title={t.groupFinance}>
+          <StatGrid className="sm:grid-cols-4 lg:grid-cols-4">
+            <StatCard label={t.sales} value={summary.salesRevenue.toLocaleString()} tone="blue" />
+            <StatCard label={t.totalIn} value={summary.cashReceived.toLocaleString()} tone="green" />
+            <StatCard label={t.receivables} value={summary.receivablesOutstanding.toLocaleString()} tone={summary.receivablesOutstanding > 0 ? 'amber' : 'green'} />
+            <StatCard label={t.totalOut} value={summary.totalExpenses.toLocaleString()} tone="red" />
+          </StatGrid>
+        </Section>
+        <Section title={t.groupRisk}>
+          <StatGrid className="grid-cols-1 sm:grid-cols-1 lg:grid-cols-1">
+            <StatCard label={t.outstanding} value={summary.peshgiOutstanding.toLocaleString()} tone="amber" />
+          </StatGrid>
+        </Section>
+      </Card>
 
-      {/* Info Cards Grouped by Type (Filled with 18-20% opacity matching color, swapped text sizes) */}
-      <div className="kpi-section">
-        {/* Group 1: Production & Quality Metrics */}
-        <div className="kpi-group">
-          <h3 className="kpi-group-title">
-            {t.groupProd}
-          </h3>
-          <div className="kpi-grid">
-            <div className="stat" style={{ borderInlineStartColor: 'var(--brand-dark)' }}>
-              <span>{t.moulding}</span>
-              <strong>{summary.moulded.toLocaleString()}</strong>
-            </div>
-            <div className="stat" style={{ borderInlineStartColor: summary.awwalSharePct < 85 ? 'var(--warn-dark)' : 'var(--ok-dark)' }}>
-              <span>{t.awwal}</span>
-              <strong className={summary.awwalSharePct < 85 ? 'warn' : 'ok'}>{summary.awwalSharePct}%</strong>
-            </div>
-            <div className="stat" style={{ borderInlineStartColor: summary.coalPer1000 > 130 ? 'var(--err-dark)' : 'var(--brand-dark)' }}>
-              <span>{t.coalKg}</span>
-              <strong>{summary.coalPer1000} kg</strong>
-            </div>
-          </div>
-        </div>
-
-        {/* Group 2: Financial Performance & Cash Flow (No Rs prefix on dashboard) */}
-        <div className="kpi-group">
-          <h3 className="kpi-group-title">
-            {t.groupFinance}
-          </h3>
-          <div className="kpi-grid">
-            <div className="stat" style={{ borderInlineStartColor: 'var(--info)' }}>
-              <span>{t.sales}</span>
-              <strong>{summary.salesRevenue.toLocaleString()}</strong>
-            </div>
-            <div className="stat" style={{ borderInlineStartColor: 'var(--ok-dark)' }}>
-              <span>{t.totalIn}</span>
-              <strong className="ok">{summary.cashReceived.toLocaleString()}</strong>
-            </div>
-            <div className="stat" style={{ borderInlineStartColor: summary.receivablesOutstanding > 0 ? 'var(--warn-dark)' : 'var(--ok-dark)' }}>
-              <span>{t.receivables}</span>
-              <strong className={summary.receivablesOutstanding > 0 ? 'warn' : ''}>
-                {summary.receivablesOutstanding.toLocaleString()}
-              </strong>
-            </div>
-            <div className="stat" style={{ borderInlineStartColor: 'var(--err-dark)' }}>
-              <span>{t.totalOut}</span>
-              <strong className="err">{summary.totalExpenses.toLocaleString()}</strong>
-            </div>
-          </div>
-        </div>
-
-        {/* Group 3: Operations & Compliance Monitoring */}
-        <div className="kpi-group">
-          <h3 className="kpi-group-title">
-            {t.groupRisk}
-          </h3>
-          <div className="kpi-grid">
-            <div className="stat" style={{ borderInlineStartColor: 'var(--warn-dark)' }}>
-              <span>{t.outstanding}</span>
-              <strong>{summary.peshgiOutstanding.toLocaleString()}</strong>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Bonded Labour Alert Table */}
       {bondedRisk.length > 0 && (
-        <div className="card">
-          <h2>{t.bondedLabourRisk}</h2>
-          <p role="status" className="warn" style={{ marginBottom: '0.85rem' }}>
-            {t.bondedLabourRiskNote}
-          </p>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th className="rownum">#</th>
-                  <th className="sticky-col">{t.name}</th>
-                  <th style={{ textAlign: 'end' }}>{t.outstanding}</th>
-                  <th style={{ textAlign: 'end' }}>{t.daysSinceRecovery}</th>
+        <TableCard title={t.bondedLabourRisk}>
+          <p className="m-0 bg-amber-50 px-4 py-2 text-sm text-amber-800">{t.bondedLabourRiskNote}</p>
+          <table className={tbl.table}>
+            <thead>
+              <tr>
+                <th className={cx('rownum', tbl.th)}>#</th><th className={cx('sticky-col', tbl.th)}>{t.name}</th>
+                <th className={tbl.th}>{t.outstanding}</th><th className={tbl.th}>{t.daysSinceRecovery}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {bondedRisk.map((r, i) => (
+                <tr key={r.workerId} className={tbl.tr}>
+                  <td className={cx('rownum', tbl.td, 'text-n-500')}>{i + 1}</td>
+                  <td className={cx(tbl.td, 'font-semibold')}>{r.name}</td>
+                  <td className={cx(tbl.td, 'text-end font-bold')}>{Number(r.outstanding).toLocaleString()}</td>
+                  <td className={tbl.td}><Badge tone="err">{r.daysSinceRecovery === null ? t.never : `${r.daysSinceRecovery} days`}</Badge></td>
                 </tr>
-              </thead>
-              <tbody>
-                {bondedRisk.map((r, i) => (
-                  <tr key={r.workerId}>
-                    <td className="rownum">{i + 1}</td>
-                    <td><strong>{r.name}</strong></td>
-                    <td style={{ textAlign: 'end' }}><strong>{Number(r.outstanding).toLocaleString()}</strong></td>
-                    <td style={{ textAlign: 'end' }}>
-                      <span className="badge red">{r.daysSinceRecovery === null ? t.never : `${r.daysSinceRecovery} days`}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+              ))}
+            </tbody>
+          </table>
+        </TableCard>
       )}
 
-      {/* Production Chart */}
-      <div className="card">
-        <LineChart
-          data={bucketed}
-          x="date"
-          y="moulded"
-          label={t.moulding}
-          color="#ea580c"
-          format={(v) => Number(v).toLocaleString()}
-        />
-      </div>
-
-      {/* Quality Awwal Share Chart */}
-      <div className="card">
-        <LineChart
-          data={bucketed}
-          x="date"
-          y="awwalSharePct"
-          label={t.awwal}
-          color="#059669"
-          format={(v) => `${v}%`}
-        />
-      </div>
-
-      {/* Fuel Consumption Chart */}
-      <div className="card">
-        <LineChart
-          data={bucketed}
-          x="date"
-          y="coalPer1000"
-          label={t.coalKg}
-          color="#dc2626"
-          format={(v) => `${v} kg`}
-        />
-      </div>
-
-      {/* Revenue Timeline */}
-      <div className="card">
-        <LineChart
-          data={bucketed}
-          x="date"
-          y="revenue"
-          label={t.sales}
-          color="#0284c7"
-          format={(v) => Math.round(v).toLocaleString()}
-        />
-      </div>
-
-      {/* Unloaded Stock by Grade (Bar Chart) */}
-      <div className="card">
-        <BarChart
-          label={t.firedStock}
-          items={[
-            { label: t.awwal, value: u.awwal },
-            { label: t.doem, value: u.doem },
-            { label: t.khangar, value: u.khangar },
-            { label: t.broken, value: u.broken },
-          ]}
-        />
+      {/* charts: one per row on phones, two per row on wide screens */}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        {chart('moulded', t.moulding, '#ea580c', (v) => Number(v).toLocaleString())}
+        {chart('awwalSharePct', t.awwal, '#059669', (v) => `${v}%`)}
+        {chart('coalPer1000', t.coalKg, '#dc2626', (v) => `${v} kg`)}
+        {chart('revenue', t.sales, '#0284c7', (v) => Math.round(v).toLocaleString())}
+        <Card className="p-3 xl:col-span-2">
+          <BarChart
+            label={t.firedStock}
+            items={[
+              { label: t.awwal, value: u.awwal },
+              { label: t.doem, value: u.doem },
+              { label: t.khangar, value: u.khangar },
+              { label: t.broken, value: u.broken },
+            ]}
+          />
+        </Card>
       </div>
     </div>
   );
 }
-
-

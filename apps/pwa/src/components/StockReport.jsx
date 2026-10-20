@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useT } from '../i18n.js';
 import { get } from '../api.js';
+import { Section, StatGrid, StatCard } from './ui.jsx';
 
 const n = (v) => Number(v || 0).toLocaleString();
 
@@ -13,17 +14,14 @@ export default function StockReport() {
   const unitWord = r.unit === 'line' ? t.lines : t.chambers;
 
   const Group = ({ title, children }) => (
-    <div className="kpi-group">
-      <h3 className="kpi-group-title">{title}</h3>
-      <div className="kpi-grid">{children}</div>
-    </div>
+    <Section title={title}>
+      <StatGrid className="sm:grid-cols-4 lg:grid-cols-4">{children}</StatGrid>
+    </Section>
   );
-  const Card = ({ label, value, tone }) => (
-    <div className={`stat ${tone ? `tone-${tone}` : ''}`}><span>{label}</span><strong>{value}</strong></div>
-  );
+  const Card = ({ label, value, tone }) => <StatCard label={label} value={value} tone={tone} />;
 
   return (
-    <div className="kpi-section stock-report">
+    <div className="grid gap-4">
       <Group title={t.srMoulding}>
         <Card label={t.srMoulded} value={n(r.moulding.moulded)} tone="orange" />
         <Card label={t.netCount} value={n(r.moulding.net)} tone="teal" />

@@ -3746,3 +3746,10 @@ thead tr:first-child th {
   border-right: 1px solid var(--b200) !important; border-bottom: 1px solid var(--b200) !important;
 }
 thead tr.filter-row th { background: var(--b50) !important; }
+/* section titles not yet on Tailwind (Home groups): plain, bold, a step larger, thin line under */
+h3.kpi-group-title, h2.home-group-title, .kpi-group-title, .home-group-title {
+  background: none !important; border: 0 !important; border-bottom: 1px solid #e4e1da !important; border-radius: 0 !important; box-shadow: none !important;
+  color: #1c1917 !important; font-size: 15px !important; font-weight: 800 !important; text-transform: none !important; letter-spacing: 0 !important;
+  text-align: start !important; padding: 0 0 0.4rem !important;
+}
+.home-group-title a, .home-stock-link { color: #1c1917 !important; }

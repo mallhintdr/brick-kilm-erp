@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useT } from '../i18n.js';
 import { get, post, uuid, fmtDate } from '../api.js';
+import { Button, Alert, Tabs, IconButton, tbl, cx } from './ui.jsx';
 
 const iso = (d) => d.toISOString().slice(0, 10);
 const todayIso = () => iso(new Date());
@@ -48,68 +49,69 @@ export default function WorkWeekGrid({ kind }) {
   }
 
   return (
-    <details className="card week-card">
-      <summary className="week-summary"><h2>{t.weeklyEntry} — {kind === 'bharai' ? t.loadingBharai : t.unloadingNikasi}</h2></summary>
-      <div className="grid week-body">
-        <div className="week-controls">
-          <div className="row" style={{ alignItems: 'center', gap: '0.35rem' }}>
-            <button type="button" className="ghost" onClick={() => setWeekStart(addDays(weekStart, -7))} aria-label="Previous week">‹</button>
-            <div className="week-range">
-              <span>{t.fromDate}</span><span>{t.toDate}</span>
-              <strong>{fmtDate(days[0])}</strong><strong>{fmtDate(days[6])}</strong>
-            </div>
-            <button type="button" className="ghost" disabled={days[6] >= todayIso()} onClick={() => setWeekStart(addDays(weekStart, 7))} aria-label="Next week">›</button>
-          </div>
-          {kind === 'nikasi' && (
-            <div className="unit-switch" role="group" aria-label={t.grade}>
-              {['awwal', 'doem', 'khangar'].map((g) => (
-                <button key={g} type="button" className={grade === g ? 'on' : ''} aria-pressed={grade === g} onClick={() => setGrade(g)}>{t[g]}</button>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="table-wrap">
-          <table className="week-grid">
+    <details className="group overflow-hidden rounded-lg bg-white ring-1 ring-n-200 shadow-[0_1px_2px_rgba(28,25,23,.05)]">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3">
+        <h2 className="m-0 text-lg font-bold text-n-900">{t.weeklyEntry} — {kind === 'bharai' ? t.loadingBharai : t.unloadingNikasi}</h2>
+        <span className="text-n-500 transition group-open:rotate-180" aria-hidden="true">▾</span>
+      </summary>
+      <div className="grid gap-3 border-t border-n-100 p-4">
+        <WeekNav t={t} days={days} onPrev={() => setWeekStart(addDays(weekStart, -7))} onNext={() => setWeekStart(addDays(weekStart, 7))} />
+        {kind === 'nikasi' && <Tabs options={['awwal', 'doem', 'khangar'].map((g) => [g, t[g]])} value={grade} onChange={setGrade} />}
+        <div className="table-wrap overflow-x-auto rounded-lg ring-1 ring-n-200">
+          <table className={cx(tbl.table, 'text-sm')}>
             <thead>
               <tr>
-                <th className="sticky-col">{t.name}</th>
-                {days.map((d) => <th key={d}>{fmtDate(d).slice(0, 5)}</th>)}
-                <th>{t.total}</th>
+                <th className={cx('sticky-col', tbl.th)}>{t.name}</th>
+                {days.map((d) => <th key={d} className={tbl.th}>{fmtDate(d).slice(0, 5)}</th>)}
+                <th className={tbl.th}>{t.total}</th>
               </tr>
             </thead>
             <tbody>
               {workers.map((w) => (
-                <tr key={w._id}>
-                  <td><strong>{w.name}</strong></td>
+                <tr key={w._id} className={tbl.tr}>
+                  <td className={cx(tbl.td, 'px-2 text-start font-semibold')}>{w.name}</td>
                   {days.map((d) => {
                     const sv = saved[`${w._id}|${d}`];
-                    if (sv != null) return <td key={d} className="week-cell-saved">{sv.toLocaleString()}</td>;
+                    if (sv != null) return <td key={d} className={cx(tbl.td, 'bg-green-50! px-1 font-semibold text-gain')}>{sv.toLocaleString()}</td>;
                     return (
-                      <td key={d}>
+                      <td key={d} className={cx(tbl.td, 'px-1')}>
                         <input inputMode="numeric" aria-label={`${w.name} ${d}`} disabled={d > todayIso()}
+                          className="mx-auto block h-8 min-h-0 w-16 rounded-md border-0 bg-white px-1 text-center text-sm ring-1 ring-n-300 outline-none focus:ring-2 focus:ring-brand-500 disabled:bg-n-100"
                           value={grid[w._id]?.[d] ?? ''} onChange={(e) => setGrid((g) => ({ ...g, [w._id]: { ...(g[w._id] || {}), [d]: e.target.value.replace(/[^\d]/g, '') } }))} />
                       </td>
                     );
                   })}
-                  <td><strong>{rowTotal(w._id).toLocaleString()}</strong></td>
+                  <td className={cx(tbl.td, 'font-bold')}>{rowTotal(w._id).toLocaleString()}</td>
                 </tr>
               ))}
-              {!workers.length && <tr><td colSpan={9} className="muted">{t.noWorkersInCategory}</td></tr>}
+              {!workers.length && <tr><td colSpan={9} className="px-3 py-6 text-center text-sm text-n-500">{t.noWorkersInCategory}</td></tr>}
             </tbody>
             <tfoot>
-              <tr>
-                <td>{t.total}</td>
-                {days.map((d) => <td key={d}>{dayTotal(d).toLocaleString()}</td>)}
-                <td>{workers.reduce((a, w) => a + rowTotal(w._id), 0).toLocaleString()}</td>
+              <tr className="bg-n-100 font-bold">
+                <td className={tbl.td}>{t.total}</td>
+                {days.map((d) => <td key={d} className={tbl.td}>{dayTotal(d).toLocaleString()}</td>)}
+                <td className={tbl.td}>{workers.reduce((a, w) => a + rowTotal(w._id), 0).toLocaleString()}</td>
               </tr>
             </tfoot>
           </table>
         </div>
-        <button type="button" className="primary fit-center" disabled={busy || !newCells.length} onClick={saveWeek}>
-          {busy ? '...' : `💾 ${t.saveWeek}`}
-        </button>
-        {msg.text && <p role={msg.bad ? 'alert' : 'status'} className={msg.bad ? 'err' : 'ok'}>{msg.text}</p>}
+        <Button loading={busy} disabled={!newCells.length} onClick={saveWeek} className="justify-self-center sm:min-w-48">💾 {t.saveWeek}</Button>
+        {msg.text && <Alert tone={msg.bad ? 'err' : 'ok'}>{msg.text}</Alert>}
       </div>
     </details>
+  );
+}
+
+// ‹  From 12-10-2026  To 18-10-2026  ›  (shared by the weekly grids)
+export function WeekNav({ t, days, onPrev, onNext }) {
+  return (
+    <div className="flex items-center justify-center gap-2">
+      <IconButton label="Previous week" onClick={onPrev} className="ring-1 ring-n-300 bg-white text-lg">‹</IconButton>
+      <div className="grid grid-cols-2 gap-x-4 text-center">
+        <span className="text-xs text-n-500">{t.fromDate}</span><span className="text-xs text-n-500">{t.toDate}</span>
+        <strong className="text-md tabular-nums">{fmtDate(days[0])}</strong><strong className="text-md tabular-nums">{fmtDate(days[6])}</strong>
+      </div>
+      <IconButton label="Next week" disabled={days[6] >= todayIso()} onClick={onNext} className="ring-1 ring-n-300 bg-white text-lg disabled:opacity-40">›</IconButton>
+    </div>
   );
 }

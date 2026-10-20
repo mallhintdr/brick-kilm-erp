@@ -46,9 +46,10 @@ export const CardHeader = ({ title, children, className }) => (
   </div>
 );
 export const CardBody = ({ className, children }) => <div className={cx('grid gap-3 p-4', className)}>{children}</div>;
-// light peach band used for every section title across the app
+// section title: plain (no fill, so it never mixes with the coloured number cards), bold and a step
+// larger than the card text, with a thin line underneath
 export const SectionTitle = ({ children, className }) => (
-  <h3 className={cx('m-0 rounded-md border border-brand-200 bg-brand-100 px-3 py-2 text-center text-sm font-bold uppercase tracking-wide text-brand-800', className)}>{children}</h3>
+  <h3 className={cx('m-0 border-b border-n-200 pb-1.5 text-start text-base font-extrabold text-n-900', className)}>{children}</h3>
 );
 export const Section = ({ title, children, className }) => (
   <section className={cx('grid gap-3', className)}>
