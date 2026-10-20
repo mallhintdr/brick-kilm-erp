@@ -1,0 +1,24 @@
+/* Tailwind entry. Layer order: Tailwind utilities come before the old stylesheet ("legacy") and are
+   marked important, so a Tailwind class always wins while old and new styles live side by side.
+   As pages move to Tailwind their old rules are deleted from styles.css. */
+@layer theme, base, components, utilities, legacy;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) important;
+@import "./styles.css" layer(legacy);
+@source "./";
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans', 'Noori Nastaleeq', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-urdu: 'Noori Nastaleeq', 'Plus Jakarta Sans', serif;
+  /* brand: kiln orange */
+  --color-brand-50: #fff7ed; --color-brand-100: #ffedd5; --color-brand-200: #fed7aa; --color-brand-300: #fdba74;
+  --color-brand-500: #f97316; --color-brand-600: #ea580c; --color-brand-700: #c2410c; --color-brand-800: #9a3412; --color-brand-900: #7c2d12;
+  /* warm neutrals */
+  --color-n-0: #ffffff; --color-n-50: #f7f6f3; --color-n-100: #f1efea; --color-n-200: #e4e1da; --color-n-300: #cfcbc2;
+  --color-n-400: #a8a29e; --color-n-500: #78716c; --color-n-600: #57534e; --color-n-700: #44403c; --color-n-900: #1c1917;
+  --color-zebra: #fbf7f3;
+  --color-gain: #15803d; --color-loss: #dc2626; --color-caution: #b45309;
+  /* type scale */
+  --text-2xs: 11px; --text-xs: 12px; --text-sm: 13px; --text-md: 14px; --text-base: 15px; --text-lg: 16px; --text-xl: 20px;
+  --radius-md: 9px; --radius-lg: 12px;
+}
