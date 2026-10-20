@@ -3721,3 +3721,7 @@ p.err { background: #fef2f2; color: var(--err-v2) !important; }
 
 /* desktop: comfortable reading width */
 @media (min-width: 1280px) { main#main { max-width: 1280px; margin-inline: auto; } }
+/* header buttons keep their own look (not the white secondary style) */
+button.ghost.logout-btn { background: #dc2626 !important; color: #fff !important; border: 0 !important; min-height: 40px; }
+button.ghost.logout-btn:hover:not(:disabled) { background: #b91c1c !important; }
+button.ghost.logout-btn .logout-user { color: #fff !important; }
