@@ -3725,3 +3725,6 @@ p.err { background: #fef2f2; color: var(--err-v2) !important; }
 button.ghost.logout-btn { background: #dc2626 !important; color: #fff !important; border: 0 !important; min-height: 40px; }
 button.ghost.logout-btn:hover:not(:disabled) { background: #b91c1c !important; }
 button.ghost.logout-btn .logout-user { color: #fff !important; }
+/* home buttons: the full name always shows (wraps to a second line instead of being cut) */
+.home-module { min-height: 52px; height: auto !important; align-items: center; }
+.home-module span { white-space: normal !important; overflow: visible !important; text-overflow: clip !important; line-height: 1.2; overflow-wrap: anywhere; font-size: 0.86rem; }
