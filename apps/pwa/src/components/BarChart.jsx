@@ -174,7 +174,7 @@ export default function BarChart({ items, colors, height = 230, label = 'Grade B
       <div className="chart-checkbox-legend-row legend-wrap">
         {items.map((it, idx) => {
           const isChecked = activeItems.includes(idx);
-          const barColor = colors?.[idx] || 'var(--brand)';
+          const barColor = colors?.[idx] || ['#059669', '#0284c7', '#d97706', '#ef4444'][idx % 4]; // same as the bars
           return (
             <label key={it.label} className="chart-checkbox-label">
               <input

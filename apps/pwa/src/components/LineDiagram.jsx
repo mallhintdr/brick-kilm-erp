@@ -85,7 +85,7 @@ export default function LineDiagram({ lines, selected, onSelect, t, fireIndex, m
             <text y="74" textAnchor="middle" className="loop-dir">{t.clockwise} ↺</text>
           </g>
           {lines.map((l, i) => {
-            const q = at((i + 0.5) * PITCH);
+            const q = at(i * PITCH); // line 1 sits exactly at the middle of the top curve
             const p = { x: 2 * Cx - q.x, y: q.y, ang: 180 - q.ang }; // mirrored: lines run counter-clockwise
             const sel = selected?.index === l.index;
             // writing runs along the line and stays upright (the strip looks the same turned round)

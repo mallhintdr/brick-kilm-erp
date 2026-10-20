@@ -32,7 +32,7 @@ export default function Firing() {
   const fireAt = allLines.find((l) => l.state === 'Firing')?.index;
   const ahead = new Set();
   if (fireAt && N) {
-    for (let k = 1; k <= N && ahead.size < 10; k++) {
+    for (let k = 1; k <= N && ahead.size < 15; k++) { // wraps: after 240 comes line 1
       const l = allLines.find((x) => x.index === ((fireAt - 1 + k) % N) + 1);
       if (l && ['Loading', 'Preheating'].includes(l.state)) ahead.add(l.index);
     }
