@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useT } from '../i18n.js';
 import { getRole } from '../api.js';
 import HomeStock from '../components/HomeStock.jsx';
+import { SectionTitle } from '../components/ui.jsx';
 
 const GROUPS = [
   { titleKey: 'dailyOps', paths: ['/attendance', '/moulding', '/loading', '/kiln-board', '/firing', '/unloading'] },
@@ -15,21 +16,25 @@ export default function Home({ links = [] }) {
   const visible = links.filter((l) => !l.roles || l.roles.includes(role));
 
   return (
-    <div className="home-page-container">
+    <div className="grid gap-4">
       <HomeStock />
       {GROUPS.map((g) => {
         const items = g.paths.map((p) => visible.find((l) => l.to === p)).filter(Boolean);
         if (!items.length) return null;
         return (
-          <section key={g.titleKey} className="home-group" aria-label={t[g.titleKey]}>
-            <h2 className="home-group-title">{t[g.titleKey]}</h2>
-            <div className="home-module-grid">
+          <section key={g.titleKey} className="grid gap-3 rounded-lg bg-white p-3.5 ring-1 ring-n-200" aria-label={t[g.titleKey]}>
+            <SectionTitle>{t[g.titleKey]}</SectionTitle>
+            {/* the full name always shows: it wraps to a second line instead of being cut */}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {items.map((l) => (
-                <Link key={l.to} to={l.to} className="home-module">
-                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke={l.color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    {l.iconGlyph}
-                  </svg>
-                  <span>{t[l.labelKey]}</span>
+                <Link key={l.to} to={l.to}
+                  className="flex min-h-13 items-center gap-2.5 rounded-lg bg-white px-3 py-2 text-md font-semibold leading-tight text-n-900 no-underline ring-1 ring-n-200 transition hover:bg-brand-50 hover:ring-brand-300">
+                  <span className="grid size-8 shrink-0 place-items-center rounded-md" style={{ background: `color-mix(in srgb, ${l.color} 12%, #fff)` }}>
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke={l.color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      {l.iconGlyph}
+                    </svg>
+                  </span>
+                  <span className="min-w-0 break-words">{t[l.labelKey]}</span>
                 </Link>
               ))}
             </div>

@@ -192,57 +192,59 @@ function Shell({ children }) {
   const kilnCode = getKilnCode();
 
   return (
-    <div className="app-shell">
+    <div className="app-shell flex min-h-dvh flex-col bg-n-50">
       <a href="#main" className="skip-link">{t.skipToContent}</a>
-      <div className="sticky-header-wrapper">
-        <header className="top">
-          {/* Brand Logo & Name */}
-          <NavLink to="/home" className="brand-badge" title={t.home} onClick={() => setSmokeBurst(Date.now())}>
-            <div className="brand-icon-box" aria-hidden="true">
+      <div className="sticky-header-wrapper sticky top-0 z-40 bg-gradient-to-b from-slate-900 to-slate-800 shadow-md print:hidden">
+        <header className="mx-auto flex h-14 max-w-[1280px] items-center gap-2 px-3 sm:h-16 sm:px-4">
+          {/* logo and name: back to Home (the chimney puffs out a cloud of smoke) */}
+          <NavLink to="/home" title={t.home} onClick={() => setSmokeBurst(Date.now())}
+            className="flex min-w-0 items-center gap-2.5 rounded-lg px-1.5 py-1 no-underline hover:bg-white/5">
+            <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-brand-600 shadow-[0_2px_8px_rgba(234,88,12,.45)]" aria-hidden="true">
               <KilnLogo size={30} color="#ffffff" burst={smokeBurst} />
-            </div>
-            <span className="brand-stack">
-              <strong className="brand-text">{t.appName}</strong>
-              <small className="brand-user">v{__APP_VERSION__}</small>
+            </span>
+            <span className="grid min-w-0 leading-tight">
+              <strong className="truncate text-base font-extrabold text-white sm:text-lg">{t.appName}</strong>
+              <small className="text-2xs font-semibold text-slate-400">v{__APP_VERSION__}</small>
             </span>
           </NavLink>
 
-          <span className="grow" />
+          <span className="flex-1" />
 
-          <div className="top-actions">
-            {/* single toggle: shows the language it switches to */}
-            <button
-              type="button" className="lang-btn" onClick={() => setLang(lang === 'ur' ? 'en' : 'ur')}
-              title={lang === 'ur' ? 'English' : 'اردو'} aria-label={lang === 'ur' ? 'Switch to English' : 'اردو میں بدلیں'}
-            >
-              {lang === 'ur' ? 'EN' : 'UR'}
-            </button>
-            <button
-              type="button"
-              className="ghost logout-btn with-user"
-              title={kilnCode ? ` —  ()` : ` — `}
-              aria-label={` `}
-              onClick={() => { clearSession(); nav('/login'); }}
-            >
-              <Icon name="logout" color="#ffffff" size={16} stroke={2.75} />
-              <span className="logout-user">{username}</span>
-            </button>
-          </div>
+          {/* single toggle: shows the language it switches to */}
+          <button
+            type="button" onClick={() => setLang(lang === 'ur' ? 'en' : 'ur')}
+            title={lang === 'ur' ? 'English' : 'اردو'} aria-label={lang === 'ur' ? 'Switch to English' : 'اردو میں بدلیں'}
+            className="inline-flex size-10 min-h-10 shrink-0 items-center justify-center rounded-lg border-0 bg-white/10 p-0 font-sans text-sm leading-none font-extrabold text-white ring-1 ring-white/20 hover:bg-white/20"
+          >
+            {lang === 'ur' ? 'EN' : 'UR'}
+          </button>
+          <button
+            type="button" title={username} aria-label={`${t.logout || 'Logout'} ${username}`}
+            onClick={() => { clearSession(); nav('/login'); }}
+            className="flex min-h-10 shrink-0 items-center gap-1.5 rounded-lg border-0 bg-red-600 px-2.5 text-white hover:bg-red-700"
+          >
+            <Icon name="logout" color="#ffffff" size={16} stroke={2.75} />
+            <span className="max-w-20 truncate font-sans text-xs font-bold">{username}</span>
+          </button>
         </header>
       </div>
 
-      <main id="main" ref={mainRef} tabIndex={-1}>{children}</main>
+      <main id="main" ref={mainRef} tabIndex={-1}
+        className="mx-auto w-full max-w-[1280px] flex-1 px-3 pt-3 pb-[calc(84px+env(safe-area-inset-bottom))] outline-none sm:px-4 sm:pt-4 lg:pb-8">
+        {children}
+      </main>
 
-      {/* phones: the most used pages one thumb away */}
-      <nav className="tabbar" aria-label={t.home}>
+      {/* phones and tablets: the most used pages one thumb away */}
+      <nav aria-label={t.home}
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 gap-1 border-t border-n-200 bg-white/95 px-1 pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] backdrop-blur-md lg:hidden print:hidden">
         {[['/home', 'home', t.home], ['/kiln-board', 'board', t.kilnBoard], ['/firing', 'firing', t.firing], ['/khata', 'kharchi', t.khataTitle], ['/roznamcha', 'reports', t.roznamcha]].map(([to, icon, label]) => (
-          <NavLink key={to} to={to} className={({ isActive }) => `tab${isActive ? ' on' : ''}`}>
-            <Icon name={icon} size={20} stroke={2} />
-            <span>{label}</span>
+          <NavLink key={to} to={to}
+            className={({ isActive }) => `flex min-w-0 flex-col items-center gap-0.5 rounded-lg px-0.5 py-1.5 text-2xs font-semibold no-underline ${isActive ? 'bg-brand-50 text-brand-700' : 'text-n-500 hover:text-n-900'}`}>
+            <span className="[&_svg]:stroke-current"><Icon name={icon} size={20} stroke={2} /></span>
+            <span className="max-w-full truncate">{label}</span>
           </NavLink>
         ))}
       </nav>
-
     </div>
   );
 }
