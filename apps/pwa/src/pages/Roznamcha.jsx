@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useT } from '../i18n.js';
 import { get, fmtDate } from '../api.js';
+import { Card, CardHeader, CardBody, Input, Alert, Section, StatGrid, StatCard, toneAt, TableCard, tbl, FilterInput, ClearFilters, Empty, Badge } from '../components/ui.jsx';
 
 const today = () => new Date().toISOString().slice(0, 10);
-const TYPES = ['moulding', 'bharai', 'nikasi', 'sale', 'payment', 'purchase', 'coalArrival', 'coalUse', 'peshgi', 'dasti', 'issue'];
+const TYPES = ['moulding', 'bharai', 'nikasi', 'sale', 'payment', 'purchase', 'coalArrival', 'coalUse', 'peshgi', 'dasti', 'issue', 'absent'];
 
 // Roznamcha: the day's report, every entry made that day in time order.
 export default function Roznamcha() {
@@ -22,68 +23,67 @@ export default function Roznamcha() {
   const has = (v, q) => !q || String(v ?? '').toLowerCase().includes(q.toLowerCase());
   const rows = (data?.rows || []).filter((r) => has(typeText(r.type), lf.type) && has(r.detail, lf.detail));
   const count = (k) => (data?.rows || []).filter((r) => r.type === k).length;
+  const counted = TYPES.filter((k) => count(k));
 
   return (
-    <div className="grid">
-      <div className="card grid">
-        <h2>{t.roznamcha}</h2>
-        <div className="row" style={{ justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}>
-          <input type="date" max={today()} value={date} onChange={(e) => setDate(e.target.value)} style={{ maxWidth: '200px' }} />
-          <strong>{fmtDate(date)}</strong>
-        </div>
-        {err && <p className="err" role="alert">{err}</p>}
-      </div>
+    <div className="grid gap-4">
+      <Card>
+        <CardHeader title={t.roznamcha} />
+        <CardBody>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Input type="date" max={today()} value={date} onChange={(e) => setDate(e.target.value)} className="max-w-52" />
+            <strong className="text-lg text-n-900">{fmtDate(date)}</strong>
+          </div>
+          {err && <Alert tone="err">{err}</Alert>}
+        </CardBody>
+      </Card>
 
       {data && (
-        <div className="kpi-section">
-          <div className="kpi-group">
-            <h3 className="kpi-group-title">{t.daySummary}</h3>
-            <div className="kpi-grid">
-              {TYPES.filter((k) => count(k)).map((k) => (
-                <div key={k} className="stat"><span>{typeText(k)}</span><strong>{count(k)}</strong></div>
-              ))}
-              {!data.rows.length && <div className="stat"><span>{t.noEntries}</span><strong>0</strong></div>}
-            </div>
-          </div>
-        </div>
+        <Card className="p-4">
+          <Section title={t.daySummary}>
+            <StatGrid>
+              {counted.map((k, i) => <StatCard key={k} label={typeText(k)} value={count(k)} tone={toneAt(i)} />)}
+              {!counted.length && <StatCard label={t.noEntries} value={0} tone="slate" />}
+            </StatGrid>
+          </Section>
+        </Card>
       )}
 
       {data && (
-        <div className="card table-wrap">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.65rem 0.85rem' }}>
-            <h2 style={{ margin: 0, border: 'none', padding: 0 }}>{t.roznamcha} ({rows.length})</h2>
-            {Object.values(lf).some(Boolean) && <button type="button" className="clear-filter-btn" onClick={() => setLf({})}>✕ {t.clearAll}</button>}
-          </div>
-          <table>
+        <TableCard
+          title={`${t.roznamcha} (${rows.length})`}
+          actions={<ClearFilters show={Object.values(lf).some(Boolean)} onClick={() => setLf({})} label={t.clearAll} />}
+        >
+          <table className={tbl.table}>
             <thead>
               <tr>
-                <th className="rownum">{t.serialNo}</th>
-                <th>{t.wxTime}</th>
-                <th className="sticky-col">{t.entryType}</th>
-                <th>{t.details}</th>
-                <th>{t.amount}</th>
+                <th className={`rownum ${tbl.th}`}>{t.serialNo}</th>
+                <th className={tbl.th}>{t.wxTime}</th>
+                <th className={`sticky-col ${tbl.th}`}>{t.entryType}</th>
+                <th className={tbl.th}>{t.details}</th>
+                <th className={tbl.th}>{t.amount}</th>
               </tr>
               <tr className="filter-row">
-                <th className="rownum" /><th />
-                <th className="sticky-col"><input type="search" className="table-col-filter" aria-label="type" value={lf.type || ''} onChange={(e) => setLf({ ...lf, type: e.target.value })} /></th>
-                <th><input type="search" className="table-col-filter" aria-label="detail" value={lf.detail || ''} onChange={(e) => setLf({ ...lf, detail: e.target.value })} /></th>
-                <th />
+                <th className={`rownum ${tbl.fth}`} /><th className={tbl.fth} />
+                <th className={`sticky-col ${tbl.fth}`}><FilterInput aria-label={t.entryType} value={lf.type || ''} onChange={(e) => setLf({ ...lf, type: e.target.value })} /></th>
+                <th className={tbl.fth}><FilterInput aria-label={t.details} value={lf.detail || ''} onChange={(e) => setLf({ ...lf, detail: e.target.value })} /></th>
+                <th className={tbl.fth} />
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.no}>
-                  <td className="rownum">{r.no}</td>
-                  <td>{new Date(r.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                  <td><span className={`badge rz-${r.type}`}>{typeText(r.type)}</span></td>
-                  <td className="issues-cell">{r.detail}</td>
-                  <td>{r.amount ? <strong>{Number(r.amount).toLocaleString()}</strong> : r.qty ? Number(r.qty).toLocaleString() : '—'}</td>
+                <tr key={r.no} className={tbl.tr}>
+                  <td className={`rownum ${tbl.td} text-n-500`}>{r.no}</td>
+                  <td className={tbl.td}>{new Date(r.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                  <td className={tbl.td}><Badge tone={r.type === 'issue' || r.type === 'absent' ? 'err' : r.amount ? 'brand' : 'neutral'}>{typeText(r.type)}</Badge></td>
+                  <td className={`${tbl.td} text-start whitespace-normal min-w-56`}>{r.detail}</td>
+                  <td className={tbl.td}>{r.amount ? <strong>{Number(r.amount).toLocaleString()}</strong> : r.qty ? Number(r.qty).toLocaleString() : '—'}</td>
                 </tr>
               ))}
-              {!rows.length && <tr><td colSpan={5} className="muted">{t.noEntries}</td></tr>}
+              {!rows.length && <Empty cols={5}>{t.noEntries}</Empty>}
             </tbody>
           </table>
-        </div>
+        </TableCard>
       )}
     </div>
   );

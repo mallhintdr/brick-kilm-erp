@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useT, useLang } from '../i18n.js';
 import { post, setSession } from '../api.js';
+import KilnLogo from '../components/KilnLogo.jsx';
+import { Card, Field, Input, Button, Alert } from '../components/ui.jsx';
 
 export default function Login() {
   const t = useT();
@@ -30,69 +32,33 @@ export default function Login() {
   }
 
   return (
-    <div className="login-wrapper">
-      <form className="card login" onSubmit={submit}>
-        <div className="login-brand-header">
-          <div className="login-brand-icon">
-            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 20h16M7 20v-8l5-6 5 6v8M10 16h4M12 7V3" />
-            </svg>
+    <div className="grid min-h-dvh place-items-center bg-n-50 px-4 py-8">
+      <Card className="w-full max-w-sm overflow-hidden">
+        <div className="grid place-items-center gap-2 bg-gradient-to-br from-slate-900 to-slate-800 px-6 py-7 text-center">
+          <div className="grid size-14 place-items-center rounded-xl bg-brand-600 shadow-lg">
+            <KilnLogo size={34} color="#ffffff" />
           </div>
-          <h1>{t.appName}</h1>
-          <p className="login-subtitle">Enterprise Kiln Operations & Field ERP</p>
+          <h1 className="m-0 text-xl font-bold text-white">{t.appName}</h1>
+          <p className="m-0 text-xs text-slate-400">Brick kiln operations</p>
         </div>
-
-        <label>
-          {t.username}
-          <input
-            value={f.username}
-            onChange={(e) => setF({ ...f, username: e.target.value })}
-            placeholder="e.g. owner or munshi"
-            autoFocus
-            required
-          />
-        </label>
-
-        <label>
-          {t.password}
-          <input
-            type="password"
-            value={f.password}
-            onChange={(e) => setF({ ...f, password: e.target.value })}
-            placeholder="••••••••"
-            required
-          />
-        </label>
-
-        {needsCode && (
-          <label>
-            {t.kilnCode}
-            <input
-              value={f.tenantCode}
-              onChange={(e) => setF({ ...f, tenantCode: e.target.value })}
-              placeholder={t.kilnCodeHint || 'e.g. SAD208'}
-              autoFocus
-              required
-            />
-          </label>
-        )}
-
-        {err && <p role="alert" className="err">{err}</p>}
-
-        <button className="primary" type="submit" disabled={loading} style={{ width: '100%', marginTop: '0.5rem' }}>
-          {loading ? '...' : t.login}
-        </button>
-
-        <button
-          type="button"
-          className="ghost"
-          style={{ width: '100%' }}
-          onClick={() => setLang(lang === 'ur' ? 'en' : 'ur')}
-        >
-          🌐 {t.lang}
-        </button>
-        <p className="app-version">v{__APP_VERSION__}</p>
-      </form>
+        <form className="grid gap-3.5 p-5" onSubmit={submit}>
+          <Field label={t.username}>
+            <Input value={f.username} onChange={(e) => setF({ ...f, username: e.target.value })} placeholder="owner / munshi" autoFocus required autoCapitalize="none" autoCorrect="off" />
+          </Field>
+          <Field label={t.password}>
+            <Input type="password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} placeholder="••••••••" required />
+          </Field>
+          {needsCode && (
+            <Field label={t.kilnCode}>
+              <Input value={f.tenantCode} onChange={(e) => setF({ ...f, tenantCode: e.target.value })} placeholder={t.kilnCodeHint || 'e.g. SAD208'} autoFocus required autoCapitalize="characters" />
+            </Field>
+          )}
+          {err && <Alert tone="err">{err}</Alert>}
+          <Button type="submit" block loading={loading} className="mt-1">{t.login}</Button>
+          <Button variant="secondary" block onClick={() => setLang(lang === 'ur' ? 'en' : 'ur')}>🌐 {t.lang}</Button>
+          <p className="m-0 text-center text-xs text-n-400">v{__APP_VERSION__}</p>
+        </form>
+      </Card>
     </div>
   );
 }
