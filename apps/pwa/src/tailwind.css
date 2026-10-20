@@ -22,3 +22,14 @@
   --text-2xs: 11px; --text-xs: 12px; --text-sm: 13px; --text-md: 14px; --text-base: 15px; --text-lg: 16px; --text-xl: 20px;
   --radius-md: 9px; --radius-lg: 12px;
 }
+
+/* Urdu (Nastaleeq) letters look ~15% smaller than English at the same size: step each size up in Urdu */
+@layer utilities {
+  html[lang='ur'] .text-2xs { font-size: 12.5px !important; }
+  html[lang='ur'] .text-xs { font-size: 13.5px !important; }
+  html[lang='ur'] .text-sm { font-size: 15px !important; }
+  html[lang='ur'] .text-md { font-size: 16px !important; }
+  html[lang='ur'] .text-base { font-size: 17px !important; }
+  html[lang='ur'] .text-lg { font-size: 18.5px !important; }
+  html[lang='ur'] .text-xl { font-size: 22px !important; }
+}

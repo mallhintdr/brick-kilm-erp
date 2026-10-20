@@ -38,31 +38,31 @@ export default function SearchSelect({ options, value, onChange, placeholder, re
   };
 
   return (
-    <div className="search-select" ref={boxRef}>
+    <div className="relative w-full" ref={boxRef}>
       <input
         type="search" role="combobox" aria-expanded={open} aria-label={ariaLabel} autoComplete="off"
         placeholder={selected ? selected.label : placeholder}
-        className={selected && !open ? 'has-value' : ''}
+        className={`w-full min-h-11 rounded-lg border-0 bg-white px-3.5 py-2 text-[16px] text-n-900 ring-1 ring-n-300 outline-none placeholder:text-n-400 focus:ring-2 focus:ring-brand-500 ${selected && !open ? 'font-semibold' : ''}`}
         value={open ? query : (selected?.label ?? '')}
         onFocus={() => setOpen(true)}
         onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
         onKeyDown={onKey}
       />
       {/* keeps native "required" validation working */}
-      {required && <input className="search-select-guard" tabIndex={-1} aria-hidden="true" required value={value || ''} onChange={() => {}} />}
+       {required && <input className="pointer-events-none absolute inset-x-0 bottom-0 h-px min-h-0 p-0 opacity-0 ring-0 border-0" tabIndex={-1} aria-hidden="true" required value={value || ''} onChange={() => {}} />}
       {open && (
-        <ul className="search-select-list" role="listbox" ref={listRef}>
+        <ul className="absolute inset-x-0 top-full z-30 m-0 mt-1 max-h-64 list-none overflow-y-auto rounded-lg bg-white p-1 shadow-lg ring-1 ring-n-200" role="listbox" ref={listRef}>
           {shown.map((o, i) => (
             <li
               key={o.value} role="option" aria-selected={o.value === value}
-              className={`${i === active ? 'active' : ''}${o.value === value ? ' chosen' : ''}`}
+              className={`cursor-pointer rounded-md px-3 py-2 text-md ${i === active ? 'bg-brand-50 text-brand-800' : 'text-n-900'} ${o.value === value ? 'font-bold' : ''}`}
               onPointerDown={(e) => { e.preventDefault(); pick(o); }}
               onMouseEnter={() => setActive(i)}
             >
               {o.label}
             </li>
           ))}
-          {!shown.length && <li className="empty">{emptyText}</li>}
+          {!shown.length && <li className="px-3 py-2 text-sm text-n-500">{emptyText}</li>}
         </ul>
       )}
     </div>

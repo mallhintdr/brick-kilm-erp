@@ -57,10 +57,10 @@ export const Section = ({ title, children, className }) => (
 );
 
 /* ---------- Form fields ---------- */
-const BOX = 'w-full min-h-11 rounded-lg bg-white px-3.5 py-2 text-[16px] font-normal text-n-900 ring-1 ring-n-300 border-0 outline-none placeholder:text-n-400 focus:ring-2 focus:ring-brand-500 disabled:bg-n-100 disabled:opacity-70';
+const BOX = 'w-full max-w-none min-h-11 rounded-lg bg-white px-3.5 py-2 text-[16px] font-normal text-n-900 ring-1 ring-n-300 border-0 outline-none placeholder:text-n-400 focus:ring-2 focus:ring-brand-500 disabled:bg-n-100 disabled:opacity-70';
 export const Field = ({ label, hint, error, className, children }) => (
   <label className={cx('flex min-w-0 flex-col gap-1.5 text-md font-medium text-n-700', className)}>
-    <span className="truncate">{label}</span>
+    <span className="truncate text-md font-medium">{label}</span>
     {children}
     {error ? <span className="text-xs font-medium text-loss">{error}</span> : hint ? <span className="text-xs font-normal text-n-500">{hint}</span> : null}
   </label>
@@ -129,8 +129,43 @@ export const tbl = {
   fth: 'border-b border-n-200 bg-brand-50 p-1',
   td: 'border-b border-n-100 px-2.5 py-2 text-center tabular-nums text-n-900',
   tr: 'odd:bg-white even:bg-zebra hover:bg-brand-50 *:bg-inherit',
+  cell: 'w-full min-w-24 min-h-9 rounded-md bg-white px-2 py-1 text-md text-n-900 ring-1 ring-brand-300 border-0 outline-none focus:ring-2 focus:ring-brand-500',
   filter: 'w-full min-h-8 rounded-md bg-white px-2 text-sm ring-1 ring-n-300 border-0 outline-none focus:ring-2 focus:ring-brand-500',
 };
 export const FilterInput = (p) => <input type="search" className={tbl.filter} {...p} />;
 export const ClearFilters = ({ show, onClick, label }) => (show ? <Button size="sm" variant="secondary" onClick={onClick}>✕ {label}</Button> : null);
 export const Empty = ({ cols, children }) => <tr><td colSpan={cols} className="px-3 py-6 text-center text-sm text-n-500">{children}</td></tr>;
+
+/* ---------- Sheet: slides up from the bottom on phones, centred box on desktop ---------- */
+export const Sheet = ({ title, onClose, children, footer, wide }) => (
+  <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-label={title}>
+    <div className="absolute inset-0 bg-n-900/40 backdrop-blur-[2px]" onClick={onClose} />
+    <div className={cx('relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl', wide ? 'sm:max-w-3xl' : 'sm:max-w-lg')}>
+      <div className="flex items-center justify-between gap-2 border-b border-brand-200 bg-brand-100 px-4 py-2.5">
+        <h2 className="m-0 text-base font-bold text-brand-800">{title}</h2>
+        <IconButton label="Close" onClick={onClose} className="size-9 text-brand-800 hover:bg-brand-200">✕</IconButton>
+      </div>
+      <div className="grid flex-1 gap-3 overflow-y-auto p-4">{children}</div>
+      {footer && <div className="border-t border-n-100 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">{footer}</div>}
+    </div>
+  </div>
+);
+
+/* ---------- Filter chips and a from–to date range ---------- */
+export const Chips = ({ options, value, onChange, className }) => (
+  <div className={cx('flex flex-wrap justify-center gap-1.5', className)}>
+    {options.map(([k, label]) => (
+      <button key={k} type="button" aria-pressed={value === k} onClick={() => onChange(k)}
+        className={cx('min-h-8 rounded-full border-0 px-3 text-xs font-semibold ring-1 transition', value === k ? 'bg-brand-600 text-white ring-brand-600' : 'bg-white text-n-700 ring-n-300 hover:bg-n-50')}>
+        {label}
+      </button>
+    ))}
+  </div>
+);
+export const DateRange = ({ from, to, onFrom, onTo, fromLabel, toLabel, clearLabel = '✕' }) => (
+  <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-2">
+    <Field label={fromLabel}><Input type="date" value={from} max={to || undefined} onChange={(e) => onFrom(e.target.value)} className="min-h-10" /></Field>
+    <Field label={toLabel}><Input type="date" value={to} min={from || undefined} onChange={(e) => onTo(e.target.value)} className="min-h-10" /></Field>
+    <Button size="sm" variant="secondary" className="min-h-10" disabled={!from && !to} onClick={() => { onFrom(''); onTo(''); }}>{clearLabel}</Button>
+  </div>
+);

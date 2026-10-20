@@ -9,9 +9,15 @@ const GLYPHS = {
   delete: <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m5 5v6m4-6v6" />,
 };
 
+const ICON_TONE = {
+  edit: 'text-sky-700 bg-sky-50 ring-sky-200 hover:bg-sky-100',
+  save: 'text-white bg-gain ring-green-700 hover:bg-green-800',
+  cancel: 'text-n-600 bg-white ring-n-300 hover:bg-n-100',
+  delete: 'text-white bg-loss ring-red-700 hover:bg-red-700',
+};
 export function IconBtn({ kind, title, onClick, disabled }) {
   return (
-    <button type="button" className={`icon-btn icon-btn-${kind}`} title={title} aria-label={title} onClick={onClick} disabled={disabled}>
+    <button type="button" className={`inline-grid size-8 min-h-0 place-items-center rounded-md border-0 p-0 ring-1 transition disabled:opacity-50 ${ICON_TONE[kind]}`} title={title} aria-label={title} onClick={onClick} disabled={disabled}>
       <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         {GLYPHS[kind]}
       </svg>
@@ -61,7 +67,7 @@ export default function RowActions({
   }
 
   return (
-    <div className="row-actions">
+    <div className="row-actions inline-flex items-center justify-center gap-1.5">
       {editing ? (
         <>
           <IconBtn kind="save" title={t.save} onClick={save} disabled={busy} />

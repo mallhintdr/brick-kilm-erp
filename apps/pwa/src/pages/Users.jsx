@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useT } from '../i18n.js';
 import { get, post, put, del, uuid } from '../api.js';
+import { Card, CardHeader, CardBody, Field, Input, Select, FormGrid, Button, Alert, Muted, Sheet, TableCard, tbl, cx } from '../components/ui.jsx';
 
 const ROLES = ['owner', 'accountant', 'munshi', 'mistri', 'viewer'];
 const MODULES = ['workers', 'peshgi', 'settings', 'types'];
@@ -25,7 +26,7 @@ function PermissionMatrix({ user, t, onClose, onChanged }) {
   async function resetModule(module) {
     try {
       await del(`/users/${user._id}/permissions/${module}`);
-      setMsg({ text: t.resetDefault + ': ' + module, bad: false });
+      setMsg({ text: `${t.resetDefault}: ${module}`, bad: false });
       load();
       onChanged?.();
     } catch (e) { setMsg({ text: e.message, bad: true }); }
@@ -35,43 +36,36 @@ function PermissionMatrix({ user, t, onClose, onChanged }) {
   const isOwnerUser = matrix.role === 'owner';
 
   return (
-    <div className="sheet-backdrop" onClick={onClose}>
-      <div className="sheet" role="dialog" aria-modal="true" aria-label={t.permissions} onClick={(e) => e.stopPropagation()} style={{ position: 'static', borderRadius: 'var(--radius)', maxWidth: 560, margin: '10vh auto', padding: '1.1rem' }}>
-        <h2>{t.permissions}: {user.username} ({t.roleLabel}: {user.role})</h2>
-        {isOwnerUser && <p className="muted">{t.ownerAlwaysFull}</p>}
-        {!isOwnerUser && (
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th>{t.module}</th>{ACTIONS.map((a) => <th key={a}>{t[a]}</th>)}<th /></tr></thead>
-              <tbody>
-                {MODULES.map((m) => {
-                  const cell = matrix.modules[m];
-                  return (
-                    <tr key={m}>
-                      <td>{t[m]}</td>
-                      {ACTIONS.map((a) => (
-                        <td key={a}>
-                          <input
-                            type="checkbox" style={{ minHeight: 'auto', width: 'auto' }}
-                            checked={!!cell.effective[a]} onChange={() => toggle(m, a, cell.effective[a])}
-                            title={cell.overridden[a] ? t.customOverride : t.roleDefault}
-                          />
-                          {cell.overridden[a] && <span className="muted" style={{ fontSize: '.7em' }}> *</span>}
-                        </td>
-                      ))}
-                      <td><button className="ghost" onClick={() => resetModule(m)}>{t.resetDefault}</button></td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-        {msg.text && <p role={msg.bad ? 'alert' : 'status'} className={msg.bad ? 'err' : 'ok'}>{msg.text}</p>}
-        <p className="muted" style={{ fontSize: '.8em' }}>* {t.customOverride}</p>
-        <button className="primary" onClick={onClose}>{t.close}</button>
-      </div>
-    </div>
+    <Sheet title={`${t.permissions}: ${user.username} (${user.role})`} onClose={onClose} footer={<Button block onClick={onClose}>{t.close}</Button>}>
+      {isOwnerUser && <Muted>{t.ownerAlwaysFull}</Muted>}
+      {!isOwnerUser && (
+        <div className="table-wrap overflow-x-auto rounded-lg ring-1 ring-n-200">
+          <table className={tbl.table}>
+            <thead><tr><th className={tbl.th}>{t.module}</th>{ACTIONS.map((a) => <th key={a} className={tbl.th}>{t[a]}</th>)}<th className={tbl.th} /></tr></thead>
+            <tbody>
+              {MODULES.map((m) => {
+                const cell = matrix.modules[m];
+                return (
+                  <tr key={m} className={tbl.tr}>
+                    <td className={cx(tbl.td, 'font-semibold')}>{t[m]}</td>
+                    {ACTIONS.map((a) => (
+                      <td key={a} className={tbl.td}>
+                        <input type="checkbox" className="size-5 min-h-0 accent-brand-600" checked={!!cell.effective[a]} onChange={() => toggle(m, a, cell.effective[a])}
+                          title={cell.overridden[a] ? t.customOverride : t.roleDefault} />
+                        {cell.overridden[a] && <span className="text-xs text-brand-700"> *</span>}
+                      </td>
+                    ))}
+                    <td className={tbl.td}><Button size="sm" variant="secondary" onClick={() => resetModule(m)}>{t.resetDefault}</Button></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {msg.text && <Alert tone={msg.bad ? 'err' : 'ok'}>{msg.text}</Alert>}
+      <Muted className="text-xs">* {t.customOverride}</Muted>
+    </Sheet>
   );
 }
 
@@ -103,39 +97,46 @@ export default function Users() {
   }
 
   return (
-    <div className="grid">
-      <form className="card grid" onSubmit={addUser}>
-        <h2>{t.newUser}</h2>
-        <label>{t.username}<input required value={f.username} onChange={(e) => setF({ ...f, username: e.target.value })} /></label>
-        <label>{t.password}<input required type="password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} /></label>
-        <label>{t.roleLabel}
-          <select value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })}>
-            {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
-          </select>
-        </label>
-        <button className="primary">{t.add}</button>
-        {msg.text && <p role={msg.bad ? 'alert' : 'status'} className={msg.bad ? 'err' : 'ok'}>{msg.text}</p>}
-      </form>
+    <div className="grid gap-4">
+      <Card>
+        <CardHeader title={t.newUser} />
+        <form onSubmit={addUser}>
+          <CardBody>
+            <FormGrid className="lg:grid-cols-3">
+              <Field label={t.username}><Input required autoCapitalize="none" value={f.username} onChange={(e) => setF({ ...f, username: e.target.value })} /></Field>
+              <Field label={t.password}><Input required type="password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} /></Field>
+              <Field label={t.roleLabel}>
+                <Select value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })}>{ROLES.map((r) => <option key={r} value={r}>{r}</option>)}</Select>
+              </Field>
+            </FormGrid>
+            <Button type="submit" className="justify-self-center sm:min-w-40">＋ {t.add}</Button>
+            {msg.text && <Alert tone={msg.bad ? 'err' : 'ok'}>{msg.text}</Alert>}
+          </CardBody>
+        </form>
+      </Card>
 
-      <div className="card table-wrap">
-        <table>
-          <thead><tr><th className="rownum">#</th><th className="sticky-col">{t.username}</th><th>{t.roleLabel}</th><th className="actions">{t.action}</th></tr></thead>
+      <TableCard title={`${t.users} (${users.length})`}>
+        <table className={tbl.table}>
+          <thead><tr>
+            <th className={cx('rownum', tbl.th)}>#</th><th className={cx('sticky-col', tbl.th)}>{t.username}</th>
+            <th className={tbl.th}>{t.roleLabel}</th><th className={cx('actions', tbl.th)}>{t.action}</th>
+          </tr></thead>
           <tbody>
             {users.map((u, i) => (
-              <tr key={u._id}>
-                <td className="rownum">{i + 1}</td>
-                <td>{u.username}</td>
-                <td>
-                  <select value={u.role} disabled={u.role === 'owner'} onChange={(e) => changeRole(u._id, e.target.value)}>
+              <tr key={u._id} className={tbl.tr}>
+                <td className={cx('rownum', tbl.td, 'text-n-500')}>{i + 1}</td>
+                <td className={cx(tbl.td, 'font-semibold')}>{u.username}</td>
+                <td className={tbl.td}>
+                  <select className={cx(tbl.cell, 'max-w-40')} value={u.role} disabled={u.role === 'owner'} onChange={(e) => changeRole(u._id, e.target.value)}>
                     {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
                   </select>
                 </td>
-                <td className="actions"><button className="ghost" onClick={() => setEditing(u)}>{t.permissions}</button></td>
+                <td className={cx('actions', tbl.td)}><Button size="sm" variant="secondary" onClick={() => setEditing(u)}>{t.permissions}</Button></td>
               </tr>
             ))}
           </tbody>
         </table>
-      </div>
+      </TableCard>
 
       {editing && <PermissionMatrix user={editing} t={t} onClose={() => setEditing(null)} onChanged={load} />}
     </div>

@@ -2,9 +2,21 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useT, useLang } from '../i18n.js';
 import { get, put, fmtDate } from '../api.js';
 import { useTypes, typeLabel } from '../useTypes.js';
+import {
+  Card, CardHeader, CardBody, Field, Input, Select, FormGrid, Button, IconButton, Alert, Section, StatGrid, StatCard,
+  Tabs, Badge, TableCard, tbl, FilterInput, Empty, cx,
+} from '../components/ui.jsx';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const STATUSES = ['present', 'absent', 'leave', 'half'];
+// colour of each mark: chosen = filled, not chosen = outline
+const MARK = {
+  present: ['bg-gain text-white ring-gain', 'text-gain ring-green-300'],
+  absent: ['bg-loss text-white ring-loss', 'text-loss ring-red-300'],
+  leave: ['bg-amber-500 text-white ring-amber-500', 'text-caution ring-amber-300'],
+  half: ['bg-sky-600 text-white ring-sky-600', 'text-sky-700 ring-sky-300'],
+};
+const BADGE = { present: 'ok', absent: 'err', leave: 'warn', half: 'brand' };
 
 // Daily attendance: tap P / A / L / ½ for each worker, then save the day.
 export default function Attendance() {
@@ -58,87 +70,90 @@ export default function Attendance() {
   }
 
   return (
-    <div className="grid">
-      <div className="card grid">
-        <h2>{t.attendance}</h2>
-        <div className="grid two">
-          <label>{t.date}<input type="date" max={today()} value={date} onChange={(e) => setDate(e.target.value)} /></label>
-          <label>
-            {t.category}
-            <select value={category} onChange={(e) => setCategory(e.target.value)}>
-              <option value="">{t.allCategories}</option>
-              {cats.active.map((c) => <option key={c.key} value={c.key}>{typeLabel(c, lang)}</option>)}
-            </select>
-          </label>
-          <label>{t.name}<input type="search" placeholder={t.typeToSearch} value={query} onChange={(e) => setQuery(e.target.value)} /></label>
-        </div>
-        <div className="row" style={{ justifyContent: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button type="button" className="ghost" onClick={() => setMarks({ ...marks, ...Object.fromEntries(shown.map((w) => [w._id, 'present'])) })}>{t.markAllPresent}</button>
-          <button type="button" className="primary fit-center" disabled={busy || !shown.some((w) => marks[w._id])} onClick={save}>
-            {t.save}{changed ? ` (${changed})` : ''}
-          </button>
-        </div>
-        {msg.text && <p role={msg.bad ? 'alert' : 'status'} className={msg.bad ? 'err' : 'ok'}>{msg.text}</p>}
-      </div>
-
-      <div className="kpi-section">
-        <div className="kpi-group">
-          <h3 className="kpi-group-title">{fmtDate(date)}</h3>
-          <div className="kpi-grid">
-            <div className="stat" style={{ borderInlineStartColor: 'var(--ok-dark)' }}><span>{t.att_present}</span><strong className="ok">{count('present')}</strong></div>
-            <div className="stat" style={{ borderInlineStartColor: 'var(--err-dark)' }}><span>{t.att_absent}</span><strong className="err">{count('absent')}</strong></div>
-            <div className="stat" style={{ borderInlineStartColor: 'var(--warn-dark)' }}><span>{t.att_leave}</span><strong className="warn">{count('leave')}</strong></div>
-            <div className="stat" style={{ borderInlineStartColor: 'var(--info)' }}><span>{t.att_half}</span><strong>{count('half')}</strong></div>
+    <div className="grid gap-4">
+      <Card>
+        <CardHeader title={t.attendance} />
+        <CardBody>
+          <FormGrid className="lg:grid-cols-3">
+            <Field label={t.date}><Input type="date" max={today()} value={date} onChange={(e) => setDate(e.target.value)} /></Field>
+            <Field label={t.category}>
+              <Select value={category} onChange={(e) => setCategory(e.target.value)}>
+                <option value="">{t.allCategories}</option>
+                {cats.active.map((c) => <option key={c.key} value={c.key}>{typeLabel(c, lang)}</option>)}
+              </Select>
+            </Field>
+            <Field label={t.name}><Input type="search" placeholder={t.typeToSearch} value={query} onChange={(e) => setQuery(e.target.value)} /></Field>
+          </FormGrid>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button variant="secondary" onClick={() => setMarks({ ...marks, ...Object.fromEntries(shown.map((w) => [w._id, 'present'])) })}>{t.markAllPresent}</Button>
+            <Button disabled={busy || !shown.some((w) => marks[w._id])} onClick={save}>{t.save}{changed ? ` (${changed})` : ''}</Button>
           </div>
-        </div>
-      </div>
+          {msg.text && <Alert tone={msg.bad ? 'err' : 'ok'}>{msg.text}</Alert>}
+        </CardBody>
+      </Card>
 
-      <div className="card table-wrap">
-        <h2>{t.workers} ({shown.length})</h2>
-        <table className="att-table">
+      <Card className="p-4">
+        <Section title={fmtDate(date)}>
+          <StatGrid className="grid-cols-4 sm:grid-cols-4 lg:grid-cols-4">
+            <StatCard label={t.att_present} value={count('present')} tone="green" />
+            <StatCard label={t.att_absent} value={count('absent')} tone="red" />
+            <StatCard label={t.att_leave} value={count('leave')} tone="amber" />
+            <StatCard label={t.att_half} value={count('half')} tone="blue" />
+          </StatGrid>
+        </Section>
+      </Card>
+
+      <TableCard title={`${t.workers} (${shown.length})`}>
+        <table className={cx(tbl.table, 'text-sm')}>
           <thead>
-            <tr><th className="rownum">#</th><th className="att-name">{t.name}</th><th className="att-cat">{t.category}</th><th>{t.attStatus}</th></tr>
+            <tr>
+              <th className={cx('rownum', tbl.th)}>#</th><th className={tbl.th}>{t.name}</th>
+              <th className={tbl.th}>{t.category}</th><th className={tbl.th}>{t.attStatus}</th>
+            </tr>
             <tr className="filter-row">
-              <th className="rownum" />
-              <th><input type="search" className="table-col-filter" aria-label={t.name} value={query} onChange={(e) => setQuery(e.target.value)} /></th>
-              <th className="att-cat"><input type="search" className="table-col-filter" aria-label={t.category} value={catQ} onChange={(e) => setCatQ(e.target.value)} /></th>
-              <th />
+              <th className={cx('rownum', tbl.fth)} />
+              <th className={tbl.fth}><FilterInput aria-label={t.name} value={query} onChange={(e) => setQuery(e.target.value)} /></th>
+              <th className={tbl.fth}><FilterInput aria-label={t.category} value={catQ} onChange={(e) => setCatQ(e.target.value)} /></th>
+              <th className={tbl.fth} />
             </tr>
           </thead>
           <tbody>
-            {shown.map((w, i) => (
-              <tr key={w._id}>
-                <td className="rownum">{i + 1}</td>
-                <td>
-                  <button type="button" className={`name-link${recordFor === w._id ? ' on' : ''}`} onClick={() => setRecordFor(w._id)} title={t.attRecord}>
-                    <strong>{w.name}</strong>{w.fatherName ? <span className="muted"> — {w.fatherName}</span> : null}
-                  </button>
-                </td>
-                <td className="att-cat">{cats.label(w.category)}</td>
-                <td>
-                  <div className="att-btns" role="radiogroup" aria-label={w.name}>
-                    {STATUSES.map((st) => (
-                      <button key={st} type="button" role="radio" aria-checked={marks[w._id] === st}
-                        className={`att-${st}${marks[w._id] === st ? ' on' : ''}`} onClick={() => setMarks({ ...marks, [w._id]: st })} title={t[`att_${st}`]}>
-                        {t[`attShort_${st}`]}
+            {shown.map((w, i) => {
+              const m = marks[w._id];
+              const isSaved = m && m === saved[w._id];
+              return (
+                <tr key={w._id} className={tbl.tr}>
+                  <td className={cx('rownum', tbl.td, 'px-1 text-n-500')}>{i + 1}</td>
+                  <td className={cx(tbl.td, 'px-1.5 text-start')}>
+                    <button type="button" onClick={() => setRecordFor(w._id)} title={t.attRecord}
+                      className={cx('min-h-0 border-0 bg-transparent p-0 text-start text-sm underline-offset-2 hover:underline', recordFor === w._id ? 'text-brand-700' : 'text-n-900')}>
+                      <strong>{w.name}</strong>{w.fatherName ? <span className="text-n-500"> — {w.fatherName}</span> : null}
+                    </button>
+                  </td>
+                  <td className={cx(tbl.td, 'px-1.5 text-xs')}>{cats.label(w.category)}</td>
+                  <td className={cx(tbl.td, 'px-1')}>
+                    <div className="inline-flex items-center gap-1" role="radiogroup" aria-label={w.name}>
+                      {STATUSES.map((st) => (
+                        <button key={st} type="button" role="radio" aria-checked={m === st} title={t[`att_${st}`]} onClick={() => setMarks({ ...marks, [w._id]: st })}
+                          className={cx('grid size-8 min-h-0 place-items-center rounded-md border-0 p-0 text-xs font-bold ring-1', m === st ? MARK[st][0] : cx('bg-white', MARK[st][1]))}>
+                          {t[`attShort_${st}`]}
+                        </button>
+                      ))}
+                      <button type="button" disabled={!m || isSaved} onClick={() => saveOne(w)}
+                        title={isSaved ? t.savedOk : t.save} aria-label={`${t.save} ${w.name}`}
+                        className={cx('grid size-8 min-h-0 place-items-center rounded-md border-0 p-0 text-sm font-bold ring-1', isSaved ? 'bg-green-50 text-gain ring-green-300' : 'bg-brand-600 text-white ring-brand-600 disabled:bg-n-100 disabled:text-n-400 disabled:ring-n-200')}>
+                        ✓
                       </button>
-                    ))}
-                    <button
-                      type="button" className={`att-save${marks[w._id] && marks[w._id] === saved[w._id] ? ' done' : ''}`}
-                      disabled={!marks[w._id] || marks[w._id] === saved[w._id]} onClick={() => saveOne(w)}
-                      title={marks[w._id] === saved[w._id] && marks[w._id] ? t.savedOk : t.save} aria-label={`${t.save} ${w.name}`}
-                    >✓</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {!shown.length && <tr><td colSpan={4} className="muted">{t.noEntries}</td></tr>}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+            {!shown.length && <Empty cols={4}>{t.noEntries}</Empty>}
           </tbody>
         </table>
-      </div>
-      {recordFor && (
-        <WorkerRecord t={t} worker={workers.find((w) => w._id === recordFor)} onClose={() => setRecordFor('')} />
-      )}
+      </TableCard>
+      {recordFor && <WorkerRecord t={t} worker={workers.find((w) => w._id === recordFor)} onClose={() => setRecordFor('')} />}
     </div>
   );
 }
@@ -161,41 +176,38 @@ function WorkerRecord({ t, worker, onClose }) {
   const list = Array.from({ length: days }, (_, i) => new Date(Date.now() - i * 86400000).toISOString().slice(0, 10));
   const n = (st) => list.filter((d) => byDate[d] === st).length;
   return (
-    <div className="card grid att-record" ref={boxRef}>
-      <div className="att-record-head">
-        <h2>{t.attRecord}: {worker?.name}{worker?.fatherName ? ` — ${worker.fatherName}` : ''}</h2>
-        <button type="button" className="close-btn" aria-label={t.close || 'Close'} onClick={onClose}>✕</button>
-      </div>
-      <div className="wx-tabs" role="tablist">
-        {[7, 15, 30].map((d) => (
-          <button key={d} type="button" role="tab" aria-selected={days === d} className={days === d ? 'on' : ''} onClick={() => setDays(d)}>
-            {d === 7 ? t.attWeek : d === 15 ? t.att15 : t.attMonth}
-          </button>
-        ))}
-      </div>
-      {workerId && (
-        <>
-          <div className="kpi-grid">
-            <div className="stat" style={{ borderInlineStartColor: 'var(--ok-dark)' }}><span>{t.att_present}</span><strong className="ok">{n('present') + n('half') / 2}</strong></div>
-            <div className="stat" style={{ borderInlineStartColor: 'var(--err-dark)' }}><span>{t.att_absent}</span><strong className="err">{n('absent')}</strong></div>
-            <div className="stat" style={{ borderInlineStartColor: 'var(--warn-dark)' }}><span>{t.att_leave}</span><strong className="warn">{n('leave')}</strong></div>
-            <div className="stat"><span>{t.attNotMarked}</span><strong>{list.filter((d) => !byDate[d]).length}</strong></div>
-          </div>
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th className="sticky-col">{t.date}</th><th>{t.attStatus}</th></tr></thead>
-              <tbody>
-                {list.map((d) => (
-                  <tr key={d}>
-                    <td><strong>{fmtDate(d)}</strong> <span className="muted">{new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short' })}</span></td>
-                    <td>{byDate[d] ? <span className={`badge att-badge att-${byDate[d]}`}>{t[`att_${byDate[d]}`]}</span> : <span className="muted">{t.attNotMarked}</span>}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
+    <div ref={boxRef}>
+      <Card>
+        <CardHeader title={`${t.attRecord}: ${worker?.name || ''}${worker?.fatherName ? ` — ${worker.fatherName}` : ''}`}>
+          <IconButton label={t.close || 'Close'} onClick={onClose}>✕</IconButton>
+        </CardHeader>
+        <CardBody>
+          <Tabs options={[[7, t.attWeek], [15, t.att15], [30, t.attMonth]]} value={days} onChange={setDays} />
+          {workerId && (
+            <>
+              <StatGrid className="grid-cols-4 sm:grid-cols-4 lg:grid-cols-4">
+                <StatCard label={t.att_present} value={n('present') + n('half') / 2} tone="green" />
+                <StatCard label={t.att_absent} value={n('absent')} tone="red" />
+                <StatCard label={t.att_leave} value={n('leave')} tone="amber" />
+                <StatCard label={t.attNotMarked} value={list.filter((d) => !byDate[d]).length} tone="slate" />
+              </StatGrid>
+              <div className="table-wrap overflow-x-auto rounded-lg ring-1 ring-n-200">
+                <table className={tbl.table}>
+                  <thead><tr><th className={cx('sticky-col', tbl.th)}>{t.date}</th><th className={tbl.th}>{t.attStatus}</th></tr></thead>
+                  <tbody>
+                    {list.map((d) => (
+                      <tr key={d} className={tbl.tr}>
+                        <td className={tbl.td}><strong>{fmtDate(d)}</strong> <span className="text-n-500">{new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short' })}</span></td>
+                        <td className={tbl.td}>{byDate[d] ? <Badge tone={BADGE[byDate[d]]}>{t[`att_${byDate[d]}`]}</Badge> : <span className="text-n-400">{t.attNotMarked}</span>}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </CardBody>
+      </Card>
     </div>
   );
 }

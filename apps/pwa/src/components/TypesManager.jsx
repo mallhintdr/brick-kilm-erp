@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useT } from '../i18n.js';
 import { get, post, put, del, uuid } from '../api.js';
+import { Card, CardHeader, CardBody, Field, Input, FormGrid, Button, Alert, Muted, Tabs, Badge, tbl, cx } from './ui.jsx';
 
 const KINDS = ['workerCategory', 'procurementItem', 'customerType', 'paymentMode'];
 
@@ -40,68 +41,72 @@ export default function TypesManager({ isOwner }) {
   };
 
   return (
-    <div className="card grid">
-      <h2>{t.typesTitle}</h2>
-      <p className="muted">{t.typesNote}</p>
+    <Card>
+      <CardHeader title={t.typesTitle} />
+      <CardBody>
+        <Muted>{t.typesNote}</Muted>
+        <Tabs size="sm" options={KINDS.map((k) => [k, t.kinds[k]])} value={kind} onChange={setKind} className="grid-cols-2! sm:grid-cols-4!" />
 
-      <div className="row" style={{ flexWrap: 'wrap' }}>
-        {KINDS.map((k) => (
-          <button key={k} className={k === kind ? 'primary' : 'ghost'} onClick={() => setKind(k)}>{t.kinds[k]}</button>
-        ))}
-      </div>
+        {isOwner && (
+          <form onSubmit={create} className="grid gap-3">
+            <FormGrid className="lg:grid-cols-3">
+              <Field label={t.labelEn}><Input required value={add.label} onChange={(e) => setAdd({ ...add, label: e.target.value })} /></Field>
+              <Field label={t.labelUr}><Input dir="rtl" value={add.labelUr} onChange={(e) => setAdd({ ...add, labelUr: e.target.value })} /></Field>
+              <Field label={t.typeKey}><Input value={add.key} placeholder="auto" onChange={(e) => setAdd({ ...add, key: e.target.value })} /></Field>
+            </FormGrid>
+            <Button type="submit" className="justify-self-center sm:min-w-40">＋ {t.add}</Button>
+          </form>
+        )}
 
-      {isOwner && (
-        <form className="grid" onSubmit={create}>
-          <label>{t.labelEn}<input required value={add.label} onChange={(e) => setAdd({ ...add, label: e.target.value })} /></label>
-          <label>{t.labelUr}<input dir="rtl" value={add.labelUr} onChange={(e) => setAdd({ ...add, labelUr: e.target.value })} /></label>
-          <label>{t.typeKey}<input value={add.key} placeholder="auto" onChange={(e) => setAdd({ ...add, key: e.target.value })} /></label>
-          <button className="primary">{t.add}</button>
-        </form>
-      )}
+        {msg.text && <Alert tone={msg.bad ? 'err' : 'ok'}>{msg.text}</Alert>}
 
-      {msg.text && <p role={msg.bad ? 'alert' : 'status'} className={msg.bad ? 'err' : 'ok'}>{msg.text}</p>}
-
-      <div className="table-wrap" style={{ margin: '0 -1.1rem -1.1rem' }}>
-        <table>
-          <thead>
-            <tr><th className="rownum">#</th><th>{t.labelEn}</th><th>{t.labelUr}</th><th>{t.typeKey}</th><th>{t.status}</th>{isOwner && <th />}</tr>
-          </thead>
-          <tbody>
-            {rows.map((r, i) => {
-              const editing = edit?.id === r._id;
-              return (
-                <tr key={r._id}>
-                  <td className="rownum">{i + 1}</td>
-                  <td>{editing ? <input value={edit.label} onChange={(e) => setEdit({ ...edit, label: e.target.value })} /> : r.label}</td>
-                  <td>{editing ? <input dir="rtl" value={edit.labelUr} onChange={(e) => setEdit({ ...edit, labelUr: e.target.value })} /> : r.labelUr}</td>
-                  <td><code>{r.key}</code>{r.builtin && <span className="muted"> · {t.builtin}</span>}</td>
-                  <td className={r.active ? 'ok' : 'warn'}>{r.active ? t.active : t.inactive}</td>
-                  {isOwner && (
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      {editing ? (
-                        <>
-                          <button className="primary" onClick={saveEdit}>{t.save}</button>
-                          <button className="ghost" onClick={() => setEdit(null)}>{t.cancel}</button>
-                        </>
-                      ) : (
-                        <>
-                          <button className="ghost" onClick={() => setEdit({ id: r._id, label: r.label, labelUr: r.labelUr || '' })}>{t.edit}</button>
-                          {!r.builtin && (
-                            <button className="ghost" onClick={() => run(() => put(`/types/${r._id}`, { active: !r.active }))}>
-                              {r.active ? t.deactivate : t.activate}
-                            </button>
+        <div className="table-wrap overflow-x-auto rounded-lg ring-1 ring-n-200">
+          <table className={tbl.table}>
+            <thead>
+              <tr>
+                {['#', t.labelEn, t.labelUr, t.typeKey, t.status].map((h, i) => <th key={i} className={cx(i === 0 && 'rownum', tbl.th)}>{h}</th>)}
+                {isOwner && <th className={tbl.th}>{t.action}</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => {
+                const editing = edit?.id === r._id;
+                return (
+                  <tr key={r._id} className={tbl.tr}>
+                    <td className={cx('rownum', tbl.td, 'text-n-500')}>{i + 1}</td>
+                    <td className={tbl.td}>{editing ? <input className={tbl.cell} value={edit.label} onChange={(e) => setEdit({ ...edit, label: e.target.value })} /> : r.label}</td>
+                    <td className={tbl.td}>{editing ? <input className={tbl.cell} dir="rtl" value={edit.labelUr} onChange={(e) => setEdit({ ...edit, labelUr: e.target.value })} /> : r.labelUr}</td>
+                    <td className={tbl.td}><code className="text-xs text-n-600">{r.key}</code>{r.builtin && <span className="text-xs text-n-400"> · {t.builtin}</span>}</td>
+                    <td className={tbl.td}><Badge tone={r.active ? 'ok' : 'warn'}>{r.active ? t.active : t.inactive}</Badge></td>
+                    {isOwner && (
+                      <td className={cx(tbl.td, 'whitespace-nowrap')}>
+                        <div className="inline-flex flex-wrap justify-center gap-1.5">
+                          {editing ? (
+                            <>
+                              <Button size="sm" onClick={saveEdit}>{t.save}</Button>
+                              <Button size="sm" variant="secondary" onClick={() => setEdit(null)}>{t.cancel}</Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button size="sm" variant="secondary" onClick={() => setEdit({ id: r._id, label: r.label, labelUr: r.labelUr || '' })}>{t.edit}</Button>
+                              {!r.builtin && (
+                                <Button size="sm" variant="secondary" onClick={() => run(() => put(`/types/${r._id}`, { active: !r.active }))}>
+                                  {r.active ? t.deactivate : t.activate}
+                                </Button>
+                              )}
+                              <Button size="sm" variant="dangerGhost" disabled={r.builtin} title={r.builtin ? t.builtinNoDelete : ''} onClick={() => remove(r)}>{t.delete}</Button>
+                            </>
                           )}
-                          <button className="ghost danger" disabled={r.builtin} title={r.builtin ? t.builtinNoDelete : ''} onClick={() => remove(r)}>{t.delete}</button>
-                        </>
-                      )}
-                    </td>
-                  )}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </CardBody>
+    </Card>
   );
 }

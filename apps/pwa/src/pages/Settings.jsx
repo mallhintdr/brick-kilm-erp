@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useT } from '../i18n.js';
+import { useT, useLang } from '../i18n.js';
 import { get, put, getRole } from '../api.js';
 import TypesManager from '../components/TypesManager.jsx';
 import DeleteButton from '../components/DeleteButton.jsx';
 import LocationPicker from '../components/LocationPicker.jsx';
 import { useTypes, typeLabel } from '../useTypes.js';
-import { useLang } from '../i18n.js';
+import { Card, CardHeader, CardBody, Field, Input, FormGrid, Button, Alert, Muted } from '../components/ui.jsx';
 
 const KEYS = [
   'peshgiLimit', 'munshiAdvanceLimit', 'recoveryPct', 'kharchiFloor',
@@ -30,40 +30,42 @@ export default function Settings() {
   }
 
   return (
-    <>
-      <div className="card grid settings-rates">
-        <p className="muted">{t.limitNote}</p>
-        {KEYS.map((k) => (
-          <div className="row" key={k}>
-            <label className="grow">{t[k]}
-              <input inputMode="decimal" disabled={!isOwner} value={vals[k] ?? ''} onChange={(e) => setVals({ ...vals, [k]: e.target.value })} />
-            </label>
-            {isOwner && <button className="primary" onClick={() => save(k)}>{t.save}</button>}
-            {isOwner && (
-              <DeleteButton
-                path={`/settings/${k}`} name={t[k]} label={t.resetDefault}
-                onDone={() => { setMsg({ text: t.savedOk, bad: false }); get('/settings').then(setVals).catch(() => {}); }}
-                onError={(m) => setMsg({ text: m, bad: true })}
-              />
-            )}
+    <div className="grid gap-4">
+      <Card>
+        <CardHeader title={t.settings} />
+        <CardBody>
+          <Muted>{t.limitNote}</Muted>
+          {/* one compact row per setting: box, green save, red reset */}
+          <div className="grid grid-cols-1 gap-x-5 gap-y-2.5 lg:grid-cols-2">
+            {KEYS.map((k) => (
+              <div key={k} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-end gap-1.5">
+                <Field label={t[k]}>
+                  <Input inputMode="decimal" disabled={!isOwner} value={vals[k] ?? ''} onChange={(e) => setVals({ ...vals, [k]: e.target.value })} className="min-h-10" />
+                </Field>
+                {isOwner && <Button size="sm" className="min-h-10 bg-gain hover:bg-green-800" onClick={() => save(k)}>{t.save}</Button>}
+                {isOwner && (
+                  <DeleteButton
+                    path={`/settings/${k}`} name={t[k]} label={t.resetDefault} variant="danger" className="min-h-10"
+                    onDone={() => { setMsg({ text: t.savedOk, bad: false }); get('/settings').then(setVals).catch(() => {}); }}
+                    onError={(m) => setMsg({ text: m, bad: true })}
+                  />
+                )}
+              </div>
+            ))}
           </div>
-        ))}
-        <label className="row" style={{ alignItems: 'center' }}>
-          <input
-            type="checkbox" disabled={!isOwner} style={{ minHeight: 'auto', width: 'auto' }}
-            checked={vals.allowNegativeStock === '1'}
-            onChange={(e) => save('allowNegativeStock', e.target.checked ? '1' : '0')}
-          />
-          {t.allowNegativeStock}
-        </label>
-        {msg.text && <p role={msg.bad ? 'alert' : 'status'} className={msg.bad ? 'err' : 'ok'}>{msg.text}</p>}
-      </div>
+          <label className="flex items-center justify-center gap-2 text-md font-medium text-n-700">
+            <input type="checkbox" disabled={!isOwner} className="size-5 min-h-0 accent-brand-600" checked={vals.allowNegativeStock === '1'}
+              onChange={(e) => save('allowNegativeStock', e.target.checked ? '1' : '0')} />
+            {t.allowNegativeStock}
+          </label>
+          {msg.text && <Alert tone={msg.bad ? 'err' : 'ok'}>{msg.text}</Alert>}
+        </CardBody>
+      </Card>
 
       <OpeningStock t={t} isOwner={isOwner} />
-
       <KilnLocation t={t} isOwner={isOwner} vals={vals} onSaved={(v) => setVals((x) => ({ ...x, ...v }))} />
       <TypesManager isOwner={isOwner} />
-    </>
+    </div>
   );
 }
 
@@ -104,27 +106,32 @@ function KilnLocation({ t, isOwner, vals, onSaved }) {
 
   const set = Boolean(vals.kilnLat && vals.kilnLon);
   return (
-    <div className="card grid">
-      <h2>{t.kilnLocation}</h2>
-      <p className="muted" style={{ margin: 0 }}>{t.kilnLocationHint}</p>
-      <LocationPicker
-        lat={loc.kilnLat} lon={loc.kilnLon} disabled={!isOwner}
-        onPick={(la, lo) => { setLoc((x) => ({ ...x, kilnLat: la, kilnLon: lo })); setMsg({ text: t.locPickedSave, bad: false }); }}
-      />
-      <div className="grid two">
-        <label>{t.locPlace}<input disabled={!isOwner} value={loc.kilnPlace} placeholder="e.g. Sadiqabad" onChange={(e) => setLoc({ ...loc, kilnPlace: e.target.value })} /></label>
-        <label>{t.locLat}<input disabled={!isOwner} inputMode="decimal" value={loc.kilnLat} placeholder="28.30000" onChange={(e) => setLoc({ ...loc, kilnLat: e.target.value })} /></label>
-        <label>{t.locLon}<input disabled={!isOwner} inputMode="decimal" value={loc.kilnLon} placeholder="70.13000" onChange={(e) => setLoc({ ...loc, kilnLon: e.target.value })} /></label>
-      </div>
-      {isOwner && (
-        <div className="row" style={{ justifyContent: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <button type="button" className="primary" disabled={busy} onClick={useGps}>📍 {t.locUseGps}</button>
-          <button type="button" className="ghost" disabled={busy} onClick={() => save()}>{t.save}</button>
-          {set && <a className="ghost button-link" target="_blank" rel="noreferrer" href={`https://www.google.com/maps?q=${vals.kilnLat},${vals.kilnLon}`}>{t.locOnMap}</a>}
-        </div>
-      )}
-      {msg.text && <p role={msg.bad ? 'alert' : 'status'} className={msg.bad ? 'err' : 'ok'}>{msg.text}</p>}
-    </div>
+    <Card>
+      <CardHeader title={t.kilnLocation} />
+      <CardBody>
+        <Muted>{t.kilnLocationHint}</Muted>
+        <LocationPicker
+          lat={loc.kilnLat} lon={loc.kilnLon} disabled={!isOwner}
+          onPick={(la, lo) => { setLoc((x) => ({ ...x, kilnLat: la, kilnLon: lo })); setMsg({ text: t.locPickedSave, bad: false }); }}
+        />
+        <FormGrid className="lg:grid-cols-3">
+          <Field label={t.locPlace}><Input disabled={!isOwner} value={loc.kilnPlace} placeholder="e.g. Sadiqabad" onChange={(e) => setLoc({ ...loc, kilnPlace: e.target.value })} /></Field>
+          <Field label={t.locLat}><Input disabled={!isOwner} inputMode="decimal" value={loc.kilnLat} placeholder="28.30000" onChange={(e) => setLoc({ ...loc, kilnLat: e.target.value })} /></Field>
+          <Field label={t.locLon}><Input disabled={!isOwner} inputMode="decimal" value={loc.kilnLon} placeholder="70.13000" onChange={(e) => setLoc({ ...loc, kilnLon: e.target.value })} /></Field>
+        </FormGrid>
+        {isOwner && (
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button disabled={busy} onClick={useGps}>📍 {t.locUseGps}</Button>
+            <Button variant="secondary" disabled={busy} onClick={() => save()}>{t.save}</Button>
+            {set && (
+              <a className="inline-flex min-h-11 items-center rounded-lg bg-white px-4 font-semibold text-n-700 no-underline ring-1 ring-n-300 hover:bg-n-50"
+                target="_blank" rel="noreferrer" href={`https://www.google.com/maps?q=${vals.kilnLat},${vals.kilnLon}`}>{t.locOnMap}</a>
+            )}
+          </div>
+        )}
+        {msg.text && <Alert tone={msg.bad ? 'err' : 'ok'}>{msg.text}</Alert>}
+      </CardBody>
+    </Card>
   );
 }
 
@@ -145,31 +152,34 @@ function OpeningStock({ t, isOwner }) {
       setMsg({ text: t.savedOk, bad: false });
     } catch (e) { setMsg({ text: e.message, bad: true }); }
   }
+  const num = (v) => v.replace(/[^\d.]/g, '');
   const box = (key, label, unit) => (
-    <label key={key}>{label}{unit ? ` (${unit})` : ''}
-      <input disabled={!isOwner} inputMode="decimal" placeholder="0" value={o[key]} onChange={(e) => setO({ ...o, [key]: e.target.value.replace(/[^\d.]/g, '') })} />
-    </label>
+    <Field key={key} label={`${label}${unit ? ` (${unit})` : ''}`}>
+      <Input disabled={!isOwner} inputMode="decimal" placeholder="0" value={o[key]} onChange={(e) => setO({ ...o, [key]: num(e.target.value) })} />
+    </Field>
   );
   return (
-    <div className="card grid">
-      <h2>{t.openingStock}</h2>
-      <p className="muted" style={{ margin: 0 }}>{t.openingStockHint}</p>
-      <div className="grid two">
-        <label>{t.openingAsOf}<input type="date" disabled={!isOwner} value={o.asOf} onChange={(e) => setO({ ...o, asOf: e.target.value })} /></label>
-        {box('awwal', t.awwal)}
-        {box('doem', t.doem)}
-        {box('khangar', t.khangar)}
-        {box('green', t.hsGreen)}
-        {box('coalKg', t.hsCoal, 'kg')}
-        {items.active.filter((i) => i.key !== 'coal').map((i) => (
-          <label key={i.key}>{typeLabel(i, lang)}
-            <input disabled={!isOwner} inputMode="decimal" placeholder="0" value={o.items[i.key] ?? ''}
-              onChange={(e) => setO({ ...o, items: { ...o.items, [i.key]: e.target.value.replace(/[^\d.]/g, '') } })} />
-          </label>
-        ))}
-      </div>
-      {isOwner && <button type="button" className="primary fit-center" onClick={save}>{t.save}</button>}
-      {msg.text && <p role={msg.bad ? 'alert' : 'status'} className={msg.bad ? 'err' : 'ok'}>{msg.text}</p>}
-    </div>
+    <Card>
+      <CardHeader title={t.openingStock} />
+      <CardBody>
+        <Muted>{t.openingStockHint}</Muted>
+        <FormGrid className="lg:grid-cols-3">
+          <Field label={t.openingAsOf}><Input type="date" disabled={!isOwner} value={o.asOf} onChange={(e) => setO({ ...o, asOf: e.target.value })} /></Field>
+          {box('awwal', t.awwal)}
+          {box('doem', t.doem)}
+          {box('khangar', t.khangar)}
+          {box('green', t.hsGreen)}
+          {box('coalKg', t.hsCoal, 'kg')}
+          {items.active.filter((i) => i.key !== 'coal').map((i) => (
+            <Field key={i.key} label={typeLabel(i, lang)}>
+              <Input disabled={!isOwner} inputMode="decimal" placeholder="0" value={o.items[i.key] ?? ''}
+                onChange={(e) => setO({ ...o, items: { ...o.items, [i.key]: num(e.target.value) } })} />
+            </Field>
+          ))}
+        </FormGrid>
+        {isOwner && <Button onClick={save} className="justify-self-center sm:min-w-40">{t.save}</Button>}
+        {msg.text && <Alert tone={msg.bad ? 'err' : 'ok'}>{msg.text}</Alert>}
+      </CardBody>
+    </Card>
   );
 }
