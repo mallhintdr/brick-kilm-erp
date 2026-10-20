@@ -3608,3 +3608,116 @@ table tbody tr.pf-editing > td { background: #eff6ff !important; }
 
 /* kiln plan: white halo on dates and line numbers halved */
 .line-info, .line-num.line-num-out { stroke-width: 1.2px !important; }
+
+/* ==========================================================================
+   DESIGN SYSTEM v2: one set of rules for the whole app (phone and desktop).
+   Calm neutral surfaces, one orange brand scale, a fixed type scale,
+   flat 44px buttons and inputs, white cards, orange table headers, zebra rows.
+   Placed last so it overrides the older patched rules.
+   ========================================================================== */
+:root {
+  --b50: #fff7ed; --b100: #ffedd5; --b200: #fed7aa; --b500: #f97316; --b600: #ea580c; --b700: #c2410c; --b800: #9a3412;
+  --n0: #ffffff; --n50: #f7f6f3; --n100: #f1efea; --n200: #e4e1da; --n300: #cfcbc2; --n500: #78716c; --n600: #57534e; --n700: #44403c; --n900: #1c1917;
+  --ok-v2: #15803d; --err-v2: #dc2626;
+  --fs-xs: 12px; --fs-sm: 13px; --fs-md: 14px; --fs-base: 15px; --fs-lg: 16px; --fs-xl: 20px;
+  --r-md: 12px; --r-sm: 9px;
+  --shadow-card: 0 1px 2px rgba(28, 25, 23, 0.05);
+}
+body { background: var(--n50) !important; color: var(--n900); font-size: var(--fs-base); -webkit-font-smoothing: antialiased; }
+
+/* type scale */
+h1 { font-size: var(--fs-xl) !important; font-weight: 700 !important; }
+h2 { font-size: var(--fs-lg) !important; font-weight: 700 !important; letter-spacing: -0.01em; color: var(--n900) !important; }
+h3, .kpi-group-title, .home-group-title { font-size: var(--fs-sm) !important; font-weight: 600 !important; text-transform: uppercase; letter-spacing: 0.04em; color: var(--n500) !important; }
+.muted { color: var(--n500) !important; }
+
+/* cards: white, thin outline, soft shadow */
+.card { background: var(--n0) !important; border: 1px solid var(--n200) !important; border-radius: var(--r-md) !important; box-shadow: var(--shadow-card) !important; }
+.card:hover { transform: none !important; }
+
+/* labels */
+label { font-size: var(--fs-md) !important; font-weight: 500 !important; color: var(--n700) !important; text-transform: none !important; }
+
+/* inputs: 44px, thin outline, orange ring on focus; 16px text stops phones zooming */
+input:not([type="checkbox"]):not([type="radio"]):not(.table-col-filter):not(.cell-input), select:not(.table-col-filter):not(.cell-input), textarea:not(.cell-input) {
+  min-height: 44px; padding: 0.55rem 0.85rem !important; font-size: 16px !important; font-weight: 400 !important; color: var(--n900) !important;
+  background-color: var(--n0) !important; border: 1px solid var(--n300) !important; border-radius: var(--r-md) !important; box-shadow: none !important;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:focus {
+  outline: none !important; border-color: var(--b600) !important; box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.18) !important;
+}
+input::placeholder, textarea::placeholder { color: #a8a29e !important; font-weight: 400 !important; }
+input:disabled, select:disabled, textarea:disabled { background-color: var(--n100) !important; opacity: 0.75; }
+input[type="checkbox"], input[type="radio"] { accent-color: var(--b600); }
+
+/* buttons: flat, 44px; primary (solid orange), ghost (white outline), danger */
+button { font-weight: 600 !important; border-radius: var(--r-md) !important; text-transform: none !important; }
+button:hover:not(:disabled), button.primary:hover:not(:disabled) { transform: none !important; }
+button:focus-visible { outline: 2px solid var(--b500) !important; outline-offset: 2px; }
+button:disabled { opacity: 0.5 !important; cursor: not-allowed; }
+button.primary {
+  min-height: 44px; padding: 0 1.1rem !important; font-size: var(--fs-base) !important;
+  background: var(--b600) !important; border: 0 !important; color: #fff !important; box-shadow: 0 1px 2px rgba(154, 52, 18, 0.25) !important;
+}
+button.primary:hover:not(:disabled) { background: var(--b700) !important; }
+button.primary:active:not(:disabled) { background: var(--b800) !important; }
+button.ghost {
+  min-height: 40px; padding: 0 0.95rem !important; font-size: var(--fs-md) !important;
+  background: var(--n0) !important; color: var(--n700) !important; border: 1px solid var(--n300) !important; box-shadow: none !important;
+}
+button.ghost:hover:not(:disabled) { background: var(--n50) !important; border-color: var(--n500) !important; }
+button.ghost.danger-text { color: var(--err-v2) !important; border-color: #fecaca !important; }
+
+/* choice bars (tabs): grey track, chosen option white and raised */
+.wx-tabs, .pf-nav, .unit-switch { background: var(--n100) !important; padding: 4px !important; border-radius: var(--r-md) !important; gap: 4px !important; border: 0 !important; }
+.wx-tabs button, .pf-nav button, .unit-switch button {
+  min-height: 36px !important; background: transparent !important; border: 0 !important; color: var(--n600) !important;
+  font-weight: 600 !important; border-radius: var(--r-sm) !important; box-shadow: none !important;
+}
+.wx-tabs button.on, .pf-nav button.on, .unit-switch button.on {
+  background: var(--n0) !important; color: var(--b700) !important; box-shadow: 0 1px 3px rgba(28, 25, 23, 0.12) !important;
+}
+
+/* tables: orange header, thin white dividers, zebra rows, tidy numbers */
+table { font-size: var(--fs-md); }
+thead tr:first-child th {
+  background: var(--b700) !important; color: #fff !important; font-size: 12.5px !important; font-weight: 600 !important;
+  text-transform: none !important; padding: 0.55rem 0.6rem !important; border-right: 1px solid rgba(255, 255, 255, 0.35) !important;
+}
+thead tr.filter-row th { background: var(--b50) !important; padding: 0.3rem !important; }
+.table-col-filter { min-height: 30px; border: 1px solid var(--n300) !important; border-radius: 8px !important; background: #fff !important; }
+tbody td { padding: 0.5rem 0.6rem !important; border-bottom: 1px solid var(--n100) !important; font-variant-numeric: tabular-nums; }
+tbody tr:nth-child(odd) > td { background-color: #fff; }
+tbody tr:nth-child(even) > td { background-color: #fbf7f3; }
+tbody tr:hover > td { background-color: var(--b50); }
+tbody tr.pf-edited > td { background-color: #fff7ed; }
+tbody tr.pf-editing > td, tbody tr.picked > td { background-color: #fef3c7; }
+tfoot td { background: var(--n100) !important; font-weight: 700; }
+.table-wrap { border-radius: var(--r-md) !important; }
+
+/* badges and messages */
+.badge { border-radius: 999px !important; font-size: var(--fs-xs) !important; font-weight: 600 !important; }
+p.ok, p.err { border-radius: var(--r-sm); padding: 0.6rem 0.8rem; font-size: var(--fs-md); font-weight: 500; }
+p.ok { background: #f0fdf4; color: var(--ok-v2) !important; }
+p.err { background: #fef2f2; color: var(--err-v2) !important; }
+
+/* phone bottom tab bar (hidden on desktop) */
+.tabbar { display: none; }
+@media (max-width: 900px) {
+  .tabbar {
+    display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    background: rgba(255, 255, 255, 0.97); backdrop-filter: blur(10px); border-top: 1px solid var(--n200);
+    padding: 4px 4px calc(4px + env(safe-area-inset-bottom));
+  }
+  .tabbar .tab { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; border-radius: 10px; color: var(--n500); text-decoration: none; font-size: 10.5px; font-weight: 600; min-width: 0; }
+  .tabbar .tab span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tabbar .tab svg { stroke: currentColor; }
+  .tabbar .tab.on { color: var(--b700); background: var(--b50); }
+  main#main { padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important; }
+  .card { padding: 0.9rem !important; }
+}
+@media print { .tabbar { display: none !important; } }
+
+/* desktop: comfortable reading width */
+@media (min-width: 1280px) { main#main { max-width: 1280px; margin-inline: auto; } }

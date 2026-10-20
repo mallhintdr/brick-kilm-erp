@@ -233,6 +233,16 @@ function Shell({ children }) {
 
       <main id="main" ref={mainRef} tabIndex={-1}>{children}</main>
 
+      {/* phones: the most used pages one thumb away */}
+      <nav className="tabbar" aria-label={t.home}>
+        {[['/home', 'home', t.home], ['/kiln-board', 'board', t.kilnBoard], ['/firing', 'firing', t.firing], ['/khata', 'kharchi', t.khataTitle], ['/roznamcha', 'reports', t.roznamcha]].map(([to, icon, label]) => (
+          <NavLink key={to} to={to} className={({ isActive }) => `tab${isActive ? ' on' : ''}`}>
+            <Icon name={icon} size={20} stroke={2} />
+            <span>{label}</span>
+          </NavLink>
+        ))}
+      </nav>
+
     </div>
   );
 }

@@ -7,3 +7,5 @@ dist
 *.timestamp-*
 .DS_Store
 Thumbs.db
+repo-test/
+kpi-scale/
