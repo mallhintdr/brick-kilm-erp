@@ -4,6 +4,7 @@ import { useT } from '../i18n.js';
 import { get, put, del } from '../api.js';
 import DateTime from '../components/DateTime.jsx';
 import { IconBtn } from '../components/RowActions.jsx';
+import { Card, CardHeader, CardBody, Field, Input, FormGrid, Alert, Muted, Tabs, TableCard, tbl, Empty, cx } from '../components/ui.jsx';
 
 const iso = (d) => d.toISOString().slice(0, 10);
 const daysAgo = (n) => iso(new Date(Date.now() - n * 86400000));
@@ -48,60 +49,59 @@ export default function Corrections() {
 
   const shown = rows.filter((r) => !q || `${where(r, t)} ${teamName(r.teamId || r.nikasiTeamId)}`.toLowerCase().includes(q.toLowerCase()));
   const num = (k) => (
-    <input inputMode="numeric" className="cell-input" value={edit[k] ?? ''} onChange={(e) => setEdit({ ...edit, [k]: e.target.value.replace(/[^\d]/g, '') })} />
+    <input inputMode="numeric" className={cx(tbl.cell, 'max-w-28')} value={edit[k] ?? ''} onChange={(e) => setEdit({ ...edit, [k]: e.target.value.replace(/[^\d]/g, '') })} />
   );
 
-  return (
-    <div className="grid">
-      <div className="card grid">
-        <h2>{t.corrections}</h2>
-        <p className="muted" style={{ margin: 0, textAlign: 'center' }}>{t.correctionsHint}</p>
-        <div className="wx-tabs corr-tabs" role="tablist">
-          {[['loads', t.loadingBharai], ['nikasi', t.unloadingNikasi], ['moulding', t.moulding], ['firing', t.firing]].map(([k, label]) => (
-            <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{label}</button>
-          ))}
-        </div>
-        {(tab === 'loads' || tab === 'nikasi') && (
-          <div className="grid two">
-            <label>{t.fromDate}<input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} /></label>
-            <label>{t.toDate}<input type="date" value={to} min={from} max={daysAgo(0)} onChange={(e) => setTo(e.target.value)} /></label>
-            <label>{t.name}<input type="search" placeholder={t.typeToSearch} value={q} onChange={(e) => setQ(e.target.value)} /></label>
-          </div>
-        )}
-        {(tab === 'moulding' || tab === 'firing') && (
-          <p style={{ margin: 0, textAlign: 'center' }}>
-            {t.correctOnPage} <Link to={tab === 'moulding' ? '/moulding' : '/firing'}><strong>{tab === 'moulding' ? t.moulding : t.firing}</strong></Link>
-          </p>
-        )}
-        {msg.text && <p role={msg.bad ? 'alert' : 'status'} className={msg.bad ? 'err' : 'ok'}>{msg.text}</p>}
-      </div>
+  const isList = tab === 'loads' || tab === 'nikasi';
+  const heads = [t.date, `${t.line} / ${t.section}`, t.team, ...(tab === 'loads' ? [t.kachiBharai] : [t.awwal, t.doem, t.khangar, t.broken])];
 
-      {(tab === 'loads' || tab === 'nikasi') && (
-        <div className="card table-wrap">
-          <h2>{tab === 'loads' ? t.loadingBharai : t.unloadingNikasi} ({shown.length})</h2>
-          <table>
+  return (
+    <div className="grid gap-4">
+      <Card>
+        <CardHeader title={t.corrections} />
+        <CardBody>
+          <Muted>{t.correctionsHint}</Muted>
+          {/* two rows of two on phones, one row on wider screens */}
+          <Tabs size="sm" className="grid-cols-2! sm:grid-cols-4!" value={tab} onChange={setTab}
+            options={[['loads', t.loadingBharai], ['nikasi', t.unloadingNikasi], ['moulding', t.moulding], ['firing', t.firing]]} />
+          {isList && (
+            <FormGrid className="lg:grid-cols-3">
+              <Field label={t.fromDate}><Input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} /></Field>
+              <Field label={t.toDate}><Input type="date" value={to} min={from} max={daysAgo(0)} onChange={(e) => setTo(e.target.value)} /></Field>
+              <Field label={t.name}><Input type="search" placeholder={t.typeToSearch} value={q} onChange={(e) => setQ(e.target.value)} /></Field>
+            </FormGrid>
+          )}
+          {!isList && (
+            <p className="m-0 text-center text-md text-n-700">
+              {t.correctOnPage} <Link className="font-bold text-brand-700" to={tab === 'moulding' ? '/moulding' : '/firing'}>{tab === 'moulding' ? t.moulding : t.firing}</Link>
+            </p>
+          )}
+          {msg.text && <Alert tone={msg.bad ? 'err' : 'ok'}>{msg.text}</Alert>}
+        </CardBody>
+      </Card>
+
+      {isList && (
+        <TableCard title={`${tab === 'loads' ? t.loadingBharai : t.unloadingNikasi} (${shown.length})`}>
+          <table className={tbl.table}>
             <thead>
               <tr>
-                <th className="sticky-col">{t.date}</th>
-                <th>{t.line} / {t.section}</th>
-                <th>{t.team}</th>
-                {tab === 'loads' ? <th>{t.kachiBharai}</th> : (<><th>{t.awwal}</th><th>{t.doem}</th><th>{t.khangar}</th><th>{t.broken}</th></>)}
-                <th className="actions">{t.action}</th>
+                {heads.map((h, i) => <th key={h} className={cx(i === 0 && 'sticky-col', tbl.th)}>{h}</th>)}
+                <th className={cx('actions', tbl.th)}>{t.action}</th>
               </tr>
             </thead>
             <tbody>
               {shown.map((r) => {
                 const on = edit?.id === r._id;
                 return (
-                  <tr key={r._id}>
-                    <td>{on ? <input type="date" className="cell-input" max={daysAgo(0)} value={edit.date} onChange={(e) => setEdit({ ...edit, date: e.target.value })} /> : <DateTime value={r.date} />}</td>
-                    <td>{where(r, t)}{r.round ? ` · ${t.round} ${r.round}` : ''}</td>
-                    <td>{teamName(r.teamId || r.nikasiTeamId)}</td>
+                  <tr key={r._id} className={cx(tbl.tr, on && 'bg-amber-50!')}>
+                    <td className={tbl.td}>{on ? <input type="date" className={tbl.cell} max={daysAgo(0)} value={edit.date} onChange={(e) => setEdit({ ...edit, date: e.target.value })} /> : <DateTime value={r.date} />}</td>
+                    <td className={tbl.td}>{where(r, t)}{r.round ? ` · ${t.round} ${r.round}` : ''}</td>
+                    <td className={tbl.td}>{teamName(r.teamId || r.nikasiTeamId)}</td>
                     {tab === 'loads'
-                      ? <td>{on ? num('count') : <strong>{(r.count || 0).toLocaleString()}</strong>}</td>
-                      : ['awwal', 'doem', 'khangar', 'broken'].map((k) => <td key={k}>{on ? num(k) : (r[k] || 0).toLocaleString()}</td>)}
-                    <td className="actions">
-                      <div className="row-actions">
+                      ? <td className={cx(tbl.td, 'font-bold')}>{on ? num('count') : (r.count || 0).toLocaleString()}</td>
+                      : ['awwal', 'doem', 'khangar', 'broken'].map((k) => <td key={k} className={tbl.td}>{on ? num(k) : (r[k] || 0).toLocaleString()}</td>)}
+                    <td className={cx('actions', tbl.td)}>
+                      <div className="inline-flex gap-1.5">
                         {on ? (
                           <>
                             <IconBtn kind="save" title={t.save} onClick={save} />
@@ -121,10 +121,10 @@ export default function Corrections() {
                   </tr>
                 );
               })}
-              {!shown.length && <tr><td colSpan={tab === 'loads' ? 5 : 8} className="muted">{t.noEntries}</td></tr>}
+              {!shown.length && <Empty cols={heads.length + 1}>{t.noEntries}</Empty>}
             </tbody>
           </table>
-        </div>
+        </TableCard>
       )}
     </div>
   );

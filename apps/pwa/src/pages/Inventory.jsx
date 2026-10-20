@@ -5,6 +5,7 @@ import DateTime from '../components/DateTime.jsx';
 import { useTypes, typeLabel } from '../useTypes.js';
 import RowActions, { useRowEdit } from '../components/RowActions.jsx';
 import { useLang } from '../i18n.js';
+import { Card, CardHeader, CardBody, Field, Input, Select, FormGrid, Button, Alert, Badge, TableCard, tbl, FilterInput, Empty, cx } from '../components/ui.jsx';
 
 export default function Inventory() {
   const t = useT();
@@ -59,161 +60,98 @@ export default function Inventory() {
     }
   }
 
+  const box = (k, extra = {}) => ({ value: f[k], onChange: (e) => setF({ ...f, [k]: e.target.value }), ...extra });
+  const labBox = (k) => ({ value: lab[k], onChange: (e) => setLab({ ...lab, [k]: e.target.value }) });
+  const coal = f.item === 'coal';
+
   return (
-    <div className="grid">
-      {/* Procurement (GRN) Form */}
-      <form className="card grid" onSubmit={submitGrn}>
-        <h2>{t.grnTitle} — Goods Receipt Note</h2>
+    <div className="grid gap-4">
+      <Card>
+        <CardHeader title={t.grnTitle} />
+        <form onSubmit={submitGrn}>
+          <CardBody>
+            <FormGrid className="lg:grid-cols-3">
+              <Field label={t.item}>
+                <Select value={f.item} onChange={(e) => (e.target.value === '__new' ? addItem() : setF({ ...f, item: e.target.value }))}>
+                  {!items.active.some((i) => i.key === f.item) && <option value="" disabled>—</option>}
+                  {items.active.map((i) => <option key={i.key} value={i.key}>{typeLabel(i, lang)}</option>)}
+                  <option value="__new">＋ {t.addNewItem}</option>
+                </Select>
+              </Field>
+              <Field label={t.supplier}><Input required {...box('supplierName')} /></Field>
+              {coal
+                ? <Field label={t.vehicle}><Input placeholder="LES-4920" {...box('vehicleNo')} /></Field>
+                : <Field label={t.description}><Input placeholder={t.descriptionHint} {...box('description')} /></Field>}
+              <Field label={t.quantity}><Input required inputMode="decimal" placeholder={t.qtyUnitsHint} {...box('qty')} /></Field>
+              <Field label={t.rate}><Input required inputMode="decimal" {...box('rate')} /></Field>
+              <Field label={t.entryDate}><Input type="date" required max={new Date().toISOString().slice(0, 10)} {...box('date')} /></Field>
+              {coal && <Field label={t.freight}><Input inputMode="decimal" {...box('freight')} /></Field>}
+            </FormGrid>
 
-        <div className="grid two" style={{ gap: '0.85rem' }}>
-          <label>
-            {t.item}
-            <select value={f.item} onChange={(e) => (e.target.value === '__new' ? addItem() : setF({ ...f, item: e.target.value }))}>
-              {!items.active.some((i) => i.key === f.item) && <option value="" disabled>—</option>}
-              {items.active.map((i) => (
-                <option key={i.key} value={i.key}>{typeLabel(i, lang)}</option>
-              ))}
-              <option value="__new">＋ {t.addNewItem}</option>
-            </select>
-          </label>
+            {coal && (
+              <details className="rounded-lg bg-n-50 px-3 py-2 ring-1 ring-n-200">
+                <summary className="cursor-pointer text-sm font-semibold text-n-700">{t.labFieldsOptional}</summary>
+                <FormGrid className="mt-3 lg:grid-cols-3">
+                  <Field label={t.calorificValue}><Input inputMode="decimal" placeholder="kcal/kg" {...labBox('calorificValue')} /></Field>
+                  <Field label={t.ashPct}><Input inputMode="decimal" placeholder="%" {...labBox('ashPct')} /></Field>
+                  <Field label={t.volatileMatterPct}><Input inputMode="decimal" placeholder="%" {...labBox('volatileMatterPct')} /></Field>
+                </FormGrid>
+              </details>
+            )}
 
-          <label>
-            {t.supplier}
-            <input required placeholder="Supplier or source name" value={f.supplierName} onChange={(e) => setF({ ...f, supplierName: e.target.value })} />
-          </label>
+            <Button type="submit" loading={submitting} className="justify-self-center sm:min-w-48">＋ {t.add}</Button>
+            {msg.text && <Alert tone={msg.bad ? 'err' : 'ok'}>{msg.text}</Alert>}
+          </CardBody>
+        </form>
+      </Card>
 
-          {f.item === 'coal' ? (
-            <label>
-              {t.vehicle}
-              <input placeholder="e.g. LES-4920" value={f.vehicleNo} onChange={(e) => setF({ ...f, vehicleNo: e.target.value })} />
-            </label>
-          ) : (
-            <label>
-              {t.description}
-              <input placeholder={t.descriptionHint} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} />
-            </label>
-          )}
-
-          <label>
-            {t.quantity}
-            <input required inputMode="decimal" placeholder={t.qtyUnitsHint} value={f.qty} onChange={(e) => setF({ ...f, qty: e.target.value })} />
-          </label>
-
-          <label>
-            {t.rate}
-            <input required inputMode="decimal" placeholder="Price rate" value={f.rate} onChange={(e) => setF({ ...f, rate: e.target.value })} />
-          </label>
-
-          <label>
-            {t.entryDate}
-            <input type="date" required max={new Date().toISOString().slice(0, 10)} value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} />
-          </label>
-
-          {f.item === 'coal' && (
-            <label>
-              {t.freight}
-              <input inputMode="decimal" placeholder="Freight / Kiraya" value={f.freight} onChange={(e) => setF({ ...f, freight: e.target.value })} />
-            </label>
-          )}
-        </div>
-
-        {/* Optional Lab Tests */}
-        {f.item === 'coal' && (
-          <details className="lab-box">
-            <summary>
-              {t.labFieldsOptional} (Coal Quality Parameters)
-            </summary>
-            <div className="grid two" style={{ gap: '0.75rem' }}>
-              <label>
-                {t.calorificValue}
-                <input inputMode="decimal" placeholder="kcal/kg" value={lab.calorificValue} onChange={(e) => setLab({ ...lab, calorificValue: e.target.value })} />
-              </label>
-              <label>
-                {t.ashPct}
-                <input inputMode="decimal" placeholder="Ash %" value={lab.ashPct} onChange={(e) => setLab({ ...lab, ashPct: e.target.value })} />
-              </label>
-              <label style={{ gridColumn: '1 / -1' }}>
-                {t.volatileMatterPct}
-                <input inputMode="decimal" placeholder="Volatile %" value={lab.volatileMatterPct} onChange={(e) => setLab({ ...lab, volatileMatterPct: e.target.value })} />
-              </label>
-            </div>
-          </details>
-        )}
-
-        <button className="primary" disabled={submitting}>
-          ➕ {t.add} GRN
-        </button>
-
-        {msg.text && <p role={msg.bad ? 'alert' : 'status'} className={msg.bad ? 'err' : 'ok'}>{msg.text}</p>}
-      </form>
-
-      {/* Recent GRN Purchases Table with Column Outlines */}
-      <div className="card table-wrap">
-        <h2>{t.recentGrns} ({shownGrns.length} / {grns.length})</h2>
-        <table>
+      <TableCard title={`${t.recentGrns} (${shownGrns.length} / ${grns.length})`}>
+        <table className={tbl.table}>
           <thead>
             <tr>
-              <th className="rownum">#</th>
-              <th className="sticky-col">{t.dateTime}</th>
-              <th>{t.item}</th>
-              <th>{t.supplier}</th>
-              <th>{t.qty}</th>
-              <th style={{ textAlign: 'end' }}>{t.landedCost}</th>
-              <th className="actions">{t.action}</th>
+              <th className={cx('rownum', tbl.th)}>#</th><th className={cx('sticky-col', tbl.th)}>{t.dateTime}</th>
+              {[t.item, t.supplier, t.qty, t.landedCost].map((h) => <th key={h} className={tbl.th}>{h}</th>)}
+              <th className={cx('actions', tbl.th)}>{t.action}</th>
             </tr>
             <tr className="filter-row">
-              <th className="rownum" />
+              <th className={cx('rownum', tbl.fth)} />
               {['date', 'item', 'supplier', 'qty', 'cost'].map((k) => (
-                <th key={k}>
-                  <input type="search" className="table-col-filter" aria-label={k} value={filters[k] || ''} onChange={(e) => setFilter(k, e.target.value)} />
-                </th>
+                <th key={k} className={tbl.fth}><FilterInput aria-label={k} value={filters[k] || ''} onChange={(e) => setFilter(k, e.target.value)} /></th>
               ))}
-              <th className="actions" />
+              <th className={cx('actions', tbl.fth)} />
             </tr>
           </thead>
           <tbody>
             {shownGrns.map((g, i) => {
               const editing = editor.isEditing(g._id);
               return (
-              <tr key={g._id}>
-                <td className="rownum">{i + 1}</td>
-                <td className="dt-bold"><DateTime value={g.date} /></td>
-                <td>
-                  <span className="badge" style={{ background: '#f1f5f9', color: '#1e293b' }}>
-                    {items.label(g.item)}
-                    {g.description ? <div className="muted" style={{ fontSize: '0.75rem' }}>{g.description}</div> : null}
-                  </span>
-                </td>
-                <td>{editing ? <input className="cell-input" {...editor.field('supplierName')} /> : <strong>{g.supplierName}</strong>}</td>
-                <td>{editing ? <input inputMode="decimal" className="cell-input" {...editor.field('qty')} /> : g.qty}</td>
-                <td style={{ textAlign: 'end' }}>
-                  {editing
-                    ? <input inputMode="decimal" className="cell-input" title={t.rate} {...editor.field('rate')} />
-                    : <strong>{Number(g.landedUnitCost).toLocaleString()}</strong>}
-                </td>
-                <td className="actions">
-                  <RowActions
-                    editor={editor} id={g._id} path={`/grns/${g._id}`} name={`${items.label(g.item)} — ${g.supplierName}`}
-                    initial={{ supplierName: g.supplierName || '', qty: String(g.qty ?? ''), rate: g.rate != null ? String(g.rate) : '' }}
-                    toPayload={(d) => Object.fromEntries(Object.entries({ supplierName: d.supplierName?.trim(), qty: Number(d.qty) || undefined, rate: d.rate }).filter(([, v]) => v !== undefined && v !== '' && v !== 'undefined'))}
-                    onSaved={() => { setMsg({ text: t.savedOk, bad: false }); load(); }}
-                    onDeleted={() => { setMsg({ text: t.deleted, bad: false }); load(); }}
-                    onError={(m) => setMsg({ text: m, bad: true })}
-                  />
-                </td>
-              </tr>
+                <tr key={g._id} className={cx(tbl.tr, editing && 'bg-amber-50!')}>
+                  <td className={cx('rownum', tbl.td, 'text-n-500')}>{i + 1}</td>
+                  <td className={tbl.td}><DateTime value={g.date} /></td>
+                  <td className={tbl.td}>
+                    <Badge>{items.label(g.item)}</Badge>
+                    {g.description ? <div className="mt-0.5 text-xs text-n-500">{g.description}</div> : null}
+                  </td>
+                  <td className={cx(tbl.td, 'font-semibold')}>{editing ? <input className={tbl.cell} {...editor.field('supplierName')} /> : g.supplierName}</td>
+                  <td className={tbl.td}>{editing ? <input inputMode="decimal" className={tbl.cell} {...editor.field('qty')} /> : g.qty}</td>
+                  <td className={cx(tbl.td, 'text-end font-bold')}>{editing ? <input inputMode="decimal" className={tbl.cell} title={t.rate} {...editor.field('rate')} /> : Number(g.landedUnitCost).toLocaleString()}</td>
+                  <td className={cx('actions', tbl.td)}>
+                    <RowActions
+                      editor={editor} id={g._id} path={`/grns/${g._id}`} name={`${items.label(g.item)} — ${g.supplierName}`}
+                      initial={{ supplierName: g.supplierName || '', qty: String(g.qty ?? ''), rate: g.rate != null ? String(g.rate) : '' }}
+                      toPayload={(d) => Object.fromEntries(Object.entries({ supplierName: d.supplierName?.trim(), qty: Number(d.qty) || undefined, rate: d.rate }).filter(([, v]) => v !== undefined && v !== '' && v !== 'undefined'))}
+                      onSaved={() => { setMsg({ text: t.savedOk, bad: false }); load(); }}
+                      onDeleted={() => { setMsg({ text: t.deleted, bad: false }); load(); }}
+                      onError={(m) => setMsg({ text: m, bad: true })}
+                    />
+                  </td>
+                </tr>
               );
             })}
-            {!shownGrns.length && (
-              <tr>
-                <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted)' }}>
-                  {t.noEntries}
-                </td>
-              </tr>
-            )}
+            {!shownGrns.length && <Empty cols={7}>{t.noEntries}</Empty>}
           </tbody>
         </table>
-      </div>
+      </TableCard>
     </div>
   );
 }

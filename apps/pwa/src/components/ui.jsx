@@ -1,4 +1,5 @@
 import { forwardRef } from 'react';
+import AmountHintC, { fmtMoney as fmtM, unfmtMoney as unfmtM } from './AmountHint.jsx';
 
 // Shared building blocks (Tailwind). Every page uses these, so buttons, boxes, cards and tables
 // look the same everywhere, on phones and on desktop, in English and Urdu.
@@ -168,4 +169,13 @@ export const DateRange = ({ from, to, onFrom, onTo, fromLabel, toLabel, clearLab
     <Field label={toLabel}><Input type="date" value={to} min={from || undefined} onChange={(e) => onTo(e.target.value)} className="min-h-10" /></Field>
     <Button size="sm" variant="secondary" className="min-h-10" disabled={!from && !to} onClick={() => { onFrom(''); onTo(''); }}>{clearLabel}</Button>
   </div>
+);
+
+/* ---------- Money box: 2,45,230 while typing, plain digits to the page, Urdu words underneath ---------- */
+export { default as AmountHint, fmtMoney, unfmtMoney } from './AmountHint.jsx';
+export const MoneyInput = ({ value, onChange, className, ...p }) => (
+  <>
+    <Input inputMode="decimal" value={fmtM(value)} onChange={(e) => onChange(unfmtM(e.target.value))} className={cx('font-semibold tabular-nums', className)} {...p} />
+    <AmountHintC value={value} />
+  </>
 );

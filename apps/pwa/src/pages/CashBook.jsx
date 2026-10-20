@@ -3,18 +3,18 @@ import { useT } from '../i18n.js';
 import { get, fmtDate, fmtDateTime, getRole } from '../api.js';
 import DateTime from '../components/DateTime.jsx';
 import RowActions, { useRowEdit } from '../components/RowActions.jsx';
+import { Card, CardBody, Input, Button, Alert, Section, StatGrid, StatCard, Badge, TableCard, tbl, FilterInput, ClearFilters, Empty, cx } from '../components/ui.jsx';
 
 const EDIT_PATH = { payment: 'payments', expense: 'expenses', advance: 'advances' };
-
 const today = () => new Date().toISOString().slice(0, 10);
+const n = (v) => Number(v || 0).toLocaleString();
+const has = (v, q) => !q || String(v ?? '').toLowerCase().includes(q.toLowerCase());
 
 export default function CashBook() {
   const t = useT();
   const [date, setDate] = useState(today());
   const [book, setBook] = useState(null);
   const [err, setErr] = useState('');
-  const [incFilters, setIncFilters] = useState({});
-  const [expFilters, setExpFilters] = useState({});
   const [msg, setMsg] = useState({ text: '', bad: false });
   const editor = useRowEdit();
   // Today's entries can be corrected by staff; past days only by the owner.
@@ -23,233 +23,115 @@ export default function CashBook() {
   const load = () => get(`/cashbook?date=${date}`).then(setBook).catch((e) => setErr(e.message));
   useEffect(() => { editor.stop(); load(); }, [date]);
 
-  // Amount (and payee for expenses) edited in place; RowActions handles edit/save/cancel.
-  const amountCell = (r) => (editor.isEditing(r.id)
-    ? <input inputMode="decimal" className="cell-input" {...editor.field('amount')} />
-    : null);
-  const nameCell = (r) => (editor.isEditing(r.id) && r.kind === 'expense'
-    ? <input className="cell-input" {...editor.field('payee')} />
-    : <strong>{r.name}</strong>);
-  const actions = (r) => (
-    <td className="actions">
-      {r.id && (
-        <RowActions
-          editor={editor} id={r.id} path={`/${EDIT_PATH[r.kind]}/${r.id}`} name={r.name}
-          initial={r.kind === 'expense' ? { amount: String(r.amount), payee: r.name } : { amount: String(r.amount) }}
-          toPayload={(d) => (r.kind === 'expense' ? { amount: d.amount, payee: d.payee } : { amount: d.amount })}
-          canEdit={canEdit} canDelete={false}
-          onSaved={() => { setMsg({ text: t.savedOk, bad: false }); load(); }}
-          onError={(m) => setMsg({ text: m, bad: true })}
-        />
-      )}
-    </td>
-  );
-
   return (
-    <div className="grid">
-      {/* Date selector toolbar */}
-      <div className="card row" style={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-          <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'var(--brand-tint)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--brand-dark)', border: '1.5px solid var(--brand-dark)' }}>
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-              <line x1="16" y1="2" x2="16" y2="6" />
-              <line x1="8" y1="2" x2="8" y2="6" />
-              <line x1="3" y1="10" x2="21" y2="10" />
-            </svg>
+    <div className="grid gap-4">
+      <Card>
+        <CardBody className="grid-cols-1 sm:grid-cols-[1fr_auto] sm:items-center">
+          <div className="flex items-center gap-3">
+            <div className="grid size-10 place-items-center rounded-lg bg-brand-50 text-brand-700 ring-1 ring-brand-200">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
+              </svg>
+            </div>
+            <div>
+              <div className="text-xs font-semibold text-n-500">{t.cashbook}</div>
+              <strong className="text-lg text-n-900">{fmtDate(date)}</strong>
+            </div>
           </div>
-          <div>
-            <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase' }}>{t.cashbook}</div>
-            <strong style={{ fontSize: '0.98rem', color: 'var(--ink)' }}>{fmtDate(date)}</strong>
+          <div className="flex items-center gap-2">
+            <Input type="date" value={date} max={today()} onChange={(e) => setDate(e.target.value)} className="min-h-10" />
+            <Button size="sm" variant="secondary" className="min-h-10" onClick={() => setDate(today())}>{t.day}</Button>
           </div>
-        </div>
+        </CardBody>
+      </Card>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          <input
-            type="date"
-            value={date}
-            max={today()}
-            onChange={(e) => setDate(e.target.value)}
-            style={{ minHeight: '36px', padding: '0.25rem 0.65rem', fontSize: '0.84rem' }}
-          />
-          <button
-            type="button"
-            className="ghost"
-            style={{ minHeight: '36px', padding: '0.25rem 0.75rem', fontSize: '0.82rem' }}
-            onClick={() => setDate(today())}
-          >
-            {t.day}
-          </button>
-        </div>
-      </div>
-
-      {err && <p role="alert" className="err">{err}</p>}
-      {msg.text && <p role={msg.bad ? 'alert' : 'status'} className={msg.bad ? 'err' : 'ok'}>{msg.text}</p>}
+      {err && <Alert tone="err">{err}</Alert>}
+      {msg.text && <Alert tone={msg.bad ? 'err' : 'ok'}>{msg.text}</Alert>}
 
       {book && (
         <>
-          {/* Daily Cash KPIs Grouped by Type (filled with 18-20% opaque color, swapped sizes, no Rs) */}
-          <div className="kpi-section">
-            <div className="kpi-group">
-              <h3 className="kpi-group-title">
-                {t.groupInflows}
-              </h3>
-              <div className="kpi-grid">
-                <div className="stat" style={{ borderInlineStartColor: 'var(--info)' }}>
-                  <span>{t.openingCash}</span>
-                  <strong>{Number(book.openingCash).toLocaleString()}</strong>
-                </div>
-                <div className="stat" style={{ borderInlineStartColor: 'var(--ok-dark)' }}>
-                  <span>{t.totalIn}</span>
-                  <strong className="ok">+{Number(book.totalIn).toLocaleString()}</strong>
-                </div>
-              </div>
-            </div>
+          <Card className="grid gap-4 p-4 sm:grid-cols-2">
+            <Section title={t.groupInflows}>
+              <StatGrid className="grid-cols-2 sm:grid-cols-2 lg:grid-cols-2">
+                <StatCard label={t.openingCash} value={n(book.openingCash)} tone="blue" />
+                <StatCard label={t.totalIn} value={`+${n(book.totalIn)}`} tone="green" />
+              </StatGrid>
+            </Section>
+            <Section title={t.groupOutflows}>
+              <StatGrid className="grid-cols-2 sm:grid-cols-2 lg:grid-cols-2">
+                <StatCard label={t.totalOut} value={`-${n(book.totalOut)}`} tone="red" />
+                <StatCard label={t.closingCash} value={n(book.closingCash)} tone="orange" />
+              </StatGrid>
+            </Section>
+          </Card>
 
-            <div className="kpi-group">
-              <h3 className="kpi-group-title">
-                {t.groupOutflows}
-              </h3>
-              <div className="kpi-grid">
-                <div className="stat" style={{ borderInlineStartColor: 'var(--err-dark)' }}>
-                  <span>{t.totalOut}</span>
-                  <strong className="err">-{Number(book.totalOut).toLocaleString()}</strong>
-                </div>
-                <div className="stat" style={{ borderInlineStartColor: 'var(--brand-dark)' }}>
-                  <span>{t.closingCash}</span>
-                  <strong>{Number(book.closingCash).toLocaleString()}</strong>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Income Table with Column Outlines */}
-          {/* Income Table with Column Outlines and Quick Filters */}
-          <div className="card table-wrap">
-            <div style={{ padding: '0.75rem 1rem 0.4rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2>{t.incomeDetails}</h2>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                {Object.values(incFilters).some(Boolean) && (
-                  <button type="button" className="clear-filter-btn" onClick={() => setIncFilters({})}>
-                    ✕ Clear
-                  </button>
-                )}
-                <span className="badge green">+{Number(book.totalIn).toLocaleString()}</span>
-              </div>
-            </div>
-            <table>
-              <thead>
-                <tr>
-                  <th className="rownum">#</th>
-                  <th>{t.dateTime}</th>
-                  <th className="sticky-col">{t.name}</th>
-                  <th>{t.details}</th>
-                  <th>{t.amount}</th>
-                  <th className="actions">{t.action}</th>
-                </tr>
-                <tr className="filter-row">
-                  <th className="rownum" />
-                  <th><input type="search" className="table-col-filter" value={incFilters.at || ''} onChange={(e) => setIncFilters({ ...incFilters, at: e.target.value })} /></th>
-                  <th><input type="search" className="table-col-filter" value={incFilters.name || ''} onChange={(e) => setIncFilters({ ...incFilters, name: e.target.value })} /></th>
-                  <th><input type="search" className="table-col-filter" value={incFilters.detail || ''} onChange={(e) => setIncFilters({ ...incFilters, detail: e.target.value })} /></th>
-                  <th><input type="search" className="table-col-filter" value={incFilters.amount || ''} onChange={(e) => setIncFilters({ ...incFilters, amount: e.target.value })} /></th>
-                  <th className="actions" />
-                </tr>
-              </thead>
-              <tbody>
-                {book.income
-                  .filter((r) => {
-                    if (incFilters.at && !String(fmtDateTime(r.at)).toLowerCase().includes(incFilters.at.toLowerCase())) return false;
-                    if (incFilters.name && !String(r.name || '').toLowerCase().includes(incFilters.name.toLowerCase())) return false;
-                    if (incFilters.detail && !String(r.detail || '').toLowerCase().includes(incFilters.detail.toLowerCase())) return false;
-                    if (incFilters.amount && !String(r.amount).toLowerCase().includes(incFilters.amount.toLowerCase())) return false;
-                    return true;
-                  })
-                  .map((r, i) => (
-                    <tr key={r.id || i}>
-                      <td className="rownum">{i + 1}</td>
-                      <td><DateTime value={r.at} /></td>
-                      <td>{nameCell(r)}</td>
-                      <td>{r.detail}</td>
-                      <td className="ok">{amountCell(r) ?? <strong>+{Number(r.amount).toLocaleString()}</strong>}</td>
-                      {actions(r)}
-                    </tr>
-                  ))}
-                {!book.income.length && (
-                  <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', padding: '1.25rem', color: 'var(--muted)' }}>
-                      {t.noEntries}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Expense Table with Column Outlines and Quick Filters */}
-          <div className="card table-wrap">
-            <div style={{ padding: '0.75rem 1rem 0.4rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2>{t.expenseDetails}</h2>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                {Object.values(expFilters).some(Boolean) && (
-                  <button type="button" className="clear-filter-btn" onClick={() => setExpFilters({})}>
-                    ✕ Clear
-                  </button>
-                )}
-                <span className="badge red">-{Number(book.totalOut).toLocaleString()}</span>
-              </div>
-            </div>
-            <table>
-              <thead>
-                <tr>
-                  <th className="rownum">#</th>
-                  <th>{t.dateTime}</th>
-                  <th className="sticky-col">{t.name}</th>
-                  <th>{t.details}</th>
-                  <th>{t.amount}</th>
-                  <th className="actions">{t.action}</th>
-                </tr>
-                <tr className="filter-row">
-                  <th className="rownum" />
-                  <th><input type="search" className="table-col-filter" value={expFilters.at || ''} onChange={(e) => setExpFilters({ ...expFilters, at: e.target.value })} /></th>
-                  <th><input type="search" className="table-col-filter" value={expFilters.name || ''} onChange={(e) => setExpFilters({ ...expFilters, name: e.target.value })} /></th>
-                  <th><input type="search" className="table-col-filter" value={expFilters.detail || ''} onChange={(e) => setExpFilters({ ...expFilters, detail: e.target.value })} /></th>
-                  <th><input type="search" className="table-col-filter" value={expFilters.amount || ''} onChange={(e) => setExpFilters({ ...expFilters, amount: e.target.value })} /></th>
-                  <th className="actions" />
-                </tr>
-              </thead>
-              <tbody>
-                {book.expense
-                  .filter((r) => {
-                    if (expFilters.at && !String(fmtDateTime(r.at)).toLowerCase().includes(expFilters.at.toLowerCase())) return false;
-                    if (expFilters.name && !String(r.name || '').toLowerCase().includes(expFilters.name.toLowerCase())) return false;
-                    if (expFilters.detail && !String(r.detail || '').toLowerCase().includes(expFilters.detail.toLowerCase())) return false;
-                    if (expFilters.amount && !String(r.amount).toLowerCase().includes(expFilters.amount.toLowerCase())) return false;
-                    return true;
-                  })
-                  .map((r, i) => (
-                    <tr key={r.id || i}>
-                      <td className="rownum">{i + 1}</td>
-                      <td><DateTime value={r.at} /></td>
-                      <td>{nameCell(r)}</td>
-                      <td>{r.detail}</td>
-                      <td className="err">{amountCell(r) ?? <strong>-{Number(r.amount).toLocaleString()}</strong>}</td>
-                      {actions(r)}
-                    </tr>
-                  ))}
-                {!book.expense.length && (
-                  <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', padding: '1.25rem', color: 'var(--muted)' }}>
-                      {t.noEntries}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <CashTable t={t} title={t.incomeDetails} rows={book.income} sign="+" total={book.totalIn} editor={editor} canEdit={canEdit} setMsg={setMsg} reload={load} />
+          <CashTable t={t} title={t.expenseDetails} rows={book.expense} sign="-" total={book.totalOut} editor={editor} canEdit={canEdit} setMsg={setMsg} reload={load} />
         </>
       )}
     </div>
   );
 }
 
+// One list of the day (money in, or money out); amount (and payee for expenses) edited in the row.
+function CashTable({ t, title, rows, sign, total, editor, canEdit, setMsg, reload }) {
+  const [f, setF] = useState({});
+  const shown = rows.filter((r) => has(fmtDateTime(r.at), f.at) && has(r.name, f.name) && has(r.detail, f.detail) && has(r.amount, f.amount));
+  const inn = sign === '+';
+  return (
+    <TableCard
+      title={title}
+      actions={(
+        <div className="flex items-center gap-2">
+          <ClearFilters show={Object.values(f).some(Boolean)} onClick={() => setF({})} label={t.clearAll} />
+          <Badge tone={inn ? 'ok' : 'err'}>{sign}{n(total)}</Badge>
+        </div>
+      )}
+    >
+      <table className={tbl.table}>
+        <thead>
+          <tr>
+            <th className={cx('rownum', tbl.th)}>#</th><th className={tbl.th}>{t.dateTime}</th><th className={cx('sticky-col', tbl.th)}>{t.name}</th>
+            <th className={tbl.th}>{t.details}</th><th className={tbl.th}>{t.amount}</th><th className={cx('actions', tbl.th)}>{t.action}</th>
+          </tr>
+          <tr className="filter-row">
+            <th className={cx('rownum', tbl.fth)} />
+            {['at', 'name', 'detail', 'amount'].map((k) => (
+              <th key={k} className={tbl.fth}><FilterInput aria-label={k} value={f[k] || ''} onChange={(e) => setF({ ...f, [k]: e.target.value })} /></th>
+            ))}
+            <th className={cx('actions', tbl.fth)} />
+          </tr>
+        </thead>
+        <tbody>
+          {shown.map((r, i) => {
+            const editing = editor.isEditing(r.id);
+            return (
+              <tr key={r.id || i} className={cx(tbl.tr, editing && 'bg-amber-50!')}>
+                <td className={cx('rownum', tbl.td, 'text-n-500')}>{i + 1}</td>
+                <td className={tbl.td}><DateTime value={r.at} /></td>
+                <td className={cx(tbl.td, 'font-semibold')}>{editing && r.kind === 'expense' ? <input className={tbl.cell} {...editor.field('payee')} /> : r.name}</td>
+                <td className={cx(tbl.td, 'min-w-40 whitespace-normal text-start')}>{r.detail}</td>
+                <td className={cx(tbl.td, 'font-bold', inn ? 'text-gain' : 'text-loss')}>
+                  {editing ? <input inputMode="decimal" className={tbl.cell} {...editor.field('amount')} /> : `${sign}${n(r.amount)}`}
+                </td>
+                <td className={cx('actions', tbl.td)}>
+                  {r.id && (
+                    <RowActions
+                      editor={editor} id={r.id} path={`/${EDIT_PATH[r.kind]}/${r.id}`} name={r.name}
+                      initial={r.kind === 'expense' ? { amount: String(r.amount), payee: r.name } : { amount: String(r.amount) }}
+                      toPayload={(d) => (r.kind === 'expense' ? { amount: d.amount, payee: d.payee } : { amount: d.amount })}
+                      canEdit={canEdit} canDelete={false}
+                      onSaved={() => { setMsg({ text: t.savedOk, bad: false }); reload(); }}
+                      onError={(m) => setMsg({ text: m, bad: true })}
+                    />
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+          {!shown.length && <Empty cols={6}>{t.noEntries}</Empty>}
+        </tbody>
+      </table>
+    </TableCard>
+  );
+}

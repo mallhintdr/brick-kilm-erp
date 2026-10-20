@@ -33,8 +33,8 @@ export function amountWords(value, lang = 'en') {
 // 2 لاکھ 45 ہزار 2 سو 30 روپے. Display only, nothing here is saved.
 export default function AmountHint({ value }) {
   const words = amountWords(String(value ?? '').replace(/,/g, ''), 'ur');
-  // always rendered (empty when no amount) so the box keeps its height and the row never jumps
-  return <span className="amount-hint" dir="rtl" lang="ur" aria-live="polite">{words}</span>;
+  // always takes one line of space, so the boxes beside it never jump when the words appear
+  return <span className="block min-h-[1.6em] truncate text-end font-urdu text-sm font-medium text-teal-700" dir="rtl" lang="ur" aria-live="polite">{words}</span>;
 }
 
 // Money box that shows thousands separators while typing (245,230) but hands back plain digits.

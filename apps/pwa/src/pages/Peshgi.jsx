@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useT } from '../i18n.js';
 import { Link } from 'react-router-dom';
+import { useT } from '../i18n.js';
 import { get, post, uuid, getRole, fmtDateTime } from '../api.js';
-import AmountHint, { fmtMoney, unfmtMoney } from '../components/AmountHint.jsx';
 import DateTime from '../components/DateTime.jsx';
 import SearchSelect from '../components/SearchSelect.jsx';
+import {
+  Card, CardHeader, CardBody, Field, Input, MoneyInput, FormGrid, Button, Alert, Badge, TableCard, tbl, FilterInput, ClearFilters, Empty, cx,
+} from '../components/ui.jsx';
 
 export default function Peshgi() {
   const t = useT();
@@ -51,16 +53,18 @@ export default function Peshgi() {
   }
 
   const selectedWorker = workers.find((w) => w._id === workerId);
+  const accountText = (e) => (e.account === 'peshgi' ? t.peshgi : t.earnings);
+  const amountOf = (e) => Number(e.debit) || Number(e.credit) || '';
+  const has = (v, q) => !q || String(v ?? '').toLowerCase().includes(q.toLowerCase());
+  const shown = entries.filter((e) => has(fmtDateTime(e.createdAt), filters.date) && has(accountText(e), filters.account)
+    && has(e.type, filters.type) && has(amountOf(e), filters.amount));
 
   return (
-    <div className="grid">
-      {/* Advance / Recovery Action Card */}
-      <div className="card grid">
-        <h2>{t.peshgi} — Advance & Recovery Engine</h2>
-
-        <div className="grid two" style={{ gap: '0.9rem' }}>
-          <label style={{ gridColumn: '1 / -1' }}>
-            {t.worker}
+    <div className="grid gap-4">
+      <Card>
+        <CardHeader title={t.peshgi} />
+        <CardBody>
+          <Field label={t.worker}>
             <SearchSelect
               ariaLabel={t.worker} placeholder={t.typeToSearch} value={workerId} onChange={setWorkerId}
               options={workers.map((w) => ({
@@ -69,143 +73,69 @@ export default function Peshgi() {
                 search: `${w.cnic || ''} ${w.category || ''} ${w.phone || ''}`,
               }))}
             />
-          </label>
-        </div>
+          </Field>
 
-        {/* Worker Balance Tile & Slip Print */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', padding: '1rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid var(--line)' }}>
-          <div>
-            <div style={{ fontSize: '0.78rem', color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase' }}>
-              {t.outstanding} ({selectedWorker?.name || ''})
+          {/* the worker's balance and slip */}
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-brand-50 px-4 py-3 ring-1 ring-brand-200">
+            <div>
+              <div className="text-xs font-semibold text-n-600">{t.outstanding}{selectedWorker ? ` — ${selectedWorker.name}` : ''}</div>
+              <div className={cx('text-2xl font-extrabold tabular-nums', Number(balance) > 0 ? 'text-brand-700' : 'text-gain')}>
+                {balance !== null ? Number(balance).toLocaleString() : '—'}
+              </div>
             </div>
-            <div style={{ fontSize: '1.75rem', fontWeight: 800, color: Number(balance) > 0 ? 'var(--brand-dark)' : 'var(--ok)' }}>
-              {balance !== null ? Number(balance).toLocaleString() : '—'}
-            </div>
+            {workerId && (
+              <Link className="inline-flex min-h-10 items-center rounded-lg bg-white px-3.5 text-sm font-semibold text-n-700 no-underline ring-1 ring-n-300 hover:bg-n-50"
+                to={`/print/worker/${workerId}`} target="_blank" rel="noopener">🖨️ {t.printSlip}</Link>
+            )}
           </div>
 
-          {workerId && (
-            <Link className="ghost" to={`/print/worker/${workerId}`} target="_blank" rel="noopener">
-              🖨️ {t.printSlip}
-            </Link>
-          )}
-        </div>
+          <FormGrid className="lg:grid-cols-3">
+            <Field label={t.entryDate}><Input type="date" required max={new Date().toISOString().slice(0, 10)} value={entryDate} onChange={(e) => setEntryDate(e.target.value)} /></Field>
+            <Field label={`${t.amount} (Rs)`}><MoneyInput placeholder="5,000" value={amount} onChange={setAmount} /></Field>
+            {getRole() === 'owner' && <Field label={t.reason}><Input value={reason} onChange={(e) => setReason(e.target.value)} /></Field>}
+          </FormGrid>
 
-        <div className="grid two" style={{ gap: '0.9rem' }}>
-          <label>
-            {t.entryDate}
-            <input type="date" required max={new Date().toISOString().slice(0, 10)} value={entryDate} onChange={(e) => setEntryDate(e.target.value)} />
-          </label>
-          <label>
-            {t.amount} (Rs)
-            <input
-              inputMode="decimal"
-              placeholder="e.g. 5000"
-              value={fmtMoney(amount)}
-              onChange={(e) => setAmount(unfmtMoney(e.target.value))}
-            />
-            <AmountHint value={amount} />
-          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <Button disabled={!workerId || !amount || submitting} onClick={() => submit('/advances')}>💸 {t.advance}</Button>
+            <Button className="bg-gain hover:bg-green-800" disabled={!workerId || !amount || submitting} onClick={() => submit('/recoveries')}>📥 {t.recovery}</Button>
+          </div>
+          {msg.text && <Alert tone={msg.bad ? 'err' : 'ok'}>{msg.text}</Alert>}
+        </CardBody>
+      </Card>
 
-          {getRole() === 'owner' ? (
-            <label>
-              {t.reason}
-              <input
-                placeholder="Optional override note"
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-              />
-            </label>
-          ) : <div />}
-        </div>
-
-        <div className="row" style={{ marginTop: '0.4rem' }}>
-          <button
-            className="primary"
-            disabled={!workerId || !amount || submitting}
-            onClick={() => submit('/advances')}
-          >
-            💸 {t.advance}
-          </button>
-          <button
-            className="ghost"
-            style={{ borderColor: 'var(--ok-line)', background: 'var(--ok-tint)', color: 'var(--ok-dark)' }}
-            disabled={!workerId || !amount || submitting}
-            onClick={() => submit('/recoveries')}
-          >
-            📥 {t.recovery}
-          </button>
-        </div>
-
-        {msg.text && <p role={msg.bad ? 'alert' : 'status'} className={msg.bad ? 'err' : 'ok'}>{msg.text}</p>}
-      </div>
-
-      {/* Ledger History Table with Column Outlines and Quick Filters */}
-      <div className="card table-wrap">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.65rem 0.85rem' }}>
-          <h2 style={{ margin: 0, border: 'none', padding: 0 }}>{t.ledgerHistory} ({entries.filter((e) => {
-            if (filters.date && !String(fmtDateTime(e.createdAt)).toLowerCase().includes(filters.date.toLowerCase())) return false;
-            if (filters.account && !String(e.account === 'peshgi' ? t.peshgi : t.earnings).toLowerCase().includes(filters.account.toLowerCase())) return false;
-            if (filters.type && !String(e.type).toLowerCase().includes(filters.type.toLowerCase())) return false;
-            if (filters.amount && !String(Number(e.debit) || Number(e.credit) || '').toLowerCase().includes(filters.amount.toLowerCase())) return false;
-            return true;
-          }).length} / {entries.length})</h2>
-          {Object.values(filters).some(Boolean) && (
-            <button type="button" className="clear-filter-btn" onClick={() => setFilters({})}>
-              ✕ Clear Filters
-            </button>
-          )}
-        </div>
-        <table>
+      <TableCard
+        title={`${t.ledgerHistory} (${shown.length} / ${entries.length})`}
+        actions={<ClearFilters show={Object.values(filters).some(Boolean)} onClick={() => setFilters({})} label={t.clearAll} />}
+      >
+        <table className={tbl.table}>
           <thead>
             <tr>
-              <th className="rownum">#</th>
-              <th>{t.dateTime}</th>
-              <th className="sticky-col">{t.account}</th>
-              <th>{t.type}</th>
-              <th>{t.amount}</th>
+              <th className={cx('rownum', tbl.th)}>#</th><th className={tbl.th}>{t.dateTime}</th><th className={cx('sticky-col', tbl.th)}>{t.account}</th>
+              <th className={tbl.th}>{t.type}</th><th className={tbl.th}>{t.amount}</th>
             </tr>
             <tr className="filter-row">
-              <th className="rownum" />
-              <th><input type="search" className="table-col-filter" value={filters.date || ''} onChange={(e) => setFilters({ ...filters, date: e.target.value })} /></th>
-              <th><input type="search" className="table-col-filter" value={filters.account || ''} onChange={(e) => setFilters({ ...filters, account: e.target.value })} /></th>
-              <th><input type="search" className="table-col-filter" value={filters.type || ''} onChange={(e) => setFilters({ ...filters, type: e.target.value })} /></th>
-              <th><input type="search" className="table-col-filter" value={filters.amount || ''} onChange={(e) => setFilters({ ...filters, amount: e.target.value })} /></th>
+              <th className={cx('rownum', tbl.fth)} />
+              {['date', 'account', 'type', 'amount'].map((k) => (
+                <th key={k} className={tbl.fth}><FilterInput aria-label={k} value={filters[k] || ''} onChange={(e) => setFilters({ ...filters, [k]: e.target.value })} /></th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {entries
-              .filter((e) => {
-                if (filters.date && !String(fmtDateTime(e.createdAt)).toLowerCase().includes(filters.date.toLowerCase())) return false;
-                if (filters.account && !String(e.account === 'peshgi' ? t.peshgi : t.earnings).toLowerCase().includes(filters.account.toLowerCase())) return false;
-                if (filters.type && !String(e.type).toLowerCase().includes(filters.type.toLowerCase())) return false;
-                if (filters.amount && !String(Number(e.debit) || Number(e.credit) || '').toLowerCase().includes(filters.amount.toLowerCase())) return false;
-                return true;
-              })
-              .map((e, i) => (
-                <tr key={e._id}>
-                  <td className="rownum">{i + 1}</td>
-                  <td><DateTime value={e.createdAt} /></td>
-                  <td><strong>{e.account === 'peshgi' ? t.peshgi : t.earnings}</strong></td>
-                  <td>
-                    <span className="badge" style={{ background: '#f1f5f9', color: '#475569' }}>
-                      {e.type}{e.reversesId ? ` (${t.reversal})` : ''}
-                    </span>
-                  </td>
-                  <td className={Number(e.debit) > 0 ? 'ok' : 'err'}>
-                    <strong>{Number(e.debit) > 0 ? `+${Number(e.debit).toLocaleString()}` : `-${Number(e.credit).toLocaleString()}`}</strong>
-                  </td>
-                </tr>
-              ))}
-            {!entries.length && (
-              <tr>
-                <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted)' }}>
-                  {t.noEntries || 'No ledger entries found.'}
+            {shown.map((e, i) => (
+              <tr key={e._id} className={tbl.tr}>
+                <td className={cx('rownum', tbl.td, 'text-n-500')}>{i + 1}</td>
+                <td className={tbl.td}><DateTime value={e.createdAt} /></td>
+                <td className={cx(tbl.td, 'font-semibold')}>{accountText(e)}</td>
+                <td className={tbl.td}><Badge>{e.type}{e.reversesId ? ` (${t.reversal})` : ''}</Badge></td>
+                <td className={cx(tbl.td, 'font-bold', Number(e.debit) > 0 ? 'text-gain' : 'text-loss')}>
+                  {Number(e.debit) > 0 ? `+${Number(e.debit).toLocaleString()}` : `-${Number(e.credit).toLocaleString()}`}
                 </td>
               </tr>
-            )}
+            ))}
+            {!shown.length && <Empty cols={5}>{t.noEntries}</Empty>}
           </tbody>
         </table>
-      </div>
+      </TableCard>
     </div>
   );
 }
