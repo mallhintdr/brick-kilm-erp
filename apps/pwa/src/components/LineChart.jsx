@@ -1,3 +1,4 @@
+import { useT } from '../i18n.js';
 import { useId, useState } from 'react';
 import { fmtDateDM, fmtDateSpan, fmtDateRangeSpaced } from '../api.js';
 
@@ -84,6 +85,7 @@ function getSmoothSpline(pts) {
 
 export default function LineChart({ data, x, y, color = '#8b5cf6', height = 270, format = (v) => v, label }) {
   const gradId = useId().replace(/:/g, '');
+  const t = useT();
   const [hoverIndex, setHoverIndex] = useState(null);
   const [showBars, setShowBars] = useState(true);
   const [showTrend, setShowTrend] = useState(true);
@@ -192,46 +194,22 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 270,
   return (
     <div className="chart-card">
       {/* Top Header: Centered Graph Title (+15% larger), Date Range, and Top-Right Daily Avg with Trend */}
-      <div className="chart-header-top">
-        {/* Placeholder to balance the flex container so title stays precisely in the middle */}
-        <div className="chart-header-side-spacer" aria-hidden="true" />
-
-        {/* Center: Graph Title (+15% size) and Spaced Date Range (e.g. 17-4-26   to   9-10-26) */}
-        <div className="chart-title-center-block">
-          <h3 className="chart-title-top">
-            {chartLabel}
-          </h3>
-          <div className="chart-date-span-top">
-            {dateSpanStr}
-          </div>
+      <div className="grid gap-1.5">
+        {/* title and dates in the middle */}
+        <div className="text-center">
+          <h3 className="chart-title-top m-0">{chartLabel}</h3>
+          <div className="chart-date-span-top">{dateSpanStr}</div>
         </div>
-
-        {/* Top Right: Daily Avg badge with Trend trajectory for all graphs */}
-        <div className="chart-header-right-kpi">
-          <div
-            className="chart-daily-avg-kpi-badge"
-            style={{
-              backgroundColor: contrast.bg,
-              borderColor: contrast.border,
-              color: contrast.text,
-            }}
-            title={`Daily Average: ${format(Math.round(avg))} (Trend: ${trendPct >= 0 ? '+' : ''}${trendPct.toFixed(1)}%)`}
-          >
-            <span className="daily-avg-kpi-label">Daily Avg:</span>
-            <strong className="daily-avg-kpi-val" style={{ color: contrast.stroke }}>
-              {format(Math.round(avg))}
-            </strong>
-            <span
-              className="daily-avg-trend-pill"
-              style={{
-                backgroundColor: trendPct >= 0 ? '#ecfdf5' : '#fef2f2',
-                color: trendPct >= 0 ? '#059669' : '#dc2626',
-                borderColor: trendPct >= 0 ? '#a7f3d0' : '#fecaca',
-              }}
-            >
-              {trendPct >= 0 ? '↗' : '↘'} {trendPct >= 0 ? '+' : ''}{trendPct.toFixed(1)}%
-            </span>
-          </div>
+        {/* daily average on the left, trend on the right */}
+        <div className="flex items-center justify-between gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1"
+            style={{ backgroundColor: contrast.bg, color: contrast.text, '--tw-ring-color': contrast.border }}>
+            {t.dailyAvg}: <strong style={{ color: contrast.stroke }}>{format(Math.round(avg))}</strong>
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ring-1"
+            style={{ backgroundColor: trendPct >= 0 ? '#ecfdf5' : '#fef2f2', color: trendPct >= 0 ? '#059669' : '#dc2626', '--tw-ring-color': trendPct >= 0 ? '#a7f3d0' : '#fecaca' }}>
+            {t.trend}: {trendPct >= 0 ? '↗ +' : '↘ '}{trendPct.toFixed(1)}%
+          </span>
         </div>
       </div>
 

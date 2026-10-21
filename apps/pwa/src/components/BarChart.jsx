@@ -45,22 +45,7 @@ export default function BarChart({ items, colors, height = 230, label = 'Grade B
             {label}
           </h3>
         </div>
-        <div className="chart-header-right-kpi">
-          <div
-            className="chart-daily-avg-kpi-badge"
-            style={{
-              backgroundColor: '#f0fdf4',
-              borderColor: '#22c55e',
-              color: '#15803d',
-            }}
-            title={`Total stock across all grades: ${total.toLocaleString()}`}
-          >
-            <span className="daily-avg-kpi-label">📦 Total:</span>
-            <strong className="daily-avg-kpi-val" style={{ color: '#15803d' }}>
-              {total.toLocaleString()}
-            </strong>
-          </div>
-        </div>
+        <div className="chart-header-side-spacer" aria-hidden="true" />
       </div>
 
       <div className="chart-scroll-wrap">
