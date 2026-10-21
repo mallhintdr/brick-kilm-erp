@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useT } from '../i18n.js';
 import { getRole } from '../api.js';
 import HomeStock from '../components/HomeStock.jsx';
+import TodayPanel from '../components/TodayPanel.jsx';
 import { SectionTitle } from '../components/ui.jsx';
 
 const GROUPS = [
@@ -17,6 +18,7 @@ export default function Home({ links = [] }) {
 
   return (
     <div className="grid gap-4">
+      <TodayPanel />
       <HomeStock />
       {GROUPS.map((g) => {
         const items = g.paths.map((p) => visible.find((l) => l.to === p)).filter(Boolean);
