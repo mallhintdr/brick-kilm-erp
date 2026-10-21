@@ -26,7 +26,7 @@ export default function HomeStock() {
 
   return (
     <section className="grid gap-3 rounded-lg bg-white p-3.5 ring-1 ring-n-200" aria-label={t.hsTitle}>
-      <SectionTitle><Link to="/inventory" className="text-n-900 no-underline">{t.hsTitle}</Link></SectionTitle>
+      <SectionTitle><Link to="/inventory" className="text-white no-underline">{t.hsTitle}</Link></SectionTitle>
       <StatGrid>
         {cells.map((c) => <StatCard key={c.label} label={c.label} value={c.value} tone={c.tone} valueClass={c.warn ? 'text-loss text-lg' : undefined} className="px-1.5" compact />)}
       </StatGrid>

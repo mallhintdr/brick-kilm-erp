@@ -47,13 +47,16 @@ export const CardHeader = ({ title, children, className }) => (
   </div>
 );
 export const CardBody = ({ className, children }) => <div className={cx('grid gap-3 p-3 sm:p-4', className)}>{children}</div>;
-// section title: plain (no fill, so it never mixes with the coloured number cards), bold and a step
-// larger than the card text, with a thin line underneath
+// section title: compact dark pill centred on a thin line — stands apart from the pastel number cards
 export const SectionTitle = ({ children, className }) => (
-  <h3 className={cx('m-0 border-b border-n-200 pb-1.5 text-center text-base font-extrabold text-n-900', className)}>{children}</h3>
+  <h3 className={cx('m-0 flex items-center gap-2 text-center', className)}>
+    <span className="h-px flex-1 bg-n-200" aria-hidden="true" />
+    <span className="rounded-full bg-slate-800 px-3 py-0.5 text-sm font-bold leading-6 text-white shadow-sm">{children}</span>
+    <span className="h-px flex-1 bg-n-200" aria-hidden="true" />
+  </h3>
 );
 export const Section = ({ title, children, className }) => (
-  <section className={cx('grid gap-3', className)}>
+  <section className={cx('grid gap-2.5', className)}>
     {title && <SectionTitle>{title}</SectionTitle>}
     {children}
   </section>
