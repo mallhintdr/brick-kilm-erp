@@ -24,8 +24,9 @@ export default function TodayPanel() {
   useDataChanged(load);
 
   const hour = new Date(Date.now() + 5 * 3600e3).getUTCHours();
-  const greet = hour < 12 ? t.goodMorning : hour < 17 ? t.goodAfternoon : t.goodEvening;
-  const dateText = new Date().toLocaleDateString(lang === 'ur' ? 'ur-PK' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+  // greeting by Pakistan time: morning 5–12, afternoon 12–17, evening 17–21, night 21–5
+  const greet = hour >= 5 && hour < 12 ? t.goodMorning : hour >= 12 && hour < 17 ? t.goodAfternoon : hour >= 17 && hour < 21 ? t.goodEvening : t.goodNight;
+  const dateText = new Date().toLocaleDateString(lang === 'ur' ? 'ur-PK' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Karachi' });
   if (!d) return <Skeleton className="h-52" />;
 
   const day = d.dayData;

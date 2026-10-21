@@ -81,15 +81,16 @@ const TONE = {
   orange: '234 88 12', blue: '2 132 199', violet: '124 58 237', teal: '13 148 136', pink: '219 39 119',
   green: '22 163 74', red: '220 38 38', amber: '217 119 6', slate: '71 85 105',
 };
-// a card label ending in a period, e.g. "Lines Fired (24 h)": the period goes on a second, smaller line
+// a card label ending in brackets, e.g. "Lines Fired (24 h)" or "Green (Not Loaded)": the bracket part goes on a
+// second line at about half the size; short units like (kg) or (°C) stay on the same line
 function CardLabel({ label }) {
-  const m = typeof label === 'string' && label.match(/^(.*?)\s*(\([^()]*\d[^()]*\))$/);
+  const m = typeof label === 'string' && label.match(/^(.*?)\s*(\(([^()]{4,}|[^()]*\d[^()]*)\))$/);
   const color = { color: 'color-mix(in srgb, rgb(var(--t)) 40%, #44403c)' };
   if (!m) return <span className="text-xs font-semibold" style={color}>{label}</span>;
   return (
     <span className="grid justify-items-center leading-tight" style={color}>
       <span className="text-xs font-semibold">{m[1]}</span>
-      <span className="text-2xs font-medium opacity-80">{m[2]}</span>
+      <span className="text-[9.5px] font-medium opacity-80">{m[2]}</span>
     </span>
   );
 }
