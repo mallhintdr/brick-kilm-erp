@@ -6,7 +6,7 @@ import jwt from 'jsonwebtoken';
 import { ZodError } from 'zod';
 import {
   workerInput, advanceInput, recoveryInput, settingInput, SETTING_DEFAULTS,
-  ageOn, MIN_WORKER_AGE, RECOMMENDED_WORKER_AGE, toPaisa,
+  ageOn, MIN_WORKER_AGE, RECOMMENDED_WORKER_AGE, toPaisa, fromPaisa,
 } from '@kiln/shared';
 import { withTransaction, supportsTransactions } from './db.js';
 import { readFileSync } from 'node:fs';
@@ -166,7 +166,17 @@ export function createApp(db) {
   }));
 
   app.get('/workers', auth(), wrap(async (req, res) => {
-    res.json(await db.collection('workers').find(scope(req.user)).toArray());
+    const s = scope(req.user);
+    const [workers, bal] = await Promise.all([
+      db.collection('workers').find(s).toArray(),
+      // each worker's peshgi still outstanding (given minus recovered), for the list and counter-checks
+      db.collection('ledgerEntries').aggregate([
+        { $match: { ...s, account: 'peshgi' } },
+        { $group: { _id: '$partyId', d: { $sum: '$debit' }, c: { $sum: '$credit' } } },
+      ]).toArray(),
+    ]);
+    const by = Object.fromEntries(bal.map((b) => [String(b._id), fromPaisa(toPaisa(String(b.d ?? 0)) - toPaisa(String(b.c ?? 0)))]));
+    res.json(workers.map((w) => ({ ...w, peshgi: by[String(w._id)] ?? '0.00' })));
   }));
 
   app.get('/workers/:id', auth(), wrap(async (req, res) => {

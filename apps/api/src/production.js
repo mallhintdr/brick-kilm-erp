@@ -633,14 +633,43 @@ export function registerProductionRoutes(app, db) {
     ]).toArray();
     const open = await openingStock(db, req.user);
     const st = Object.fromEntries(unitStates.map((r) => [r._id, r]));
+    // this week (kiln week: Saturday to Friday) and this month, by Pakistan time; fired lines in the last 1 / 7 / 30 days
+    const PK = 5 * 3600e3; const DAY = 864e5;
+    const pkNow = new Date(Date.now() + PK);
+    const pkMidnight = Date.UTC(pkNow.getUTCFullYear(), pkNow.getUTCMonth(), pkNow.getUTCDate()) - PK;
+    const weekStart = new Date(pkMidnight - ((pkNow.getUTCDay() + 1) % 7) * DAY);
+    const monthStart = new Date(Date.UTC(pkNow.getUTCFullYear(), pkNow.getUTCMonth(), 1) - PK);
+    const since = (ms) => ({ $gte: new Date(Date.now() - ms) });
+    const unitColl = unit === 'line' ? 'kilnLines' : 'kilnSections';
+    const firedCount = async (ms) => (await db.collection(unitColl).countDocuments({ ...s, firedAt: since(ms) }))
+      + (await db.collection('kilnCycles').countDocuments({ ...s, unit, firedAt: since(ms) }));
+    const [mWeek, mMonth, lWeek, lMonth, fired1, fired7, fired30, fire] = await Promise.all([
+      sum('mouldingBatches', { count: '$count' }, { date: { $gte: weekStart } }),
+      sum('mouldingBatches', { count: '$count' }, { date: { $gte: monthStart } }),
+      sum('sectionLoads', { count: '$count' }, { date: { $gte: weekStart } }),
+      sum('sectionLoads', { count: '$count' }, { date: { $gte: monthStart } }),
+      firedCount(DAY), firedCount(7 * DAY), firedCount(30 * DAY),
+      db.collection('kilnFire').findOne(s),
+    ]);
+    const bricks = (...states) => states.reduce((a, k) => a + (st[k]?.bricks || 0), 0);
+    const count = (...states) => states.reduce((a, k) => a + (st[k]?.n || 0), 0);
     const soldBy = Object.fromEntries(sold.map((r) => [r._id, r.qty]));
     const n = (k) => nikasi[k] || 0;
     const lineCoal = unitStates.reduce((a, r) => a + (r.coal || 0), 0);
     const coalUsedKg = (shiftCoal.kg || 0) + (cycleCoal.kg || 0) + lineCoal;
     res.json({
       unit,
-      moulding: { moulded: moulding.count || 0, net: moulding.net || 0 },
+      moulding: { moulded: moulding.count || 0, net: moulding.net || 0, week: mWeek.count || 0, month: mMonth.count || 0 },
       kachiBharai: loaded.count || 0,
+      loading: { total: loaded.count || 0, week: lWeek.count || 0, month: lMonth.count || 0 },
+      fired: { day: fired1, week: fired7, month: fired30 },
+      // the kiln now, line by line
+      situation: {
+        fireAt: fire?.index ?? null, empty: count('Empty'), ready: count('Ready'), cooling: count('Cooling'),
+        preheating: count('Loading', 'Preheating'), unloading: count('Unloading'),
+      },
+      // bricks in the kiln: not fired yet (ahead of the fire) and fired (the fire line and everything behind it)
+      inKiln: { green: bricks('Loading', 'Preheating'), fired: bricks('Firing', 'Cooling', 'Ready', 'Unloading') },
       jalai: {
         // how far the fire has got: units waiting, burning, cooling, being unloaded, and bricks inside
         preheating: (st.Preheating?.n || 0) + (st.Loading?.n || 0), firing: st.Firing?.n || 0, cooling: st.Cooling?.n || 0,
@@ -651,6 +680,7 @@ export function registerProductionRoutes(app, db) {
       sales: { awwal: soldBy.awwal || 0, doem: soldBy.doem || 0, khangar: soldBy.khangar || 0 },
       coal: { openingKg: open.coalKg, inKg: Math.round((coalIn.qty || 0) * 1000), usedKg: Math.round(coalUsedKg), remainingKg: Math.round(open.coalKg + (coalIn.qty || 0) * 1000 - coalUsedKg) },
       stock: {
+        greenInKiln: bricks('Loading', 'Preheating'),
         green: open.green + (moulding.net || 0) - (loaded.count || 0),
         awwal: open.awwal + n('awwal') - (soldBy.awwal || 0), doem: open.doem + n('doem') - (soldBy.doem || 0), khangar: open.khangar + n('khangar') - (soldBy.khangar || 0),
       },

@@ -80,13 +80,13 @@ const TONE = {
   green: '22 163 74', red: '220 38 38', amber: '217 119 6', slate: '71 85 105',
 };
 // a number card: gradient in its own colour, soft coloured shadow, small lift on tap
-export const StatCard = ({ label, value, tone = 'orange', valueClass, className, children }) => (
+export const StatCard = ({ label, value, tone = 'orange', valueClass, className, children, compact }) => (
   <div
     className={cx('flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-3 py-2.5 text-center ring-1 transition-transform hover:-translate-y-0.5', className)}
     style={{ '--t': TONE[tone] || TONE.orange, background: 'linear-gradient(160deg, rgb(var(--t) / .07), rgb(var(--t) / .2))', boxShadow: '0 4px 14px -6px rgb(var(--t) / .45)', '--tw-ring-color': 'rgb(var(--t) / .3)' }}
   >
     <span className="text-xs font-semibold" style={{ color: 'color-mix(in srgb, rgb(var(--t)) 40%, #44403c)' }}>{label}</span>
-    <strong className={cx('text-xl font-extrabold tabular-nums', valueClass)} style={valueClass ? undefined : { color: 'color-mix(in srgb, rgb(var(--t)) 75%, #1c1917)' }}>{value}</strong>
+    <strong className={cx(compact ? 'text-[15px] leading-tight sm:text-[20px]' : 'text-xl', 'font-extrabold tabular-nums', valueClass)} style={/text-(loss|gain|caution)/.test(valueClass || '') ? undefined : { color: 'color-mix(in srgb, rgb(var(--t)) 75%, #1c1917)' }}>{value}</strong>
     {children}
   </div>
 );

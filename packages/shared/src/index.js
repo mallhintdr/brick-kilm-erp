@@ -136,6 +136,7 @@ export const workerInput = z.object({
   ratePerThousand: nonNegMoneyString.optional(),
   cutPerThousand: nonNegMoneyString.optional(),
   openingPeshgi: nonNegMoneyString.optional(), // advance already given when they join
+  dailyBricks: z.coerce.number().int().min(0).max(1000000).optional(), // bricks per day agreed with the worker
   reference: z.string().trim().max(100).optional(), // who brought them: jamadar or reference person
   name: z.string().min(2),
   fatherName: z.string().trim().min(2), // tells apart workers who share a common name
@@ -245,6 +246,7 @@ export const firingUpdate = z.object({
 export const workerUpdate = z.object({
   reference: z.string().trim().max(100).optional(),
   ratePerThousand: z.union([nonNegMoneyString, z.literal('')]).optional(),
+  dailyBricks: z.union([z.coerce.number().int().min(0).max(1000000), z.literal('')]).optional(),
   cutPerThousand: z.union([nonNegMoneyString, z.literal('')]).optional(),
   name: z.string().min(2).optional(),
   fatherName: z.string().trim().min(2).optional(),

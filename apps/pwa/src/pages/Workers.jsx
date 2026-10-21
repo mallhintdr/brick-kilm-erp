@@ -8,8 +8,8 @@ import {
   Badge, TableCard, tbl, FilterInput, ClearFilters, Empty, cx,
 } from '../components/ui.jsx';
 
-const blank = { phone: '', reference: '', ratePerThousand: '', cutPerThousand: '', openingPeshgi: '', name: '', fatherName: '', cnic: '', dob: '', category: 'pathera', eobiNo: '', pessiNo: '' };
-const COLS = ['name', 'fatherName', 'category', 'contract', 'eobiNo', 'pessiNo'];
+const blank = { dailyBricks: '', phone: '', reference: '', ratePerThousand: '', cutPerThousand: '', openingPeshgi: '', name: '', fatherName: '', cnic: '', dob: '', category: 'pathera', eobiNo: '', pessiNo: '' };
+const COLS = ['name', 'fatherName', 'category', 'phone', 'peshgi', 'dailyBricks', 'contract', 'eobiNo', 'pessiNo'];
 
 export default function Workers() {
   const t = useT();
@@ -77,11 +77,12 @@ export default function Workers() {
               <Field label={t.category}>
                 <Select {...box('category')}>{cats.active.map((c) => <option key={c.key} value={c.key}>{typeLabel(c, lang)}</option>)}</Select>
               </Field>
-              <Field label={t.mobileNo}><Input inputMode="tel" placeholder="03xx-xxxxxxx" {...box('phone')} /></Field>
+              <Field label={t.mobileNo}><Input required inputMode="tel" pattern="[0-9+\- ]{10,15}" placeholder="03xx-xxxxxxx" {...box('phone')} /></Field>
               <Field label={t.referenceJamadar}><Input {...box('reference')} /></Field>
               <Field label={t.ratePerThousand}><Input inputMode="decimal" placeholder={t.useKilnRate} {...box('ratePerThousand')} /></Field>
               <Field label={t.cutPerThousand}><Input inputMode="decimal" placeholder={t.useKilnRate} {...box('cutPerThousand')} /></Field>
-              <Field label={t.openingPeshgi}><Input inputMode="decimal" placeholder="0" {...box('openingPeshgi')} /></Field>
+              <Field label={t.openingPeshgi}><Input required inputMode="decimal" placeholder="0" {...box('openingPeshgi')} /></Field>
+              <Field label={t.dailyBricks}><Input required inputMode="numeric" placeholder="1000" {...box('dailyBricks')} /></Field>
               <Field label={t.eobiNo}><Input {...box('eobiNo')} /></Field>
               <Field label={t.pessiNo}><Input {...box('pessiNo')} /></Field>
             </FormGrid>
@@ -99,7 +100,7 @@ export default function Workers() {
           <thead>
             <tr>
               <th className={cx('rownum', tbl.th)}>#</th>
-              {[t.name, t.fatherName, t.category, t.contract, t.eobiNo, t.pessiNo].map((h, i) => <th key={i} className={cx(i === 0 && 'sticky-col', tbl.th)}>{h}</th>)}
+              {[t.name, t.fatherName, t.category, t.mobileNo, t.peshgiBal, t.dailyBricks, t.contract, t.eobiNo, t.pessiNo].map((h, i) => <th key={i} className={cx(i === 0 && 'sticky-col', tbl.th)}>{h}</th>)}
               <th className={cx('actions', tbl.th)}>{t.action}</th>
             </tr>
             <tr className="filter-row">
@@ -128,6 +129,9 @@ export default function Workers() {
                       </select>
                     ) : <Badge tone="brand">{cats.label(w.category)}</Badge>}
                   </td>
+                  <td className={cx(tbl.td, 'whitespace-nowrap')} dir="ltr">{cell('phone')}</td>
+                  <td className={cx(tbl.td, 'font-bold', Number(w.peshgi) > 0 ? 'text-brand-700' : 'text-n-400')}>{Number(w.peshgi || 0).toLocaleString()}</td>
+                  <td className={cx(tbl.td, 'font-semibold')}>{editing ? <input inputMode="numeric" className={tbl.cell} {...editor.field('dailyBricks')} /> : (w.dailyBricks ? Number(w.dailyBricks).toLocaleString() : <span className="text-n-400">—</span>)}</td>
                   <td className={tbl.td}>
                     {w.contractSigned
                       ? <Badge tone="ok">✓ {t.signed}</Badge>
@@ -138,7 +142,7 @@ export default function Workers() {
                   <td className={cx('actions', tbl.td)}>
                     <RowActions
                       editor={editor} id={w._id} path={`/workers/${w._id}`} name={w.name}
-                      initial={{ name: w.name, fatherName: w.fatherName || '', category: w.category, eobiNo: w.eobiNo || '', pessiNo: w.pessiNo || '' }}
+                      initial={{ name: w.name, fatherName: w.fatherName || '', category: w.category, phone: w.phone || '', dailyBricks: w.dailyBricks != null ? String(w.dailyBricks) : '', eobiNo: w.eobiNo || '', pessiNo: w.pessiNo || '' }}
                       toPayload={(d) => Object.fromEntries(Object.entries(d).filter(([k, v]) => v !== '' || k === 'eobiNo' || k === 'pessiNo'))}
                       canEdit={canEditWorkers}
                       onSaved={() => { setMsg({ text: t.savedOk, bad: false }); load(); }}
@@ -149,7 +153,7 @@ export default function Workers() {
                 </tr>
               );
             })}
-            {!filteredList.length && <Empty cols={8}>{t.noEntries}</Empty>}
+            {!filteredList.length && <Empty cols={11}>{t.noEntries}</Empty>}
           </tbody>
         </table>
       </TableCard>
