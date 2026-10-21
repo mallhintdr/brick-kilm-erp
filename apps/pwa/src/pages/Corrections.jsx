@@ -61,6 +61,10 @@ export default function Corrections() {
         <CardHeader title={t.corrections} />
         <CardBody>
           <Muted>{t.correctionsHint}</Muted>
+          {/* every entry of a day can also be corrected on Daily Entry */}
+          <Link to="/daily" className="flex items-center justify-between gap-2 rounded-lg bg-brand-50 px-3 py-2.5 text-md font-semibold text-brand-800 no-underline ring-1 ring-brand-200 hover:bg-brand-100">
+            <span>{t.dailyEntry}: {t.correctOnDaily}</span><span aria-hidden="true">›</span>
+          </Link>
           {/* two rows of two on phones, one row on wider screens */}
           <Tabs size="sm" className="grid-cols-2! sm:grid-cols-4!" value={tab} onChange={setTab}
             options={[['loads', t.loadingBharai], ['nikasi', t.unloadingNikasi], ['moulding', t.moulding], ['firing', t.firing]]} />

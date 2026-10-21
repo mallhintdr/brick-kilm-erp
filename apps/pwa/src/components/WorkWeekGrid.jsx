@@ -12,7 +12,7 @@ const addDays = (s, n) => { const d = new Date(`${s}T00:00:00Z`); d.setUTCDate(d
 
 // Weekly entry for bharai (kind="bharai") or nikasi (kind="nikasi"): workers x Saturday-Friday.
 // Days already recorded show their total; empty days take new counts, saved in one go.
-export default function WorkWeekGrid({ kind }) {
+export default function WorkWeekGrid({ kind, open = false }) {
   const t = useT();
   const category = kind;
   const [weekStart, setWeekStart] = useState(weekStartOf(todayIso()));
@@ -39,7 +39,8 @@ export default function WorkWeekGrid({ kind }) {
     let ok = 0; const failed = [];
     for (const c of newCells) {
       try {
-        await post('/work-entries', { kind, workerId: c.w, date: c.d, count: c.count, ...(kind === 'nikasi' ? { grade } : {}), clientUuid: uuid() });
+        if (kind === 'pathera') await post('/moulding', { workerId: c.w, date: c.d, count: c.count, kharaba: 0, deductionPct: 2, clientUuid: uuid() });
+        else await post('/work-entries', { kind, workerId: c.w, date: c.d, count: c.count, ...(kind === 'nikasi' ? { grade } : {}), clientUuid: uuid() });
         ok++;
         setGrid((g) => ({ ...g, [c.w]: { ...g[c.w], [c.d]: '' } }));
       } catch (e) { failed.push(`${fmtDate(c.d)}: ${e.message}`); }
@@ -50,9 +51,9 @@ export default function WorkWeekGrid({ kind }) {
   }
 
   return (
-    <details className="group overflow-hidden rounded-lg bg-white ring-1 ring-n-200 shadow-[0_1px_2px_rgba(28,25,23,.05)]">
+    <details open={open} className="group overflow-hidden rounded-lg bg-white ring-1 ring-n-200 shadow-[0_1px_2px_rgba(28,25,23,.05)]">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3">
-        <h2 className="m-0 text-lg font-bold text-n-900">{t.weeklyEntry} — {kind === 'bharai' ? t.loadingBharai : t.unloadingNikasi}</h2>
+        <h2 className="m-0 text-lg font-bold text-n-900">{t.weeklyEntry} — {kind === 'bharai' ? t.loadingBharai : kind === 'pathera' ? t.moulding : t.unloadingNikasi}</h2>
         <span className="text-n-500 transition group-open:rotate-180" aria-hidden="true">▾</span>
       </summary>
       <div className="grid gap-3 border-t border-n-100 p-4">

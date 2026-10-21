@@ -867,4 +867,7 @@ test('daily entry: one call returns the whole day', async () => {
   assert.equal(r.status, 200, JSON.stringify(r.body));
   for (const k of ['attendance', 'moulding', 'bharai', 'nikasi', 'firing', 'dasti', 'peshgi', 'sales', 'payments', 'purchases']) assert.ok(k in r.body, k);
   assert.ok(r.body.attendance.active > 0);
+  const w = await api('GET', '/work-week?kind=pathera&from=2026-01-01&to=2026-12-31');
+  assert.equal(w.status, 200, JSON.stringify(w.body));
+  assert.ok(Array.isArray(w.body));
 });

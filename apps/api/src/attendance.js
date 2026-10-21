@@ -79,16 +79,16 @@ export function registerAttendanceRoutes(app, db) {
   // What each worker did per day in a range: [{ workerId, date, count }] (solo teams only).
   // bharai counts every load (lines, chambers, grid); nikasi counts the chosen grade.
   app.get('/work-week', auth(), wrap(async (req, res) => {
-    const kind = req.query.kind === 'nikasi' ? 'nikasi' : 'bharai';
+    const kind = ['nikasi', 'pathera'].includes(req.query.kind) ? req.query.kind : 'bharai';
     const grade = ['awwal', 'doem', 'khangar'].includes(req.query.grade) ? req.query.grade : null;
     if (!isoDay.safeParse(req.query.from).success || !isoDay.safeParse(req.query.to).success) throw httpError(400, 'from and to dates required');
     const s = scope(req.user);
     const range = { $gte: new Date(`${req.query.from}T00:00:00.000Z`), $lte: new Date(`${req.query.to}T23:59:59.999Z`) };
     const teams = await db.collection('teams').find({ ...s, category: kind, solo: true }).toArray();
     const memberOf = Object.fromEntries(teams.map((t) => [String(t._id), t.memberIds[0]]));
-    const coll = kind === 'bharai' ? 'sectionLoads' : 'unloadings';
-    const teamField = kind === 'bharai' ? '$teamId' : '$nikasiTeamId';
-    const value = kind === 'bharai' ? '$count' : grade ? `$${grade}` : { $add: ['$awwal', '$doem', '$khangar'] };
+    const coll = { bharai: 'sectionLoads', nikasi: 'unloadings', pathera: 'mouldingBatches' }[kind];
+    const teamField = kind === 'nikasi' ? '$nikasiTeamId' : '$teamId';
+    const value = kind !== 'nikasi' ? '$count' : grade ? `$${grade}` : { $add: ['$awwal', '$doem', '$khangar'] };
     const rows = await db.collection(coll).aggregate([
       { $match: { ...s, date: range } },
       { $group: { _id: { team: teamField, day: { $dateToString: { format: '%Y-%m-%d', date: '$date' } } }, count: { $sum: value } } },

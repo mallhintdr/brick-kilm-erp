@@ -5,7 +5,7 @@ import HomeStock from '../components/HomeStock.jsx';
 import { SectionTitle } from '../components/ui.jsx';
 
 const GROUPS = [
-  { titleKey: 'dailyOps', paths: ['/daily', '/attendance', '/moulding', '/loading', '/kiln-board', '/firing', '/unloading'] },
+  { titleKey: 'dailyOps', paths: ['/daily', '/weekly', '/attendance', '/moulding', '/loading', '/kiln-board', '/firing', '/unloading'] },
   { titleKey: 'commercialAndFinance', paths: ['/cashbook', '/roznamcha', '/khata', '/sales', '/peshgi', '/kharchi', '/inventory', '/personal'] },
   { titleKey: 'managementAndReports', paths: ['/reports', '/insights', '/weather', '/activity', '/workers', '/settings', '/corrections', '/audit-logs', '/users'] },
 ];
