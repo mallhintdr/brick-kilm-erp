@@ -179,7 +179,7 @@ function QuickForm({ kind, preset, onClose }) {
   if (kind === 'moulding') {
     body = (
       <FormGrid>
-        <Field label={t.moulderOrTeam} className="sm:col-span-2"><SearchSelect required ariaLabel={t.moulderOrTeam} placeholder={t.typeToSearch} value={f.workerId || ''} onChange={set('workerId')} options={workersOf('pathera')} /></Field>
+        <Field label={t.moulderOrTeam} className="col-span-2"><SearchSelect required ariaLabel={t.moulderOrTeam} placeholder={t.typeToSearch} value={f.workerId || ''} onChange={set('workerId')} options={workersOf('pathera')} /></Field>
         {num('count', t.count, '10000')}
         {num('deductionPct', t.deductionPct, '2')}
         <Field label={t.quality}>
@@ -195,14 +195,14 @@ function QuickForm({ kind, preset, onClose }) {
           <Select value={f.line || ''} onChange={set('line')}><option value="">—</option>{linesIn('Empty').map((l) => <option key={l.index} value={l.index}>{lineWord} {l.index}</option>)}</Select>
         </Field>
         {num('count', t.kachiBharai, '4200')}
-        <Field label={t.loaderOrTeam} className="sm:col-span-2"><SearchSelect required ariaLabel={t.loaderOrTeam} placeholder={t.typeToSearch} value={f.workerId || ''} onChange={set('workerId')} options={workersOf('bharai')} /></Field>
+        <Field label={t.loaderOrTeam} className="col-span-2"><SearchSelect required ariaLabel={t.loaderOrTeam} placeholder={t.typeToSearch} value={f.workerId || ''} onChange={set('workerId')} options={workersOf('bharai')} /></Field>
         {dateBox}
       </FormGrid>
     );
   } else if (kind === 'firing') {
     body = (
       <FormGrid>
-        <Field label={t.fireman} className="sm:col-span-2"><SearchSelect required ariaLabel={t.fireman} placeholder={t.typeToSearch} value={f.workerId || ''} onChange={set('workerId')} options={workersOf('jalai')} /></Field>
+        <Field label={t.fireman} className="col-span-2"><SearchSelect required ariaLabel={t.fireman} placeholder={t.typeToSearch} value={f.workerId || ''} onChange={set('workerId')} options={workersOf('jalai')} /></Field>
         <Field label={t.shift}><Tabs options={[['day', t.day], ['night', t.night]]} value={f.shift || 'day'} onChange={set('shift')} /></Field>
         <Field label={t.lineNo}>
           <Select value={f.line || ''} onChange={set('line')}>
@@ -228,9 +228,9 @@ function QuickForm({ kind, preset, onClose }) {
         </Field>
         {dateBox}
         {chosen?.state !== 'Unloading' && (
-          <Field label={t.unloaderOrTeam} className="sm:col-span-2"><SearchSelect required ariaLabel={t.unloaderOrTeam} placeholder={t.typeToSearch} value={f.workerId || ''} onChange={set('workerId')} options={workersOf('nikasi')} /></Field>
+          <Field label={t.unloaderOrTeam} className="col-span-2"><SearchSelect required ariaLabel={t.unloaderOrTeam} placeholder={t.typeToSearch} value={f.workerId || ''} onChange={set('workerId')} options={workersOf('nikasi')} /></Field>
         )}
-        <div className="grid grid-cols-4 gap-2 sm:col-span-2">
+        <div className="col-span-2 grid grid-cols-4 gap-2">
           {['awwal', 'doem', 'khangar', 'broken'].map((k) => <Field key={k} label={t[k]}><Input inputMode="numeric" placeholder="0" value={f[k] || ''} onChange={(e) => set(k)(e.target.value.replace(/[^\d]/g, ''))} /></Field>)}
         </div>
       </FormGrid>
@@ -238,8 +238,8 @@ function QuickForm({ kind, preset, onClose }) {
   } else if (kind === 'dasti' || kind === 'peshgi') {
     body = (
       <FormGrid>
-        {kind === 'peshgi' && <Tabs className="sm:col-span-2" options={[['advance', t.advance], ['recovery', t.recovery]]} value={f.dir || 'advance'} onChange={set('dir')} />}
-        <Field label={t.worker} className="sm:col-span-2"><SearchSelect required ariaLabel={t.worker} placeholder={t.typeToSearch} value={f.workerId || ''} onChange={set('workerId')} options={workersOf()} /></Field>
+        {kind === 'peshgi' && <Tabs className="col-span-2" options={[['advance', t.advance], ['recovery', t.recovery]]} value={f.dir || 'advance'} onChange={set('dir')} />}
+        <Field label={t.worker} className="col-span-2"><SearchSelect required ariaLabel={t.worker} placeholder={t.typeToSearch} value={f.workerId || ''} onChange={set('workerId')} options={workersOf()} /></Field>
         <Field label={t.amount}><MoneyInput required value={f.amount || ''} onChange={set('amount')} /></Field>
         {dateBox}
       </FormGrid>
@@ -247,7 +247,7 @@ function QuickForm({ kind, preset, onClose }) {
   } else if (kind === 'sale') {
     body = (
       <FormGrid>
-        <Field label={t.customer} className="sm:col-span-2">
+        <Field label={t.customer} className="col-span-2">
           <SearchSelect required ariaLabel={t.customer} placeholder={t.typeToSearch} value={f.customerId || ''} onChange={set('customerId')}
             options={refs.customers.map((c) => ({ value: c._id, label: c.name, search: c.phone || '' }))} />
         </Field>
@@ -260,7 +260,7 @@ function QuickForm({ kind, preset, onClose }) {
   } else if (kind === 'payment') {
     body = (
       <FormGrid>
-        <Field label={t.unpaidInvoices} className="sm:col-span-2">
+        <Field label={t.unpaidInvoices} className="col-span-2">
           <SearchSelect required ariaLabel={t.invoice} placeholder={t.typeToSearch} value={f.invoiceId || ''}
             onChange={(v) => { const inv = unpaid.find((i) => i._id === v); setF((x) => ({ ...x, invoiceId: v, amount: String(inv?.balance ?? inv?.amount ?? '') })); }}
             options={unpaid.map((i) => ({ value: i._id, label: `${cname(i.customerId)} — ${t[i.grade] || i.grade} ${Number(i.qty).toLocaleString()} — ${Number(i.balance ?? i.amount).toLocaleString()}` }))} />

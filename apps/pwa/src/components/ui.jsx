@@ -46,7 +46,7 @@ export const CardHeader = ({ title, children, className }) => (
     {children}
   </div>
 );
-export const CardBody = ({ className, children }) => <div className={cx('grid gap-3 p-4', className)}>{children}</div>;
+export const CardBody = ({ className, children }) => <div className={cx('grid gap-3 p-3 sm:p-4', className)}>{children}</div>;
 // section title: plain (no fill, so it never mixes with the coloured number cards), bold and a step
 // larger than the card text, with a thin line underneath
 export const SectionTitle = ({ children, className }) => (
@@ -60,10 +60,10 @@ export const Section = ({ title, children, className }) => (
 );
 
 /* ---------- Form fields ---------- */
-const BOX = 'w-full min-h-11 rounded-lg bg-white px-3.5 py-2 text-[16px] font-normal text-n-900 ring-1 ring-n-300 border-0 outline-none placeholder:text-n-400 focus:ring-2 focus:ring-brand-500 disabled:bg-n-100 disabled:opacity-70';
+const BOX = 'w-full min-h-10 rounded-lg bg-white px-3 py-1.5 text-[16px] font-normal text-n-900 ring-1 ring-n-300 border-0 outline-none placeholder:text-n-400 focus:ring-2 focus:ring-brand-500 disabled:bg-n-100 disabled:opacity-70';
 export const Field = ({ label, hint, error, className, children }) => (
-  <label className={cx('flex min-w-0 flex-col gap-1.5 text-md font-medium text-n-700', className)}>
-    <span className="truncate text-md font-medium">{label}</span>
+  <label className={cx('flex min-w-0 flex-col gap-1 text-sm font-medium text-n-700', className)}>
+    <span className="truncate text-sm font-medium">{label}</span>
     {children}
     {error ? <span className="text-xs font-medium text-loss">{error}</span> : hint ? <span className="text-xs font-normal text-n-500">{hint}</span> : null}
   </label>
@@ -73,7 +73,8 @@ export const Select = forwardRef(function Select({ className, children, ...p }, 
   return <select ref={ref} className={cx(BOX, 'appearance-none bg-[url("data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%2020%2020%27%20fill=%27%2378716c%27%3E%3Cpath%20d=%27M5.2%207.2a.8.8%200%20011.1%200L10%2011l3.7-3.8a.8.8%200%20111.1%201.1l-4.2%204.5a.8.8%200%2001-1.1%200L5.2%208.3a.8.8%200%20010-1.1z%27/%3E%3C/svg%3E")] bg-[length:18px] bg-[right_10px_center] bg-no-repeat pe-9 rtl:bg-[left_10px_center]', className)} {...p}>{children}</select>;
 });
 export const Textarea = forwardRef(function Textarea({ className, ...p }, ref) { return <textarea ref={ref} className={cx(BOX, 'min-h-24 py-2.5', className)} {...p} />; });
-export const FormGrid = ({ className, children }) => <div className={cx('grid grid-cols-1 gap-3 sm:grid-cols-2', className)}>{children}</div>;
+// two columns on every screen (three on wide ones); a field that needs the whole row uses col-span-2
+export const FormGrid = ({ className, children }) => <div className={cx('grid grid-cols-2 gap-x-2.5 gap-y-2.5', className)}>{children}</div>;
 
 /* ---------- Numbers ---------- */
 const TONE = {

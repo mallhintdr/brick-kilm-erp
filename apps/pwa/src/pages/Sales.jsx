@@ -95,7 +95,7 @@ export default function Sales() {
           {activeFormTab === 'invoice' && (
             <form className="grid gap-3" onSubmit={addInvoice}>
               <FormGrid className="lg:grid-cols-3">
-                <Field label={t.customer} className="sm:col-span-2 lg:col-span-1">
+                <Field label={t.customer} className="col-span-2 lg:col-span-1">
                   <SearchSelect
                     required ariaLabel={t.customer} placeholder={t.typeToSearch} value={invf.customerId}
                     onChange={(v) => setInvf({ ...invf, customerId: v })}

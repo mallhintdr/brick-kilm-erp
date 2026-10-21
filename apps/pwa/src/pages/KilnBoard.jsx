@@ -353,7 +353,7 @@ export default function KilnBoard({ focus } = {}) {
                       </div>
                     )}
                     <FormGrid>
-                      <Field label={t.loaderOrTeam} className="sm:col-span-2">
+                      <Field label={t.loaderOrTeam} className="col-span-2">
                         <SearchSelect required ariaLabel={t.loaderOrTeam} placeholder={t.typeToSearch} value={form.teamId || ''}
                           onChange={(v) => setForm({ ...form, teamId: v })} options={pickOptions('bharai')} />
                       </Field>
@@ -371,7 +371,7 @@ export default function KilnBoard({ focus } = {}) {
                 {(unit === 'line' ? (sel.state === 'Ready' || sel.stage === 'Cooling') : sel.state === 'Cooling') && (
                   <div className="grid gap-3">
                     <FormGrid>
-                      <Field label={t.unloaderOrTeam} className="sm:col-span-2">
+                      <Field label={t.unloaderOrTeam} className="col-span-2">
                         <SearchSelect required ariaLabel={t.unloaderOrTeam} placeholder={t.typeToSearch} value={form.teamId || ''}
                           onChange={(v) => setForm({ ...form, teamId: v })} options={pickOptions('nikasi')} />
                       </Field>
@@ -411,7 +411,7 @@ export default function KilnBoard({ focus } = {}) {
                     {loadEdit && (
                       <div className="grid gap-3 rounded-lg bg-amber-50 p-3 ring-1 ring-amber-200">
                         <FormGrid>
-                          <Field label={t.loaderOrTeam} className="sm:col-span-2">
+                          <Field label={t.loaderOrTeam} className="col-span-2">
                             <SearchSelect ariaLabel={t.loaderOrTeam} placeholder={t.typeToSearch} value={loadEdit.who}
                               onChange={(v) => setLoadEdit({ ...loadEdit, who: v })} options={pickOptions('bharai')} />
                           </Field>

@@ -272,7 +272,7 @@ export default function Moulding() {
         <form onSubmit={submit}>
           <CardBody>
             <FormGrid className="lg:grid-cols-3">
-              <Field label={t.moulderOrTeam} className="sm:col-span-2 lg:col-span-1">
+              <Field label={t.moulderOrTeam} className="col-span-2 lg:col-span-1">
                 <SearchSelect
                   required ariaLabel={t.moulderOrTeam} placeholder={t.typeToSearch} value={f.teamId}
                   onChange={(v) => setF({ ...f, teamId: v })}
