@@ -74,6 +74,14 @@ export function createApp(db) {
       const { sub, role, tenantId, kilnId } = req.user;
       res.set('X-Refresh-Token', signToken({ sub, role, tenantId, kilnId }));
     }
+    // closed days: staff cannot add or change entries dated on or before the owner's lock date
+    const day = typeof req.body?.date === 'string' ? req.body.date.slice(0, 10) : null;
+    if (req.method !== 'GET' && req.user.role !== 'owner' && day && /^\d{4}-\d{2}-\d{2}$/.test(day)) {
+      return getSetting(db, req.user, 'lockedUntil', SETTING_DEFAULTS).then((locked) => {
+        if (locked && day <= locked) return next(httpError(423, `Days up to ${locked} are closed by the owner; ask the owner to reopen them`));
+        return next();
+      }).catch(next);
+    }
     next();
   };
   app.locals.auth = auth;

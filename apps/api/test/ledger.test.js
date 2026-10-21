@@ -871,3 +871,15 @@ test('daily entry: one call returns the whole day', async () => {
   assert.equal(w.status, 200, JSON.stringify(w.body));
   assert.ok(Array.isArray(w.body));
 });
+
+test('closed days: staff cannot enter on a locked day, the owner can', async () => {
+  const w = (await newWorker({ category: 'pathera' })).body.id;
+  await api('PUT', '/settings', { key: 'lockedUntil', value: '2026-09-30' });
+  const r1 = await api('POST', '/kharcha', { workerId: w, amount: '100', date: '2026-09-15', clientUuid: randomUUID() }, 'munshi');
+  assert.equal(r1.status, 423, JSON.stringify(r1.body));
+  const r2 = await api('POST', '/kharcha', { workerId: w, amount: '100', date: '2026-10-05', clientUuid: randomUUID() }, 'munshi');
+  assert.notEqual(r2.status, 423);
+  const r3 = await api('POST', '/kharcha', { workerId: w, amount: '100', date: '2026-09-15', clientUuid: randomUUID() });
+  assert.notEqual(r3.status, 423);
+  await api('PUT', '/settings', { key: 'lockedUntil', value: '' });
+});

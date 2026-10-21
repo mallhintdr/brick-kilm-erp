@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2, CheckCircle2, AlertCircle, UserRound, Save } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2, CheckCircle2, AlertCircle, UserRound, Save, Lock, LockOpen } from 'lucide-react';
 import { useT, useLang } from '../i18n.js';
 import { get, post, put, del, uuid, fmtDate, getRole } from '../api.js';
 import { useTypes } from '../useTypes.js';
@@ -42,6 +42,12 @@ export default function DailyEntry() {
   const [day, setDay] = useState(todayIso());
   const [data, setData] = useState(null);
   const [editing, setEditing] = useState(null); // { kind, row }
+  const [locked, setLocked] = useState('');
+  useEffect(() => { get('/settings').then((s) => setLocked(s.lockedUntil || '')).catch(() => {}); }, []);
+  const isLocked = locked && day <= locked;
+  const setLock = async (v) => {
+    try { await put('/settings', { key: 'lockedUntil', value: v }); setLocked(v); toast(t.savedOk); } catch (e) { toast(e.message, 'err'); }
+  };
   const load = useCallback(() => get(`/day?date=${day}`).then(setData).catch((e) => toast(e.message, 'err')), [day]);
   useEffect(() => { setData(null); load(); }, [load]);
   useDataChanged(load);
@@ -92,6 +98,15 @@ export default function DailyEntry() {
               </div>
             </div>
           ) : <Skeleton className="h-16" />}
+          {/* closing a day: after the owner closes it, staff cannot add or change its entries */}
+          {(isLocked || isOwner) && (
+            <div className={cx('flex flex-wrap items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm ring-1', isLocked ? 'bg-slate-100 text-n-700 ring-slate-300' : 'bg-white text-n-600 ring-n-200')}>
+              <span className="inline-flex items-center gap-1.5 font-semibold">{isLocked ? <Lock className="size-4" /> : <LockOpen className="size-4" />}{isLocked ? t.dayClosed : t.dayOpen}</span>
+              {isOwner && (isLocked
+                ? <Button size="sm" variant="secondary" onClick={() => setLock(shift(day, -1))}><LockOpen className="size-4" /> {t.reopenDay}</Button>
+                : <Button size="sm" variant="secondary" onClick={() => setLock(day)}><Lock className="size-4" /> {t.closeDay}</Button>)}
+            </div>
+          )}
         </CardBody>
       </Card>
 

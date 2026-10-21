@@ -175,7 +175,7 @@ export const SETTING_KEYS = [
   'ratePathera', 'rateBharai', 'rateNikasi', 'rateJalai', 'priceAwwal', 'priceDoem', 'priceKhangar',
   'allowNegativeStock', 'kilnUnit', 'kilnLineCount',
   'cutPathera', 'cutBharai', 'cutNikasi',
-  'kilnLat', 'kilnLon', 'kilnPlace', 'hotLines',
+  'kilnLat', 'kilnLon', 'kilnPlace', 'hotLines', 'lockedUntil',
 ];
 
 export const settingInput = z.object({
@@ -187,6 +187,7 @@ export const settingInput = z.object({
 // Defaults only seed the settings table; the owner can edit every value.
 // rate* = Rs per 1,000 pieces for piece-work categories; price* = Rs per 1,000 bricks sold.
 export const SETTING_DEFAULTS = {
+  lockedUntil: '', // days up to and including this date are closed: only the owner can add or change entries
   peshgiLimit: '50000',
   munshiAdvanceLimit: '10000',
   recoveryPct: '25',
