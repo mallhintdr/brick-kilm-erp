@@ -5,7 +5,10 @@ import { useState } from 'react';
 // - Values angled above bars
 // - Bottom-center checkbox legends
 // - Bottom-center totals
-export default function BarChart({ items, colors, height = 230, label = 'Grade Breakdown' }) {
+// short axis numbers so big values fit: 1,250,000 -> 1.25M, 55,400 -> 55.4K
+const shortNum = (v) => { const a = Math.abs(v); return a >= 1e6 ? `${+(v / 1e6).toFixed(2)}M` : a >= 1e4 ? `${+(v / 1e3).toFixed(1)}K` : Math.round(v).toLocaleString(); };
+
+export default function BarChart({ items, colors, height = 320, label = 'Grade Breakdown' }) {
   const [activeItems, setActiveItems] = useState(() => items.map((_, i) => i));
 
   const toggleItem = (idx) => {
@@ -15,10 +18,10 @@ export default function BarChart({ items, colors, height = 230, label = 'Grade B
   };
 
   const w = 720;
-  const padL = 60;
+  const padL = 86;
   const padR = 40;
-  const padT = 36;
-  const padB = 44;
+  const padT = 56;
+  const padB = 84;
 
   const innerW = w - padL - padR;
   const innerH = height - padT - padB;
@@ -67,12 +70,12 @@ export default function BarChart({ items, colors, height = 230, label = 'Grade B
             <text
               x={padL - 10}
               y={yPos + 4}
-              fontSize="11"
+              fontSize="22"
               fontWeight="800"
               fill="#1e293b"
               textAnchor="end"
             >
-              {val.toLocaleString()}
+              {shortNum(val)}
             </text>
           </g>
         ))}
@@ -116,8 +119,8 @@ export default function BarChart({ items, colors, height = 230, label = 'Grade B
               {/* Grade Name & Share % on X-Axis */}
               <text
                 x={x + bar / 2}
-                y={padT + innerH + 18}
-                fontSize="11"
+                y={padT + innerH + 30}
+                fontSize="22"
                 fontWeight="800"
                 fill="#0f172a"
                 textAnchor="middle"
@@ -126,8 +129,8 @@ export default function BarChart({ items, colors, height = 230, label = 'Grade B
               </text>
               <text
                 x={x + bar / 2}
-                y={padT + innerH + 31}
-                fontSize="9.5"
+                y={padT + innerH + 56}
+                fontSize="19"
                 fontWeight="700"
                 fill="#64748b"
                 textAnchor="middle"
@@ -139,12 +142,11 @@ export default function BarChart({ items, colors, height = 230, label = 'Grade B
               {isVisible && (
                 <text
                   x={x + bar / 2}
-                  y={barTopY - 8}
-                  transform={`rotate(-35, ${x + bar / 2}, ${barTopY - 8})`}
-                  fontSize="10.5"
+                  y={barTopY - 10}
+                  fontSize="21"
                   fontWeight="800"
                   fill="#0f172a"
-                  textAnchor="start"
+                  textAnchor="middle"
                 >
                   {Number(it.value).toLocaleString()}
                 </text>

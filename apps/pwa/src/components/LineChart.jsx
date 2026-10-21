@@ -83,7 +83,10 @@ function getSmoothSpline(pts) {
   return path;
 }
 
-export default function LineChart({ data, x, y, color = '#8b5cf6', height = 270, format = (v) => v, label }) {
+// short axis numbers so big values fit: 1,250,000 -> 1.25M, 55,400 -> 55.4K
+const shortNum = (v) => { const a = Math.abs(v); return a >= 1e6 ? `${+(v / 1e6).toFixed(2)}M` : a >= 1e4 ? `${+(v / 1e3).toFixed(1)}K` : Math.round(v).toLocaleString(); };
+
+export default function LineChart({ data, x, y, color = '#8b5cf6', height = 340, format = (v) => v, label }) {
   const gradId = useId().replace(/:/g, '');
   const t = useT();
   const [hoverIndex, setHoverIndex] = useState(null);
@@ -95,10 +98,10 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 270,
   }
 
   const w = 720;
-  const padL = 48; // room for Y-axis parameter labels
+  const padL = 86; // room for Y-axis parameter labels
   const padR = 16; // room for right edge
-  const padT = 36; // room for top peak values and pills
-  const padB = 48; // room for diagonal X-axis dd-mm labels
+  const padT = 40; // room for top peak values and pills
+  const padB = 80; // room for diagonal X-axis dd-mm labels
 
   const innerW = w - padL - padR;
   const innerH = height - padT - padB;
@@ -240,13 +243,13 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 270,
             />
             <text
               x={padL - 10}
-              y={yPos + 4}
-              fontSize="11"
+              y={yPos + 7}
+              fontSize="22"
               fontWeight="800"
               fill="#1e293b"
               textAnchor="end"
             >
-              {val.toLocaleString()}
+              {shortNum(val)}
             </text>
           </g>
         ))}
@@ -265,9 +268,9 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 270,
             />
             <text
               x={xPos}
-              y={padT + innerH + 12}
-              transform={`rotate(-40, ${xPos}, ${padT + innerH + 12})`}
-              fontSize="10.5"
+              y={padT + innerH + 20}
+              transform={`rotate(-40, ${xPos}, ${padT + innerH + 20})`}
+              fontSize="21"
               fontWeight="800"
               fill="#334155"
               textAnchor="end"
