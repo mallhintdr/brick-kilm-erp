@@ -298,8 +298,11 @@ export default function KilnBoard({ focus } = {}) {
         </div>
 
         {sel && (
-          <div ref={panelRef} className="xl:sticky xl:top-20">
-            <Card className="overflow-hidden ring-2 ring-brand-300">
+          <>
+          {/* phones/tablets: the panel slides up over the plan; wide screens: it sits beside the plan */}
+          <div className="fixed inset-0 z-40 animate-[fade-in_.16s_ease-out] bg-n-900/40 xl:hidden" onClick={() => setSel(null)} aria-hidden="true" />
+          <div ref={panelRef} className="fixed inset-x-0 bottom-0 z-50 max-h-[88dvh] animate-[sheet-up_.22s_cubic-bezier(.2,.8,.2,1)] overflow-y-auto rounded-t-2xl xl:static xl:sticky xl:top-20 xl:z-auto xl:max-h-none xl:animate-none xl:overflow-visible xl:rounded-none">
+            <Card className="overflow-hidden rounded-b-none ring-2 ring-brand-300 xl:rounded-lg">
               {/* ‹  Line 131 · Round 2 — Firing  ›  ✕ */}
               <div className="flex items-center gap-1.5 border-b border-n-100 bg-brand-50 px-2 py-2">
                 {unit === 'line' && <IconButton label={t.previous} disabled={!rows.some((x) => x.index === sel.index - 1)} onClick={() => stepSel(-1)} className="bg-white text-lg ring-1 ring-n-300 disabled:opacity-40">‹</IconButton>}
@@ -474,6 +477,7 @@ export default function KilnBoard({ focus } = {}) {
               </CardBody>
             </Card>
           </div>
+          </>
         )}
       </div>
 
