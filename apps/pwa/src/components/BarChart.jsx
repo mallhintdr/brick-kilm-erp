@@ -96,8 +96,8 @@ export default function BarChart({ items, colors, height = 230, label = 'Grade B
         {items.map((it, i) => {
           const isVisible = activeItems.includes(i);
           const h = isVisible ? Math.max(4, ((it.value / max) * innerH) || 0) : 0;
-          const x = padL + i * bw + bw * 0.18;
-          const bar = bw * 0.64;
+          const x = padL + i * bw + bw * 0.08;
+          const bar = bw * 0.84;
           const defaultColors = ['#059669', '#0284c7', '#d97706', '#ef4444'];
           const barColor = colors?.[i] || defaultColors[i % defaultColors.length];
           const sharePct = total > 0 ? ((it.value / total) * 100).toFixed(1) : 0;

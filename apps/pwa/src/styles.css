@@ -1079,3 +1079,7 @@ thead tr.filter-row th { background: var(--b50) !important; padding: 0.3rem !imp
 .table-wrap { border-radius: var(--r-md) !important; }
 /* one light header colour across the app: section titles and table headers */
 thead tr.filter-row th { background: var(--b50) !important; }
+
+/* charts fit the screen width (no sideways scrolling) */
+.chart-scroll-wrap { overflow-x: hidden !important; }
+.chart-scroll-wrap svg.chart { min-width: 0 !important; width: 100% !important; }

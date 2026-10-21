@@ -93,8 +93,8 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 270,
   }
 
   const w = 720;
-  const padL = 60; // room for Y-axis parameter labels
-  const padR = 40; // room for right edge
+  const padL = 48; // room for Y-axis parameter labels
+  const padR = 16; // room for right edge
   const padT = 36; // room for top peak values and pills
   const padB = 48; // room for diagonal X-axis dd-mm labels
 
@@ -114,7 +114,7 @@ export default function LineChart({ data, x, y, color = '#8b5cf6', height = 270,
   const n = data.length || 1;
   const slotW = innerW / n;
   const sx = (i) => padL + (i + 0.5) * slotW;
-  const barWidth = Math.max(6, Math.min(32, slotW * 0.72));
+  const barWidth = Math.max(2, Math.min(44, slotW * 0.86)); // bars nearly touch: minimal gaps
 
   // Linear Regression Trend calculation for percentage trajectory
   let trendPct = 0;
