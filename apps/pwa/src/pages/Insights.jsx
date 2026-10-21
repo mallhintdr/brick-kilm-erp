@@ -116,7 +116,7 @@ export default function Insights() {
           <StatGrid className="sm:grid-cols-3 lg:grid-cols-3">
             <StatCard label={t.moulding} value={summary.moulded.toLocaleString()} tone="orange" />
             <StatCard label={t.awwal} value={`${summary.awwalSharePct}%`} tone={summary.awwalSharePct < 85 ? 'amber' : 'green'} />
-            <StatCard label={t.coalKg} value={`${summary.coalPer1000} kg`} tone={summary.coalPer1000 > 130 ? 'red' : 'slate'} className="col-span-2 sm:col-span-1" />
+            <StatCard label={t.coalKg} value={`${summary.coalPer1000} kg`} tone={summary.coalPer1000 > 130 ? 'red' : 'slate'} />
           </StatGrid>
         </Section>
         <Section title={t.groupFinance}>

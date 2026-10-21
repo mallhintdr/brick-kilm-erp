@@ -15,11 +15,9 @@ export default function StockReport() {
 
   // three cards: one row of three; four: 2 x 2 on phones; five: 3 + 2 on phones, one row on wide screens
   const Group = ({ title, children }) => {
-    const k = [children].flat().filter(Boolean).length;
-    const cols = k === 3 ? 'grid-cols-3 sm:grid-cols-3 lg:grid-cols-3' : k === 4 ? 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-4' : 'grid-cols-3 sm:grid-cols-5 lg:grid-cols-5';
     return (
       <Section title={title}>
-        <StatGrid className={cols}>{children}</StatGrid>
+        <StatGrid>{children}</StatGrid>
       </Section>
     );
   };

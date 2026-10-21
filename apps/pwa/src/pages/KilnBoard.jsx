@@ -385,7 +385,7 @@ export default function KilnBoard({ focus } = {}) {
                 {sel.state === 'Unloading' && (
                   <div className="grid gap-3">
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-                      <Field label={t.entryDate} className="col-span-2 sm:col-span-1">{dateBox()}</Field>
+                      <Field label={t.entryDate}>{dateBox()}</Field>
                       {['awwal', 'doem', 'khangar', 'broken'].map((k) => (
                         <Field key={k} label={t[k]}><Input inputMode="numeric" placeholder="0" value={form[k] || ''} onChange={(e) => setForm({ ...form, [k]: e.target.value })} /></Field>
                       ))}

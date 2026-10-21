@@ -121,7 +121,23 @@ export const StatCard = ({ label, value, tone = 'orange', valueClass, className,
     {children}
   </div>
 );
-export const StatGrid = ({ className, children }) => <div className={cx('grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4', className)}>{children}</div>;
+// Card layout by how many cards a section has: 1–3 in one row; 4 as 2 x 2; 5 or more in rows of 3,
+// with the cards of a short last row stretched to fill the width.
+export const cardSpan = (i, n) => {
+  if (n <= 3) return { gridColumn: `span ${6 / n}` };
+  if (n === 4) return { gridColumn: 'span 3' };
+  const r = n % 3; const lastRow = i >= n - r;
+  return { gridColumn: r && lastRow ? `span ${6 / r}` : 'span 2' };
+};
+export const StatGrid = ({ className, children }) => {
+  const kids = [children].flat(Infinity).filter(Boolean);
+  const keep = cx(className).split(' ').filter((c) => c && !/(^|:)grid-cols-/.test(c)).join(' ');
+  return (
+    <div className={cx('grid grid-cols-6 gap-2.5', keep)}>
+      {kids.map((k, i) => <div key={k.key ?? i} className="grid min-w-0 *:min-w-0" style={cardSpan(i, kids.length)}>{k}</div>)}
+    </div>
+  );
+};
 const TONES5 = ['orange', 'blue', 'violet', 'teal', 'pink'];
 export const toneAt = (i) => TONES5[i % TONES5.length];
 

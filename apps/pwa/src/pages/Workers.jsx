@@ -61,7 +61,7 @@ export default function Workers() {
           <StatGrid className="sm:grid-cols-3 lg:grid-cols-3">
             <StatCard label={t.workers} value={list.length} tone="orange" />
             <StatCard label={t.complianceGaps} value={`${unregistered} / ${list.length}`} tone={unregistered ? 'amber' : 'green'} />
-            <StatCard label={t.signed} value={list.filter((w) => w.contractSigned).length} tone="green" className="col-span-2 sm:col-span-1" />
+            <StatCard label={t.signed} value={list.filter((w) => w.contractSigned).length} tone="green" />
           </StatGrid>
         </Section>
       </Card>

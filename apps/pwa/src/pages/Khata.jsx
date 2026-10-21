@@ -54,7 +54,7 @@ export default function Khata() {
               <StatGrid className="sm:grid-cols-3 lg:grid-cols-3">
                 <StatCard label={t.naamGiven} value={rs(khata.totals.naam) || 0} tone="amber" />
                 <StatCard label={t.jamaEarned} value={rs(khata.totals.jama) || 0} tone="green" />
-                <StatCard label={t.baqaya} value={rs(bal) || 0} tone={bal > 0 ? 'red' : 'green'} className="col-span-2 sm:col-span-1" />
+                <StatCard label={t.baqaya} value={rs(bal) || 0} tone={bal > 0 ? 'red' : 'green'} />
               </StatGrid>
             </Section>
           </Card>

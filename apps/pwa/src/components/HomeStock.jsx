@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useT } from '../i18n.js';
 import { get } from '../api.js';
-import { SectionTitle, StatCard, Skeleton } from './ui.jsx';
+import { SectionTitle, StatCard, Skeleton, StatGrid } from './ui.jsx';
 
 const n = (v) => Math.round(Number(v || 0)).toLocaleString();
 
@@ -27,9 +27,9 @@ export default function HomeStock() {
   return (
     <section className="grid gap-3 rounded-lg bg-white p-3.5 ring-1 ring-n-200" aria-label={t.hsTitle}>
       <SectionTitle><Link to="/inventory" className="text-n-900 no-underline">{t.hsTitle}</Link></SectionTitle>
-      <div className="grid grid-cols-3 gap-2 lg:grid-cols-7">
-        {cells.map((c) => <StatCard key={c.label} label={c.label} value={c.value} tone={c.tone} valueClass={c.warn ? 'text-loss text-lg' : undefined} className={c.wide ? 'col-span-3 px-1.5 lg:col-span-1' : 'px-1.5'} />)}
-      </div>
+      <StatGrid>
+        {cells.map((c) => <StatCard key={c.label} label={c.label} value={c.value} tone={c.tone} valueClass={c.warn ? 'text-loss text-lg' : undefined} className="px-1.5" compact />)}
+      </StatGrid>
     </section>
   );
 }
