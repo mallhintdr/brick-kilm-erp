@@ -883,3 +883,12 @@ test('closed days: staff cannot enter on a locked day, the owner can', async () 
   assert.notEqual(r3.status, 423);
   await api('PUT', '/settings', { key: 'lockedUntil', value: '' });
 });
+
+test('insights summary for a period (one completed day)', async () => {
+  const y = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  const all = (await api('GET', '/insights/summary')).body;
+  const one = await api('GET', `/insights/summary?from=${y}&to=${y}`);
+  assert.equal(one.status, 200, JSON.stringify(one.body));
+  assert.ok(one.body.moulded <= all.moulded);
+  assert.equal(one.body.receivablesOutstanding, all.receivablesOutstanding); // always to date
+});

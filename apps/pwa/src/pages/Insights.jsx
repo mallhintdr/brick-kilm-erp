@@ -40,15 +40,19 @@ export default function Insights() {
   const [bondedRisk, setBondedRisk] = useState([]);
 
   useEffect(() => {
-    get('/insights/summary').then(setSummary).catch(() => {});
     get('/insights/bonded-labour-risk').then(setBondedRisk).catch(() => {});
   }, []);
 
+  // the chosen period drives the cards and the charts; "1 day" is the last completed day (yesterday)
+  const periodOf = (rangeKey, fDate, tDate) => {
+    if (rangeKey === 'custom') return [fDate, tDate];
+    if (rangeKey === 1) return [daysAgoStr(1), daysAgoStr(1)];
+    return [daysAgoStr(Number(rangeKey)), todayStr()];
+  };
   const fetchDaily = (rangeKey, fDate, tDate) => {
-    const url = rangeKey === 'custom'
-      ? `/insights/daily?from=${fDate}&to=${tDate}`
-      : `/insights/daily?days=${rangeKey}`;
-    get(url).then(setDaily).catch(() => setDaily([]));
+    const [f, to] = periodOf(rangeKey, fDate, tDate);
+    get(`/insights/daily?from=${f}&to=${to}`).then(setDaily).catch(() => setDaily([]));
+    get(`/insights/summary?from=${f}&to=${to}`).then(setSummary).catch(() => {});
   };
 
   useEffect(() => {
@@ -69,6 +73,7 @@ export default function Insights() {
   const u = summary.unloaded;
 
   const RANGES = [
+    { key: 1, label: t.days1 },
     { key: 7, label: t.days7 },
     { key: 15, label: t.days15 },
     { key: 30, label: t.days30 },
@@ -93,7 +98,7 @@ export default function Insights() {
               onChange={(e) => {
                 const val = e.target.value === 'custom' ? 'custom' : Number(e.target.value);
                 setRange(val);
-                if (val !== 'custom') { setFromDate(daysAgoStr(val)); setToDate(todayStr()); }
+                if (val !== 'custom') { const [f, to] = periodOf(val); setFromDate(f); setToDate(to); }
               }}
             >
               {RANGES.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}

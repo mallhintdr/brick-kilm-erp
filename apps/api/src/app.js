@@ -265,23 +265,28 @@ export function createApp(db) {
   // ---- Insights / reports (read-only aggregates over seeded or live operational data) ----
   app.get('/insights/summary', auth(), wrap(async (req, res) => {
     const s = scope(req.user);
+    // optional period (Pakistan days): moulding, nikasi, coal, sales, cash in and expenses for it;
+    // receivables and peshgi outstanding are always the totals to date
+    const day = /^\d{4}-\d{2}-\d{2}$/;
+    const ranged = day.test(req.query.from || '') && day.test(req.query.to || '');
+    const p = ranged ? { date: { $gte: new Date(`${req.query.from}T00:00:00+05:00`), $lte: new Date(`${req.query.to}T23:59:59.999+05:00`) } } : {};
     const [moulding] = await db.collection('mouldingBatches').aggregate([
-      { $match: s }, { $group: { _id: null, moulded: { $sum: '$count' }, kharaba: { $sum: '$kharaba' } } },
+      { $match: { ...s, ...p } }, { $group: { _id: null, moulded: { $sum: '$count' }, kharaba: { $sum: '$kharaba' } } },
     ]).toArray();
     const [unload] = await db.collection('unloadings').aggregate([
-      { $match: s }, { $group: { _id: null, awwal: { $sum: '$awwal' }, doem: { $sum: '$doem' }, khangar: { $sum: '$khangar' }, broken: { $sum: '$broken' } } },
+      { $match: { ...s, ...p } }, { $group: { _id: null, awwal: { $sum: '$awwal' }, doem: { $sum: '$doem' }, khangar: { $sum: '$khangar' }, broken: { $sum: '$broken' } } },
     ]).toArray();
     const [coal] = await db.collection('firingLogs').aggregate([
-      { $match: s }, { $group: { _id: null, coalKg: { $sum: '$coalKg' }, days: { $sum: 1 }, fanOffDays: { $sum: { $cond: ['$fanOn', 0, 1] } } } },
+      { $match: { ...s, ...p } }, { $group: { _id: null, coalKg: { $sum: '$coalKg' }, days: { $sum: 1 }, fanOffDays: { $sum: { $cond: ['$fanOn', 0, 1] } } } },
     ]).toArray();
     const [sales] = await db.collection('invoices').aggregate([
-      { $match: s }, { $group: { _id: null, revenue: { $sum: { $toDouble: '$amount' } }, count: { $sum: 1 } } },
+      { $match: { ...s, ...p } }, { $group: { _id: null, revenue: { $sum: { $toDouble: '$amount' } }, count: { $sum: 1 } } },
     ]).toArray();
     const [paid] = await db.collection('payments').aggregate([
-      { $match: { ...s, direction: 'in' } }, { $group: { _id: null, total: { $sum: { $toDouble: '$amount' } } } },
+      { $match: { ...s, ...p, direction: 'in' } }, { $group: { _id: null, total: { $sum: { $toDouble: '$amount' } } } },
     ]).toArray();
     const [expenses] = await db.collection('expenses').aggregate([
-      { $match: s }, { $group: { _id: null, total: { $sum: { $toDouble: '$amount' } } } },
+      { $match: { ...s, ...p } }, { $group: { _id: null, total: { $sum: { $toDouble: '$amount' } } } },
     ]).toArray();
     const [peshgiOut] = await db.collection('ledgerEntries').aggregate([
       { $match: { ...s, account: 'peshgi' } },
@@ -289,8 +294,11 @@ export function createApp(db) {
     ]).toArray();
     const totalUnloaded = unload ? unload.awwal + unload.doem + unload.khangar + unload.broken : 0;
     // coal noted per line/chamber (finished cycles + ones still in the kiln) adds to the shift logs
-    const [cycleCoal] = await db.collection('kilnCycles').aggregate([{ $match: s }, { $group: { _id: null, kg: { $sum: '$coalKg' } } }]).toArray();
-    const [lineCoal] = await db.collection('kilnLines').aggregate([{ $match: s }, { $group: { _id: null, kg: { $sum: '$coalKg' } } }]).toArray();
+    const [cycleCoal] = ranged ? [] : await db.collection('kilnCycles').aggregate([{ $match: s }, { $group: { _id: null, kg: { $sum: '$coalKg' } } }]).toArray();
+    const [lineCoal] = ranged ? [] : await db.collection('kilnLines').aggregate([{ $match: s }, { $group: { _id: null, kg: { $sum: '$coalKg' } } }]).toArray();
+    // receivables to date, whatever period is shown
+    const [allSales] = ranged ? await db.collection('invoices').aggregate([{ $match: s }, { $group: { _id: null, revenue: { $sum: { $toDouble: '$amount' } } } }]).toArray() : [sales];
+    const [allPaid] = ranged ? await db.collection('payments').aggregate([{ $match: { ...s, direction: 'in' } }, { $group: { _id: null, total: { $sum: { $toDouble: '$amount' } } } }]).toArray() : [paid];
     const coalKg = (coal?.coalKg ?? 0) + (cycleCoal?.kg ?? 0) + (lineCoal?.kg ?? 0);
 
     res.json({
@@ -307,7 +315,7 @@ export function createApp(db) {
       invoiceCount: sales?.count ?? 0,
       cashReceived: +(paid?.total ?? 0).toFixed(2),
       totalExpenses: +(expenses?.total ?? 0).toFixed(2),
-      receivablesOutstanding: +((sales?.revenue ?? 0) - (paid?.total ?? 0)).toFixed(2),
+      receivablesOutstanding: +((allSales?.revenue ?? 0) - (allPaid?.total ?? 0)).toFixed(2),
       peshgiOutstanding: peshgiOut ? +(peshgiOut.d - peshgiOut.c).toFixed(2) : 0,
     });
   }));
@@ -316,8 +324,8 @@ export function createApp(db) {
     const s = scope(req.user);
     let dateMatch;
     if (req.query.from && req.query.to) {
-      const fromDate = new Date(`${req.query.from}T00:00:00.000Z`);
-      const toDate = new Date(`${req.query.to}T23:59:59.999Z`);
+      const fromDate = new Date(`${req.query.from}T00:00:00.000+05:00`);
+      const toDate = new Date(`${req.query.to}T23:59:59.999+05:00`);
       dateMatch = { $gte: fromDate, $lte: toDate };
     } else {
       const days = Math.min(Math.max(Number(req.query.days) || 182, 1), 400);
