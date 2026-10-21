@@ -861,3 +861,10 @@ test('roznamcha lists the day entries', async () => {
   const past = await api('GET', '/roznamcha?date=2026-09-29');
   assert.equal(past.status, 200, JSON.stringify(past.body));
 });
+
+test('daily entry: one call returns the whole day', async () => {
+  const r = await api('GET', `/day?date=${new Date().toISOString().slice(0, 10)}`);
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  for (const k of ['attendance', 'moulding', 'bharai', 'nikasi', 'firing', 'dasti', 'peshgi', 'sales', 'payments', 'purchases']) assert.ok(k in r.body, k);
+  assert.ok(r.body.attendance.active > 0);
+});

@@ -110,4 +110,46 @@ export function registerJournalRoutes(app, db) {
     ev.sort((a, b) => new Date(a.at) - new Date(b.at));
     res.json({ date: day, rows: ev.map((e, i) => ({ no: i + 1, ...e })) });
   }));
+
+  // ---- Daily Entry: every record of one day, grouped by kind, with ids so each can be edited ----
+  app.get('/day', auth(), wrap(async (req, res) => {
+    const s = scope(req.user);
+    const { day, start, end } = dayRange(req.query.date);
+    const range = { $gte: start, $lte: end };
+    const [teams, workers, customers, moulding, loads, unloads, firing, dasti, ledger, invoices, payments, grns, marks] = await Promise.all([
+      db.collection('teams').find(s, { projection: { label: 1 } }).toArray(),
+      db.collection('workers').find(s, { projection: { name: 1, category: 1, status: 1 } }).toArray(),
+      db.collection('customers').find(s, { projection: { name: 1 } }).toArray(),
+      db.collection('mouldingBatches').find({ ...s, date: range }).sort({ date: 1 }).toArray(),
+      db.collection('sectionLoads').find({ ...s, date: range }).sort({ date: 1 }).toArray(),
+      db.collection('unloadings').find({ ...s, date: range }).sort({ date: 1 }).toArray(),
+      db.collection('firingLogs').find({ ...s, date: range }).sort({ date: 1 }).toArray(),
+      db.collection('kharchaEntries').find({ ...s, date: range }).sort({ date: 1 }).toArray(),
+      db.collection('ledgerEntries').find({ ...s, account: 'peshgi', type: { $in: ['advance', 'recovery'] }, createdAt: range }).sort({ createdAt: 1 }).toArray(),
+      db.collection('invoices').find({ ...s, date: range }).sort({ date: 1 }).toArray(),
+      db.collection('payments').find({ ...s, date: range }).sort({ date: 1 }).toArray(),
+      db.collection('grns').find({ ...s, date: range }).sort({ date: 1 }).toArray(),
+      db.collection('attendance').find({ ...s, date: day }).toArray(),
+    ]);
+    const team = Object.fromEntries(teams.map((x) => [String(x._id), x.label]));
+    const wname = Object.fromEntries(workers.map((w) => [String(w._id), w.name]));
+    const cname = Object.fromEntries(customers.map((c) => [String(c._id), c.name]));
+    const where = (r) => (r.unit === 'grid' ? 'weekly' : `${r.unit === 'line' ? 'line' : 'chamber'} ${r.sectionIndex}`);
+    const active = workers.filter((w) => w.status !== 'inactive');
+    const att = { marked: marks.length, active: active.length, present: 0, absent: 0, leave: 0, half: 0, byWorker: {} };
+    for (const m of marks) { att[m.status] = (att[m.status] || 0) + 1; att.byWorker[m.workerId] = m.status; }
+    res.json({
+      date: day,
+      attendance: att,
+      moulding: moulding.map((m) => ({ _id: m._id, teamId: m.teamId, who: team[m.teamId] || '—', count: m.count, net: m.netCount, at: m.date })),
+      bharai: loads.map((l) => ({ _id: l._id, teamId: l.teamId, who: team[l.teamId] || '—', where: where(l), index: l.sectionIndex, count: l.count, at: l.date })),
+      nikasi: unloads.map((u) => ({ _id: u._id, who: team[u.nikasiTeamId] || '—', where: where(u), awwal: u.awwal || 0, doem: u.doem || 0, khangar: u.khangar || 0, broken: u.broken || 0, at: u.date })),
+      firing: firing.map((f) => ({ _id: f._id, who: team[f.teamId] || '—', shift: f.shift, lineIndex: f.lineIndex ?? null, coalKg: f.coalKg, tempC: f.tempC, at: f.date })),
+      dasti: dasti.map((k) => ({ _id: k._id, workerId: k.workerId, who: wname[k.workerId] || '—', amount: num(k.amount), at: k.date })),
+      peshgi: ledger.map((e) => ({ _id: e._id, workerId: e.partyId, who: wname[e.partyId] || '—', kind: e.type, amount: num(e.type === 'advance' ? e.debit : e.credit), at: e.createdAt })),
+      sales: invoices.map((i) => ({ _id: i._id, who: cname[i.customerId] || '—', grade: i.grade, qty: i.qty, rate: i.rate, amount: num(i.amount) + num(i.tax), at: i.date })),
+      payments: payments.map((p) => ({ _id: p._id, who: cname[p.partyId] || '—', mode: p.mode, amount: num(p.amount), at: p.date })),
+      purchases: grns.map((g) => ({ _id: g._id, item: g.item, who: g.supplierName || '—', qty: g.qty, rate: g.rate, amount: num(g.landedTotal), at: g.date })),
+    });
+  }));
 }

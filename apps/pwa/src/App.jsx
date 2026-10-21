@@ -24,6 +24,8 @@ import KilnLogo from './components/KilnLogo.jsx';
 import Weather from './pages/Weather.jsx';
 import Khata from './pages/Khata.jsx';
 import Roznamcha from './pages/Roznamcha.jsx';
+import DailyEntry from './pages/DailyEntry.jsx';
+import { QuickEntryHost, QuickAddFab } from './components/QuickEntry.jsx';
 import Attendance from './pages/Attendance.jsx';
 import Corrections from './pages/Corrections.jsx';
 import PersonalFinance from './pages/PersonalFinance.jsx';
@@ -156,6 +158,7 @@ const ROW_2_LINKS = [
   { to: '/weather', icon: 'insights', color: '#0ea5e9', labelKey: 'weather' },
   { to: '/khata', icon: 'kharchi', color: '#9333ea', labelKey: 'khataTitle' },
   { to: '/roznamcha', icon: 'reports', color: '#0f766e', labelKey: 'roznamcha' },
+  { to: '/daily', icon: 'reports', color: '#ea580c', labelKey: 'dailyEntry' },
   { to: '/attendance', icon: 'workers', color: '#16a34a', labelKey: 'attendance' },
   { to: '/corrections', icon: 'settings', color: '#dc2626', labelKey: 'corrections', roles: ['owner'] },
   { to: '/personal', icon: 'money', color: '#7c3aed', labelKey: 'personalFinance', roles: ['owner'] },
@@ -231,6 +234,9 @@ function Shell({ children }) {
       </div>
 
       <Toaster />
+      <QuickEntryHost />
+      {/* desktop: the + button in the corner (phones have it in the tab bar) */}
+      <QuickAddFab className="fixed bottom-6 end-6 z-40 hidden lg:grid print:hidden" />
       <main id="main" ref={mainRef} tabIndex={-1}
         className="mx-auto w-full max-w-[1280px] flex-1 px-3 pt-3 pb-[calc(84px+env(safe-area-inset-bottom))] outline-none sm:px-4 sm:pt-4 lg:pb-8">
         {children}
@@ -238,14 +244,16 @@ function Shell({ children }) {
 
       {/* phones and tablets: the most used pages one thumb away */}
       <nav aria-label={t.home}
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 gap-1 border-t border-n-200 bg-white/95 px-1 pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] backdrop-blur-md lg:hidden print:hidden">
-        {[['/home', 'home', t.home], ['/kiln-board', 'board', t.kilnBoard], ['/firing', 'firing', t.firing], ['/khata', 'kharchi', t.khataTitle], ['/roznamcha', 'reports', t.roznamcha]].map(([to, icon, label]) => (
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 items-end gap-1 border-t border-n-200 bg-white/95 px-1 pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] backdrop-blur-md lg:hidden print:hidden">
+        {[['/home', 'home', t.home], ['/daily', 'reports', t.dailyEntry], ['+'], ['/kiln-board', 'board', t.kilnBoard], ['/khata', 'kharchi', t.khataTitle]].map(([to, icon, label]) => (to === '+'
+          ? <div key="+" className="grid place-items-center pb-1"><QuickAddFab className="-mt-6 size-13 ring-4 ring-white" /></div>
+          : (
           <NavLink key={to} to={to}
             className={({ isActive }) => `flex min-w-0 flex-col items-center gap-0.5 rounded-lg px-0.5 py-1.5 text-2xs font-semibold no-underline ${isActive ? 'bg-brand-50 text-brand-700' : 'text-n-500 hover:text-n-900'}`}>
             <span className="[&_svg]:stroke-current"><Icon name={icon} size={20} stroke={2} /></span>
             <span className="max-w-full truncate">{label}</span>
           </NavLink>
-        ))}
+        )))}
       </nav>
     </div>
   );
@@ -288,6 +296,7 @@ export default function App() {
         <Route path="/weather" element={guard(<Weather />)} />
         <Route path="/khata" element={guard(<Khata />)} />
         <Route path="/roznamcha" element={guard(<Roznamcha />)} />
+        <Route path="/daily" element={guard(<DailyEntry />)} />
         <Route path="/attendance" element={guard(<Attendance />)} />
         <Route path="/corrections" element={guard(<Corrections />)} />
         <Route path="/personal" element={guard(<PersonalFinance />)} />
