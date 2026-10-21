@@ -76,3 +76,57 @@
 @keyframes sheet-up { from { transform: translateY(100%); } to { transform: none; } }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { * { animation-duration: 1ms !important; } }
+
+/* Phones: list tables as cards (labels come from the column headers, set by useFrozenColumns) */
+@layer utilities {
+  @media (max-width: 639px) {
+    .stack-wrap table, .stack-wrap tbody, .stack-wrap tfoot { display: block !important; width: 100% !important; }
+    .stack-wrap thead > tr:first-child { display: none !important; }
+    .stack-wrap thead > tr.filter-row { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 8px; background: var(--color-brand-50); }
+    .stack-wrap thead > tr.filter-row > th { display: block !important; padding: 0 !important; border: 0 !important; position: static !important; }
+    .stack-wrap thead > tr.filter-row > th:not(:has(input, select)) { display: none !important; }
+    .stack-wrap tbody > tr, .stack-wrap tfoot > tr { display: grid !important; grid-template-columns: minmax(0, 1fr); gap: 2px; padding: 10px 12px !important; border-bottom: 1px solid var(--color-n-200); }
+    .stack-wrap tbody > tr > td, .stack-wrap tfoot > tr > td { display: flex !important; align-items: center; justify-content: space-between; gap: 12px; padding: 2px 0 !important; border: 0 !important;
+      text-align: end !important; white-space: normal !important; min-width: 0 !important; position: static !important; background: transparent !important; }
+    .stack-wrap tbody > tr > td::before, .stack-wrap tfoot > tr > td::before { content: attr(data-label); flex: none; max-width: 45%; text-align: start; font-size: 12px; font-weight: 600; color: var(--color-n-500); }
+    .stack-wrap tbody > tr > td[data-label=""]::before, .stack-wrap tbody > tr > td.rownum::before { content: none; }
+    .stack-wrap tbody > tr > td.rownum { display: none !important; }
+    .stack-wrap tbody > tr > td[colspan] { justify-content: center; }
+    .stack-wrap tbody > tr > td[colspan]::before { content: none; }
+    .stack-wrap tbody > tr > td.actions { justify-content: flex-end; padding-top: 6px !important; }
+  }
+}
+@layer utilities { @media (max-width: 639px) { .stack-wrap td.sticky-col, .stack-wrap th.sticky-col { box-shadow: none !important; } } }
+
+/* Night mode (moon button in the header): the neutral surfaces and text swap to dark; brand and
+   meaning colours stay. Higher specificity than the plain classes, same layer, so it wins. */
+@layer utilities {
+  html.dark { color-scheme: dark; }
+  html.dark body { background: #0b1220; color: #e2e8f0; }
+  html.dark .bg-white, html.dark .bg-n-0 { background-color: #111a2b !important; }
+  html.dark .bg-n-50, html.dark .bg-zebra, html.dark .even\:bg-zebra:nth-child(even) { background-color: #0f1726 !important; }
+  html.dark .odd\:bg-white:nth-child(odd) { background-color: #111a2b !important; }
+  html.dark .bg-n-100 { background-color: #1b2538 !important; }
+  html.dark .bg-n-200\/70, html.dark .bg-n-200 { background-color: #243049 !important; }
+  html.dark .text-n-900 { color: #f1f5f9 !important; }
+  html.dark .text-n-700 { color: #cbd5e1 !important; }
+  html.dark .text-n-600 { color: #b4c0d0 !important; }
+  html.dark .text-n-500 { color: #94a3b8 !important; }
+  html.dark .text-n-400 { color: #7b8aa0 !important; }
+  html.dark .ring-n-200, html.dark .ring-n-300 { --tw-ring-color: #2a3650 !important; }
+  html.dark .border-n-100, html.dark .border-n-200 { border-color: #233049 !important; }
+  html.dark .bg-brand-50 { background-color: #2a1a10 !important; }
+  html.dark .bg-brand-100 { background-color: #3a2213 !important; }
+  html.dark .text-brand-800, html.dark .text-brand-700 { color: #fdba74 !important; }
+  html.dark .border-brand-200, html.dark .ring-brand-200 { border-color: #5a3418 !important; --tw-ring-color: #5a3418 !important; }
+  html.dark .bg-green-50 { background-color: #0f2a1c !important; }
+  html.dark .bg-red-50 { background-color: #2c1416 !important; }
+  html.dark .bg-amber-50 { background-color: #2b2110 !important; }
+  html.dark .bg-sky-50 { background-color: #0f2233 !important; }
+  html.dark .hover\:bg-n-50:hover, html.dark .hover\:bg-brand-50:hover { background-color: #1b2538 !important; }
+  html.dark .bg-white\/95 { background-color: rgb(17 26 43 / .95) !important; }
+  html.dark input, html.dark select, html.dark textarea { color: #f1f5f9; }
+  html.dark .text-gain { color: #4ade80 !important; }
+  html.dark .text-loss { color: #f87171 !important; }
+  html.dark .text-caution { color: #fbbf24 !important; }
+}

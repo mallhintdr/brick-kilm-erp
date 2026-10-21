@@ -16,8 +16,27 @@ function stickHeaders(root) {
   });
 }
 
+// Phones show list tables as cards: each cell gets its column name, filter boxes get it as a hint.
+function labelCells(root) {
+  root.querySelectorAll('.stack-wrap table').forEach((table) => {
+    const head = table.querySelector(':scope > thead > tr');
+    if (!head) return;
+    const names = [...head.children].map((th) => th.textContent.trim());
+    table.querySelectorAll(':scope > tbody > tr, :scope > tfoot > tr').forEach((tr) => {
+      let col = 0;
+      [...tr.children].forEach((td) => {
+        if (td.dataset.label !== names[col]) td.dataset.label = names[col] || '';
+        col += Number(td.getAttribute('colspan') || 1);
+      });
+    });
+    const filters = table.querySelector(':scope > thead > tr.filter-row');
+    if (filters) [...filters.children].forEach((th, i) => { const inp = th.querySelector('input,select'); if (inp && !inp.placeholder && names[i]) inp.placeholder = names[i]; });
+  });
+}
+
 function apply(root) {
   stickHeaders(root);
+  labelCells(root);
   root.querySelectorAll('table').forEach((table) => {
     const head = table.querySelector('thead tr th.sticky-col');
     if (!head) return;

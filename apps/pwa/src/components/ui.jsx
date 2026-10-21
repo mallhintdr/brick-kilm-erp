@@ -123,10 +123,11 @@ export const Muted = ({ className, children }) => <p className={cx('m-0 text-cen
 
 /* ---------- Tables ---------- */
 // card with a title row and a scrolling table; header peach, filter row paler, zebra rows
-export const TableCard = ({ title, actions, className, children }) => (
+// stack: on phones each row shows as a small card (column name: value) instead of a wide table
+export const TableCard = ({ title, actions, className, children, stack = true }) => (
   <Card className={cx('overflow-hidden', className)}>
     {title != null && <CardHeader title={title}>{actions}</CardHeader>}
-    <div className="table-wrap overflow-x-auto">{children}</div>
+    <div className={cx('table-wrap overflow-x-auto', stack && 'stack-wrap')}>{children}</div>
   </Card>
 );
 export const tbl = {

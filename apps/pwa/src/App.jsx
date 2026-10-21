@@ -33,6 +33,7 @@ import PersonalFinance from './pages/PersonalFinance.jsx';
 import PrintWorkerSlip from './pages/PrintWorkerSlip.jsx';
 import PrintKharchiSlip from './pages/PrintKharchiSlip.jsx';
 import { Toaster } from './components/ui.jsx';
+import { Moon, Sun } from 'lucide-react';
 
 // Crisp, high-precision SVG icons tailored for Kiln Operations ERP
 const ICONS = {
@@ -196,6 +197,9 @@ function Shell({ children }) {
   // tapping the logo (back to Home) makes the chimney pour out a thick cloud of smoke
   const [smokeBurst, setSmokeBurst] = useState(null);
   const kilnCode = getKilnCode();
+  const [dark, setDark] = useState(() => { try { return localStorage.getItem('theme') === 'dark'; } catch { return false; } });
+  useEffect(() => { document.documentElement.classList.toggle('dark', dark); try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch { /* storage off */ } }, [dark]);
+  const toggleDark = () => setDark((d) => !d);
 
   return (
     <div className="app-shell flex min-h-dvh flex-col bg-n-50">
@@ -216,6 +220,11 @@ function Shell({ children }) {
 
           <span className="flex-1" />
 
+          {/* night mode: dark screens for night firing shifts */}
+          <button type="button" onClick={toggleDark} aria-label={dark ? 'Light mode' : 'Night mode'} title={dark ? 'Light mode' : 'Night mode'}
+            className="inline-flex size-10 min-h-10 shrink-0 items-center justify-center rounded-lg border-0 bg-white/10 p-0 text-white ring-1 ring-white/20 hover:bg-white/20">
+            {dark ? <Sun className="size-5" aria-hidden="true" /> : <Moon className="size-5" aria-hidden="true" />}
+          </button>
           {/* single toggle: shows the language it switches to */}
           <button
             type="button" onClick={() => setLang(lang === 'ur' ? 'en' : 'ur')}

@@ -13,7 +13,7 @@ export default function KilnLegend({ rows, t, states }) {
         return (
           <div key={st} className="flex min-w-0 flex-col items-center justify-center rounded-lg px-1 py-1.5 text-center ring-1"
             style={{ background: `color-mix(in srgb, ${c} 16%, #fff)`, '--tw-ring-color': `color-mix(in srgb, ${c} 55%, #fff)` }}>
-            <span className="w-full truncate text-2xs font-semibold text-n-700">{t[key]}</span>
+            <span className="w-full truncate text-2xs font-semibold" style={{ color: "#44403c" }}>{t[key]}</span>
             <b className="text-lg font-extrabold tabular-nums" style={{ color: `color-mix(in srgb, ${c} 70%, #1c1917)` }}>{count}</b>
           </div>
         );
