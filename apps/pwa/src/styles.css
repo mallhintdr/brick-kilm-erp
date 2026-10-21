@@ -1083,3 +1083,8 @@ thead tr.filter-row th { background: var(--b50) !important; }
 /* charts fit the screen width (no sideways scrolling) */
 .chart-scroll-wrap { overflow-x: hidden !important; }
 .chart-scroll-wrap svg.chart { min-width: 0 !important; width: 100% !important; }
+/* chart legend: text and checkboxes 30% larger */
+.chart-checkbox-label { font-size: 0.73rem !important; gap: 0.3rem !important; }
+.chart-checkbox-legend-row.legend-wrap .chart-checkbox-label { font-size: 0.65rem !important; }
+.chart-checkbox-label input[type="checkbox"] { width: 1rem !important; height: 1rem !important; min-height: 1rem !important; }
+.chart-checkbox-legend-row.legend-wrap .chart-checkbox-label input[type="checkbox"] { width: 13.6px !important; height: 13.6px !important; min-height: 13.6px !important; }
