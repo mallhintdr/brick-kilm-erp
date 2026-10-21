@@ -1,5 +1,6 @@
-import { forwardRef } from 'react';
+import { forwardRef, useEffect, useState } from 'react';
 import AmountHintC, { fmtMoney as fmtM, unfmtMoney as unfmtM } from './AmountHint.jsx';
+import { X, Inbox, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 // Shared building blocks (Tailwind). Every page uses these, so buttons, boxes, cards and tables
 // look the same everywhere, on phones and on desktop, in English and Urdu.
@@ -112,9 +113,12 @@ const BADGE = { neutral: 'bg-n-100 text-n-700', ok: 'bg-green-50 text-gain', err
 export const Badge = ({ tone = 'neutral', className, children }) => (
   <span className={cx('inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold', BADGE[tone], className)}>{children}</span>
 );
-export const Alert = ({ tone = 'ok', children, className }) => (
-  <p role={tone === 'err' ? 'alert' : 'status'} className={cx('m-0 rounded-md px-3 py-2.5 text-md font-medium', tone === 'err' ? 'bg-red-50 text-loss' : 'bg-green-50 text-gain', className)}>{children}</p>
-);
+export const Alert = ({ tone = 'ok', children, className }) => {
+  useEffect(() => { if (typeof children === 'string' && children) toast(children, tone); }, [children, tone]);
+  return (
+    <p role={tone === 'err' ? 'alert' : 'status'} className={cx('m-0 rounded-md px-3 py-2.5 text-md font-medium', tone === 'err' ? 'bg-red-50 text-loss' : 'bg-green-50 text-gain', className)}>{children}</p>
+  );
+};
 export const Muted = ({ className, children }) => <p className={cx('m-0 text-center text-sm text-n-500', className)}>{children}</p>;
 
 /* ---------- Tables ---------- */
@@ -135,14 +139,21 @@ export const tbl = {
   filter: 'w-full min-h-8 rounded-md bg-white px-2 text-sm ring-1 ring-n-300 border-0 outline-none focus:ring-2 focus:ring-brand-500',
 };
 export const FilterInput = (p) => <input type="search" className={tbl.filter} {...p} />;
-export const ClearFilters = ({ show, onClick, label }) => (show ? <Button size="sm" variant="secondary" onClick={onClick}>✕ {label}</Button> : null);
-export const Empty = ({ cols, children }) => <tr><td colSpan={cols} className="px-3 py-6 text-center text-sm text-n-500">{children}</td></tr>;
+export const ClearFilters = ({ show, onClick, label }) => (show ? <Button size="sm" variant="secondary" onClick={onClick}><X className="size-4 shrink-0" aria-hidden="true" /> {label}</Button> : null);
+export const Empty = ({ cols, children }) => (
+  <tr><td colSpan={cols} className="px-3 py-8 text-center">
+    <span className="inline-flex flex-col items-center gap-1.5 text-sm text-n-500">
+      <span className="grid size-10 place-items-center rounded-xl bg-n-100 text-n-400"><Inbox className="size-5" aria-hidden="true" /></span>
+      {children}
+    </span>
+  </td></tr>
+);
 
 /* ---------- Sheet: slides up from the bottom on phones, centred box on desktop ---------- */
 export const Sheet = ({ title, onClose, children, footer, wide }) => (
   <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-label={title}>
-    <div className="absolute inset-0 bg-n-900/40 backdrop-blur-[2px]" onClick={onClose} />
-    <div className={cx('relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl', wide ? 'sm:max-w-3xl' : 'sm:max-w-lg')}>
+    <div className="absolute inset-0 animate-[fade-in_.16s_ease-out] bg-n-900/40 backdrop-blur-[2px]" onClick={onClose} />
+    <div className={cx('relative flex max-h-[92dvh] w-full animate-[sheet-up_.22s_cubic-bezier(.2,.8,.2,1)] flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl', wide ? 'sm:max-w-3xl' : 'sm:max-w-lg')}>
       <div className="flex items-center justify-between gap-2 border-b border-brand-200 bg-brand-100 px-4 py-2.5">
         <h2 className="m-0 text-base font-bold text-brand-800">{title}</h2>
         <IconButton label="Close" onClick={onClose} className="size-9 text-brand-800 hover:bg-brand-200">✕</IconButton>
@@ -180,3 +191,45 @@ export const MoneyInput = ({ value, onChange, className, ...p }) => (
     <AmountHintC value={value} />
   </>
 );
+
+/* ---------- Loading placeholders ---------- */
+export const Skeleton = ({ className }) => <div className={cx('animate-pulse rounded-lg bg-n-200/70', className)} aria-hidden="true" />;
+export const SkeletonCards = ({ n = 3 }) => (
+  <div className="grid gap-3">{Array.from({ length: n }, (_, i) => <Skeleton key={i} className="h-20" />)}</div>
+);
+
+/* ---------- Empty state for a whole section ---------- */
+export const EmptyState = ({ icon: Icon = Inbox, title, body, action }) => (
+  <div className="flex flex-col items-center px-6 py-10 text-center">
+    <div className="mb-3 grid size-14 place-items-center rounded-2xl bg-n-100 text-n-400"><Icon className="size-7" aria-hidden="true" /></div>
+    <p className="m-0 font-semibold text-n-900">{title}</p>
+    {body && <p className="m-0 mt-1 max-w-xs text-sm text-n-500">{body}</p>}
+    {action && <div className="mt-4">{action}</div>}
+  </div>
+);
+
+/* ---------- Pop-up messages: toast('Saved') from anywhere; <Toaster /> shows them at the top ---------- */
+export const toast = (text, tone = 'ok') => window.dispatchEvent(new CustomEvent('app-toast', { detail: { text, tone, id: Date.now() + Math.random() } }));
+export function Toaster() {
+  const [items, setItems] = useState([]);
+  useEffect(() => {
+    const on = (e) => {
+      const it = e.detail;
+      setItems((x) => [...x.slice(-2), it]);
+      setTimeout(() => setItems((x) => x.filter((y) => y.id !== it.id)), it.tone === 'err' ? 5000 : 2600);
+    };
+    window.addEventListener('app-toast', on);
+    return () => window.removeEventListener('app-toast', on);
+  }, []);
+  return (
+    <div className="pointer-events-none fixed inset-x-0 top-0 z-[60] flex flex-col items-center gap-2 p-3 pt-[max(0.75rem,env(safe-area-inset-top))]" aria-live="polite">
+      {items.map((it) => (
+        <div key={it.id} className={cx('pointer-events-auto flex max-w-sm items-center gap-2 rounded-xl px-4 py-3 text-md font-semibold shadow-lg animate-[toast-in_.18s_ease-out]',
+          it.tone === 'err' ? 'bg-loss text-white' : 'bg-n-900 text-white')}>
+          {it.tone === 'err' ? <AlertTriangle className="size-4 shrink-0" aria-hidden="true" /> : <CheckCircle2 className="size-4 shrink-0 text-green-400" aria-hidden="true" />}
+          {it.text}
+        </div>
+      ))}
+    </div>
+  );
+}

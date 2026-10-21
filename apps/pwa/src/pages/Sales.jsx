@@ -9,6 +9,7 @@ import {
   Card, CardBody, Field, Input, Select, MoneyInput, FormGrid, Button, Alert, Section, StatGrid, StatCard, Tabs, Badge,
   TableCard, tbl, FilterInput, ClearFilters, Empty, cx,
 } from '../components/ui.jsx';
+import { Plus } from 'lucide-react';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const n = (v) => Number(v || 0).toLocaleString();
@@ -110,7 +111,7 @@ export default function Sales() {
                 <Field label={t.quantity}><Input required inputMode="numeric" placeholder={t.bricksUnitHint} value={invf.qty} onChange={(e) => setInvf({ ...invf, qty: e.target.value })} /></Field>
                 <Field label={`${t.taxPct} (%)`}><Input inputMode="decimal" placeholder="0" value={invf.taxPct} onChange={(e) => setInvf({ ...invf, taxPct: e.target.value })} /></Field>
               </FormGrid>
-              <Button type="submit" className="justify-self-center sm:min-w-48">＋ {t.newInvoice}</Button>
+              <Button type="submit" className="justify-self-center sm:min-w-48"><Plus className="size-4 shrink-0" aria-hidden="true" /> {t.newInvoice}</Button>
             </form>
           )}
 
@@ -181,7 +182,7 @@ export default function Sales() {
                   </Select>
                 </Field>
               </FormGrid>
-              <Button type="submit" className="justify-self-center sm:min-w-48">＋ {t.add} {t.customer}</Button>
+              <Button type="submit" className="justify-self-center sm:min-w-48"><Plus className="size-4 shrink-0" aria-hidden="true" /> {t.add} {t.customer}</Button>
             </form>
           )}
 

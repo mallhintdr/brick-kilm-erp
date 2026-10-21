@@ -8,6 +8,7 @@ import KilnLegend from '../components/KilnLegend.jsx';
 import { Card, CardHeader, CardBody, Field, Input, Textarea, FormGrid, Button, IconButton, Alert, Muted, Tabs, TableCard, tbl, FilterInput, ClearFilters, Empty, cx } from '../components/ui.jsx';
 import SearchSelect from '../components/SearchSelect.jsx';
 import WorkWeekGrid from '../components/WorkWeekGrid.jsx';
+import { Pencil, Undo2, X } from 'lucide-react';
 
 const STATE_LABEL_KEY = {
   Empty: 'empty',
@@ -390,7 +391,7 @@ export default function KilnBoard({ focus } = {}) {
                     {isOwner && (
                       <Button variant="dangerGhost" onClick={() => {
                         if (window.confirm(`${t.cancelNikasi}: ${unitLabel} ${sel.index}?`)) act(() => post(`${base}/${sel.index}/unload/cancel`, {}), { keep: true });
-                      }}>✕ {t.cancelNikasi}</Button>
+                      }}><X className="size-4 shrink-0" aria-hidden="true" /> {t.cancelNikasi}</Button>
                     )}
                   </div>
                 )}
@@ -400,8 +401,8 @@ export default function KilnBoard({ focus } = {}) {
                   <div className="grid gap-3 border-t border-n-100 pt-3">
                     {isOwner && sel.currentLoad > 0 && !loadEdit && (
                       <div className="flex flex-wrap justify-center gap-2">
-                        <Button size="sm" variant="secondary" onClick={startLoadEdit}>✎ {t.editLoading}</Button>
-                        {['Preheating', 'Loading'].includes(sel.state) && !sel.firedAt && <Button size="sm" variant="dangerGhost" onClick={undoLoad}>↺ {t.undoLoading}</Button>}
+                        <Button size="sm" variant="secondary" onClick={startLoadEdit}><Pencil className="size-4 shrink-0" aria-hidden="true" /> {t.editLoading}</Button>
+                        {['Preheating', 'Loading'].includes(sel.state) && !sel.firedAt && <Button size="sm" variant="dangerGhost" onClick={undoLoad}><Undo2 className="size-4 shrink-0" aria-hidden="true" /> {t.undoLoading}</Button>}
                       </div>
                     )}
                     {loadEdit && (

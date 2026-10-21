@@ -9,6 +9,7 @@ import { useTypes, typeLabel } from '../useTypes.js';
 import {
   Card, CardHeader, CardBody, Field, Input, Select, MoneyInput, FormGrid, Button, Alert, Muted, Badge, TableCard, tbl, Empty, cx,
 } from '../components/ui.jsx';
+import { Calculator, Plus, Printer, Save } from 'lucide-react';
 
 const isoDaysAgo = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
 const n = (v) => Number(v || 0).toLocaleString();
@@ -113,7 +114,7 @@ export default function Kharchi() {
               <Field label={t.entryDate}><Input type="date" required max={isoDaysAgo(0)} value={kf.date} onChange={(e) => setKf({ ...kf, date: e.target.value })} /></Field>
             </FormGrid>
             {!workersOf.length && <Muted>{t.noWorkersInCategory}</Muted>}
-            <Button type="submit" disabled={!kf.workerId || !kf.amount} className="justify-self-center sm:min-w-40">＋ {t.add}</Button>
+            <Button type="submit" disabled={!kf.workerId || !kf.amount} className="justify-self-center sm:min-w-40"><Plus className="size-4 shrink-0" aria-hidden="true" /> {t.add}</Button>
             {kMsg.text && <Alert tone={kMsg.bad ? 'err' : 'ok'}>{kMsg.text}</Alert>}
           </CardBody>
         </form>
@@ -152,7 +153,7 @@ export default function Kharchi() {
             <Field label={t.periodStart}><Input type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} /></Field>
             <Field label={t.periodEnd}><Input type="date" value={periodEnd} max={isoDaysAgo(0)} onChange={(e) => setPeriodEnd(e.target.value)} /></Field>
           </FormGrid>
-          <Button onClick={propose} className="justify-self-center sm:min-w-48">🧮 {t.propose}</Button>
+          <Button onClick={propose} className="justify-self-center sm:min-w-48"><Calculator className="size-4 shrink-0" aria-hidden="true" /> {t.propose}</Button>
           {msg.text && <Alert tone={msg.bad ? 'err' : 'ok'}>{msg.text}</Alert>}
         </CardBody>
       </Card>
@@ -202,7 +203,7 @@ export default function Kharchi() {
               </tfoot>
             </table>
           </div>
-          <div className="p-4"><Button block loading={busy} onClick={settle}>💾 {t.saveAndSettle}</Button></div>
+          <div className="p-4"><Button block loading={busy} onClick={settle}><Save className="size-4 shrink-0" aria-hidden="true" /> {t.saveAndSettle}</Button></div>
         </Card>
       )}
 
@@ -224,7 +225,7 @@ export default function Kharchi() {
                 <td className={cx(tbl.td, num, 'font-bold text-gain')}>{n(r.totalKharchi)}</td>
                 <td className={cx('actions', tbl.td)}>
                   <Link className="inline-flex min-h-8 items-center rounded-md bg-white px-2.5 text-xs font-semibold text-n-700 no-underline ring-1 ring-n-300 hover:bg-n-50"
-                    to={`/print/kharchi/${r._id}`} target="_blank" rel="noopener">🖨️ {t.printSlip}</Link>
+                    to={`/print/kharchi/${r._id}`} target="_blank" rel="noopener"><Printer className="size-4 shrink-0" aria-hidden="true" /> {t.printSlip}</Link>
                 </td>
               </tr>
             ))}

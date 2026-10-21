@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useT } from '../i18n.js';
 import { get } from '../api.js';
-import { SectionTitle, StatCard } from './ui.jsx';
+import { SectionTitle, StatCard, Skeleton } from './ui.jsx';
 
 const n = (v) => Math.round(Number(v || 0)).toLocaleString();
 
@@ -12,7 +12,7 @@ export default function HomeStock() {
   const t = useT();
   const [r, setR] = useState(null);
   useEffect(() => { get('/stock-report').then(setR).catch(() => {}); }, []);
-  if (!r) return null;
+  if (!r) return <Skeleton className="h-44" />;
 
   const cells = [
     { label: t.awwal, value: n(r.stock.awwal), tone: 'teal' },

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useT } from '../i18n.js';
 import { get, post, uuid, fmtDate } from '../api.js';
 import { Button, Alert, Tabs, IconButton, tbl, cx } from './ui.jsx';
+import { Save } from 'lucide-react';
 
 const iso = (d) => d.toISOString().slice(0, 10);
 const todayIso = () => iso(new Date());
@@ -95,7 +96,7 @@ export default function WorkWeekGrid({ kind }) {
             </tfoot>
           </table>
         </div>
-        <Button loading={busy} disabled={!newCells.length} onClick={saveWeek} className="justify-self-center sm:min-w-48">💾 {t.saveWeek}</Button>
+        <Button loading={busy} disabled={!newCells.length} onClick={saveWeek} className="justify-self-center sm:min-w-48"><Save className="size-4 shrink-0" aria-hidden="true" /> {t.saveWeek}</Button>
         {msg.text && <Alert tone={msg.bad ? 'err' : 'ok'}>{msg.text}</Alert>}
       </div>
     </details>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useT } from '../i18n.js';
 import { get, post, put, del, uuid } from '../api.js';
 import { Card, CardHeader, CardBody, Field, Input, FormGrid, Button, Alert, Muted, Tabs, Badge, tbl, cx } from './ui.jsx';
+import { Plus } from 'lucide-react';
 
 const KINDS = ['workerCategory', 'procurementItem', 'customerType', 'paymentMode'];
 
@@ -54,7 +55,7 @@ export default function TypesManager({ isOwner }) {
               <Field label={t.labelUr}><Input dir="rtl" value={add.labelUr} onChange={(e) => setAdd({ ...add, labelUr: e.target.value })} /></Field>
               <Field label={t.typeKey}><Input value={add.key} placeholder="auto" onChange={(e) => setAdd({ ...add, key: e.target.value })} /></Field>
             </FormGrid>
-            <Button type="submit" className="justify-self-center sm:min-w-40">＋ {t.add}</Button>
+            <Button type="submit" className="justify-self-center sm:min-w-40"><Plus className="size-4 shrink-0" aria-hidden="true" /> {t.add}</Button>
           </form>
         )}
 

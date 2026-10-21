@@ -4,7 +4,7 @@ import { useT } from '../i18n.js';
 import { get } from '../api.js';
 import LineChart from '../components/LineChart.jsx';
 import BarChart from '../components/BarChart.jsx';
-import { Card, CardBody, Field, Input, Select, Button, Section, StatGrid, StatCard, Muted, Badge, TableCard, tbl, cx } from '../components/ui.jsx';
+import { SkeletonCards, Card, CardBody, Field, Input, Select, Button, Section, StatGrid, StatCard, Muted, Badge, TableCard, tbl, cx } from '../components/ui.jsx';
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const daysAgoStr = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
@@ -65,7 +65,7 @@ export default function Insights() {
 
   const bucketed = useMemo(() => rollup(daily, dayCount > 90 ? 7 : dayCount > 30 ? 3 : 1), [daily, dayCount]);
 
-  if (!summary) return <Muted className="py-8">…</Muted>;
+  if (!summary) return <SkeletonCards n={4} />;
   const u = summary.unloaded;
 
   const RANGES = [

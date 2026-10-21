@@ -6,6 +6,7 @@ import {
   Card, CardHeader, CardBody, Field, Input, Select, Textarea, MoneyInput, FormGrid, Button, Alert, Section, StatGrid, StatCard, Tabs,
   TableCard, tbl, FilterInput, ClearFilters, Empty, cx, AmountHint, fmtMoney, unfmtMoney,
 } from '../components/ui.jsx';
+import { FileDown, Pencil, Plus } from 'lucide-react';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const TYPES = ['borrowed', 'loanGiven', 'repaymentIn', 'repaymentOut', 'cashGiven', 'expense', 'income', 'other'];
@@ -136,7 +137,7 @@ function PfAdd({ t, parties, typeText, onSaved, onError }) {
             </Field>
           </FormGrid>
           <Field label={t.pfNote}><Textarea rows={2} className="min-h-16" value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} /></Field>
-          <Button type="submit" className="justify-self-center sm:min-w-40">＋ {t.add}</Button>
+          <Button type="submit" className="justify-self-center sm:min-w-40"><Plus className="size-4 shrink-0" aria-hidden="true" /> {t.add}</Button>
         </CardBody>
       </form>
     </Card>
@@ -235,7 +236,7 @@ function PfList({ t, rows, parties, typeText, modeText, reload, setMsg }) {
                 <td className={cx(tbl.td, 'text-loss')}>{r.direction === 'out' ? rs(r.amount) : ''}</td>
                 <td className={cx(tbl.td, 'font-bold', balCls(r.balance))}>{rs(r.balance)}</td>
                 <td className={cx(tbl.td, 'min-w-40 whitespace-normal text-start')}>
-                  {r.note || '—'}{r.edited ? <span className="ms-1 text-xs font-semibold text-brand-700">✎ {t.pfEdited}</span> : null}
+                  {r.note || '—'}{r.edited ? <span className="ms-1 text-xs font-semibold text-brand-700"><Pencil className="size-4 shrink-0" aria-hidden="true" /> {t.pfEdited}</span> : null}
                 </td>
                 <td className={cx('actions', tbl.td)}>
                   <div className="inline-flex gap-1.5">
@@ -307,7 +308,7 @@ function PfReport({ t, rows, parties, typeText, modeText }) {
           )}
           <div className="flex flex-wrap justify-center gap-2">
             <Button onClick={make}>{t.pfMakeReport}</Button>
-            {report && <Button variant="secondary" onClick={exportPdf}>⬇ {t.pfExportPdf}</Button>}
+            {report && <Button variant="secondary" onClick={exportPdf}><FileDown className="size-4 shrink-0" aria-hidden="true" /> {t.pfExportPdf}</Button>}
           </div>
         </CardBody>
       </Card>

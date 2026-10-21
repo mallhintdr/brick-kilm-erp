@@ -4,6 +4,7 @@ import { get, fmtDate, fmtDateDM } from '../api.js';
 import DateTime from '../components/DateTime.jsx';
 import StockReport from '../components/StockReport.jsx';
 import { Card, CardHeader, CardBody, Field, Input, Select, FormGrid, Button, Section, StatGrid, StatCard, Badge, TableCard, tbl, FilterInput, ClearFilters, Empty, cx } from '../components/ui.jsx';
+import { ListChecks, Printer, RefreshCw } from 'lucide-react';
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const daysAgoStr = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
@@ -323,8 +324,8 @@ export default function Reports() {
       <Card className="no-print">
         <CardHeader title={L('Kiln Operations Reports', 'جامع کاروباری رپورٹ')}>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" onClick={() => window.print()}>🖨️ {L('Print / PDF', 'پرنٹ / پی ڈی ایف')}</Button>
-            <Button size="sm" variant="secondary" loading={loading} onClick={generateReport}>🔄 {L('Refresh', 'ریفریش')}</Button>
+            <Button size="sm" onClick={() => window.print()}><Printer className="size-4 shrink-0" aria-hidden="true" /> {L('Print / PDF', 'پرنٹ / پی ڈی ایف')}</Button>
+            <Button size="sm" variant="secondary" loading={loading} onClick={generateReport}><RefreshCw className="size-4 shrink-0" aria-hidden="true" /> {L('Refresh', 'ریفریش')}</Button>
           </div>
         </CardHeader>
         <CardBody>
@@ -347,7 +348,7 @@ export default function Reports() {
           </FormGrid>
           <div className="grid gap-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-md font-semibold text-n-700">☑ {L('Include in report', 'رپورٹ میں شامل کریں')}</span>
+              <span className="text-md font-semibold text-n-700"><ListChecks className="size-4 shrink-0" aria-hidden="true" /> {L('Include in report', 'رپورٹ میں شامل کریں')}</span>
               <div className="flex gap-1.5">
                 <Button size="sm" variant="secondary" className="min-h-8 text-xs" onClick={() => selectAll(true)}>{L('Select all', 'تمام منتخب کریں')}</Button>
                 <Button size="sm" variant="secondary" className="min-h-8 text-xs" onClick={() => selectAll(false)}>{L('Clear', 'غیر منتخب')}</Button>

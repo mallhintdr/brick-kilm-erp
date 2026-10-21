@@ -5,6 +5,7 @@ import SearchSelect from '../components/SearchSelect.jsx';
 import RowActions, { useRowEdit, IconBtn } from '../components/RowActions.jsx';
 import { WeekNav } from '../components/WorkWeekGrid.jsx';
 import { Card, CardHeader, CardBody, Field, Input, Select, FormGrid, Button, Alert, StatGrid, StatCard, TableCard, tbl, FilterInput, ClearFilters, Empty, cx } from '../components/ui.jsx';
+import { Plus, Save } from 'lucide-react';
 
 const iso = (d) => d.toISOString().slice(0, 10);
 const todayIso = () => iso(new Date());
@@ -261,7 +262,7 @@ export default function Moulding() {
               </tfoot>
             </table>
           </div>
-          <Button loading={weekBusy} disabled={weekEdit || !newTotal} onClick={saveWeek} className="justify-self-center sm:min-w-48">💾 {t.saveWeek}</Button>
+          <Button loading={weekBusy} disabled={weekEdit || !newTotal} onClick={saveWeek} className="justify-self-center sm:min-w-48"><Save className="size-4 shrink-0" aria-hidden="true" /> {t.saveWeek}</Button>
         </div>
       </details>
 
@@ -298,7 +299,7 @@ export default function Moulding() {
                 {t.deductionPct}: <strong className="text-n-900">{currentDeduction.toLocaleString()}</strong> · {t.netCount}: <strong className="text-gain">{currentNet.toLocaleString()}</strong>
               </p>
             )}
-            <Button type="submit" loading={submitting} className="justify-self-center sm:min-w-40">＋ {t.add}</Button>
+            <Button type="submit" loading={submitting} className="justify-self-center sm:min-w-40"><Plus className="size-4 shrink-0" aria-hidden="true" /> {t.add}</Button>
             {msg.text && <Alert tone={msg.bad ? 'err' : 'ok'}>{msg.text}</Alert>}
           </CardBody>
         </form>

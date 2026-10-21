@@ -7,6 +7,7 @@ import DateTime from '../components/DateTime.jsx';
 import RowActions, { useRowEdit } from '../components/RowActions.jsx';
 import KilnLegend from '../components/KilnLegend.jsx';
 import { Card, CardHeader, CardBody, Field, Input, Select, FormGrid, Button, Alert, StatGrid, StatCard, Tabs, Badge, TableCard, tbl, FilterInput, ClearFilters, Empty, cx } from '../components/ui.jsx';
+import { Save } from 'lucide-react';
 
 export default function Firing() {
   const t = useT();
@@ -112,7 +113,7 @@ export default function Firing() {
               <Field label={t.coalKg}><Input required inputMode="numeric" placeholder="1200" value={f.coalKg} onChange={(e) => setF({ ...f, coalKg: e.target.value })} /></Field>
               <Field label={t.tempC}><Input required inputMode="numeric" placeholder="950" value={f.tempC} onChange={(e) => setF({ ...f, tempC: e.target.value })} /></Field>
             </FormGrid>
-            <Button type="submit" loading={submitting} className="justify-self-center sm:min-w-48">💾 {t.logFiring}</Button>
+            <Button type="submit" loading={submitting} className="justify-self-center sm:min-w-48"><Save className="size-4 shrink-0" aria-hidden="true" /> {t.logFiring}</Button>
             {msg.text && <Alert tone={msg.bad ? 'err' : 'ok'}>{msg.text}</Alert>}
           </CardBody>
         </form>

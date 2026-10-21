@@ -29,6 +29,7 @@ import Corrections from './pages/Corrections.jsx';
 import PersonalFinance from './pages/PersonalFinance.jsx';
 import PrintWorkerSlip from './pages/PrintWorkerSlip.jsx';
 import PrintKharchiSlip from './pages/PrintKharchiSlip.jsx';
+import { Toaster } from './components/ui.jsx';
 
 // Crisp, high-precision SVG icons tailored for Kiln Operations ERP
 const ICONS = {
@@ -229,6 +230,7 @@ function Shell({ children }) {
         </header>
       </div>
 
+      <Toaster />
       <main id="main" ref={mainRef} tabIndex={-1}
         className="mx-auto w-full max-w-[1280px] flex-1 px-3 pt-3 pb-[calc(84px+env(safe-area-inset-bottom))] outline-none sm:px-4 sm:pt-4 lg:pb-8">
         {children}

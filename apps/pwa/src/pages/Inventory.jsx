@@ -6,6 +6,7 @@ import { useTypes, typeLabel } from '../useTypes.js';
 import RowActions, { useRowEdit } from '../components/RowActions.jsx';
 import { useLang } from '../i18n.js';
 import { Card, CardHeader, CardBody, Field, Input, Select, FormGrid, Button, Alert, Badge, TableCard, tbl, FilterInput, Empty, cx } from '../components/ui.jsx';
+import { Plus } from 'lucide-react';
 
 export default function Inventory() {
   const t = useT();
@@ -75,7 +76,7 @@ export default function Inventory() {
                 <Select value={f.item} onChange={(e) => (e.target.value === '__new' ? addItem() : setF({ ...f, item: e.target.value }))}>
                   {!items.active.some((i) => i.key === f.item) && <option value="" disabled>—</option>}
                   {items.active.map((i) => <option key={i.key} value={i.key}>{typeLabel(i, lang)}</option>)}
-                  <option value="__new">＋ {t.addNewItem}</option>
+                  <option value="__new"><Plus className="size-4 shrink-0" aria-hidden="true" /> {t.addNewItem}</option>
                 </Select>
               </Field>
               <Field label={t.supplier}><Input required {...box('supplierName')} /></Field>
@@ -99,7 +100,7 @@ export default function Inventory() {
               </details>
             )}
 
-            <Button type="submit" loading={submitting} className="justify-self-center sm:min-w-48">＋ {t.add}</Button>
+            <Button type="submit" loading={submitting} className="justify-self-center sm:min-w-48"><Plus className="size-4 shrink-0" aria-hidden="true" /> {t.add}</Button>
             {msg.text && <Alert tone={msg.bad ? 'err' : 'ok'}>{msg.text}</Alert>}
           </CardBody>
         </form>

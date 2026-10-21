@@ -7,6 +7,7 @@ import SearchSelect from '../components/SearchSelect.jsx';
 import {
   Card, CardHeader, CardBody, Field, Input, MoneyInput, FormGrid, Button, Alert, Badge, TableCard, tbl, FilterInput, ClearFilters, Empty, cx,
 } from '../components/ui.jsx';
+import { ArrowDownToLine, HandCoins, Printer } from 'lucide-react';
 
 export default function Peshgi() {
   const t = useT();
@@ -85,7 +86,7 @@ export default function Peshgi() {
             </div>
             {workerId && (
               <Link className="inline-flex min-h-10 items-center rounded-lg bg-white px-3.5 text-sm font-semibold text-n-700 no-underline ring-1 ring-n-300 hover:bg-n-50"
-                to={`/print/worker/${workerId}`} target="_blank" rel="noopener">🖨️ {t.printSlip}</Link>
+                to={`/print/worker/${workerId}`} target="_blank" rel="noopener"><Printer className="size-4 shrink-0" aria-hidden="true" /> {t.printSlip}</Link>
             )}
           </div>
 
@@ -96,8 +97,8 @@ export default function Peshgi() {
           </FormGrid>
 
           <div className="grid grid-cols-2 gap-2">
-            <Button disabled={!workerId || !amount || submitting} onClick={() => submit('/advances')}>💸 {t.advance}</Button>
-            <Button className="bg-gain hover:bg-green-800" disabled={!workerId || !amount || submitting} onClick={() => submit('/recoveries')}>📥 {t.recovery}</Button>
+            <Button disabled={!workerId || !amount || submitting} onClick={() => submit('/advances')}><HandCoins className="size-4 shrink-0" aria-hidden="true" /> {t.advance}</Button>
+            <Button className="bg-gain hover:bg-green-800" disabled={!workerId || !amount || submitting} onClick={() => submit('/recoveries')}><ArrowDownToLine className="size-4 shrink-0" aria-hidden="true" /> {t.recovery}</Button>
           </div>
           {msg.text && <Alert tone={msg.bad ? 'err' : 'ok'}>{msg.text}</Alert>}
         </CardBody>

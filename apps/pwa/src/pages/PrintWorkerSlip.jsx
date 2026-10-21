@@ -4,6 +4,7 @@ import { useT } from '../i18n.js';
 import { get, fmtDateTime } from '../api.js';
 import DateTime from '../components/DateTime.jsx';
 import { Button, StatCard, Muted, tbl, cx } from '../components/ui.jsx';
+import { Printer } from 'lucide-react';
 
 // A browser-printable worker statement: Urdu text renders through the same font/engine
 // as the rest of the app. The owner prints to paper or "Save as PDF" from the print dialog.
@@ -24,7 +25,7 @@ export default function PrintWorkerSlip() {
 
   return (
     <div className="min-h-dvh bg-n-50 p-3 print:bg-white print:p-0">
-      <Button className="no-print mb-3 print:hidden" onClick={() => window.print()}>🖨️ {t.printSlip}</Button>
+      <Button className="no-print mb-3 print:hidden" onClick={() => window.print()}><Printer className="size-4 shrink-0" aria-hidden="true" /> {t.printSlip}</Button>
       <div className="mx-auto grid max-w-2xl gap-3 rounded-lg bg-white p-6 ring-1 ring-n-200 print:max-w-none print:rounded-none print:ring-0">
         <header className="flex justify-between border-b-2 border-n-900 pb-2 text-sm">
           <strong>{t.appName}</strong>

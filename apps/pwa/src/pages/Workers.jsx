@@ -7,6 +7,7 @@ import {
   Card, CardHeader, CardBody, Field, Input, Select, FormGrid, Button, Alert, Section, StatGrid, StatCard,
   Badge, TableCard, tbl, FilterInput, ClearFilters, Empty, cx,
 } from '../components/ui.jsx';
+import { PenLine, Plus } from 'lucide-react';
 
 const blank = { dailyBricks: '', phone: '', reference: '', ratePerThousand: '', cutPerThousand: '', openingPeshgi: '', name: '', fatherName: '', cnic: '', dob: '', category: 'pathera', eobiNo: '', pessiNo: '' };
 const COLS = ['name', 'fatherName', 'category', 'phone', 'peshgi', 'dailyBricks', 'contract', 'eobiNo', 'pessiNo'];
@@ -86,7 +87,7 @@ export default function Workers() {
               <Field label={t.eobiNo}><Input {...box('eobiNo')} /></Field>
               <Field label={t.pessiNo}><Input {...box('pessiNo')} /></Field>
             </FormGrid>
-            <Button type="submit" loading={submitting} className="justify-self-center sm:min-w-56">＋ {t.add} {t.worker}</Button>
+            <Button type="submit" loading={submitting} className="justify-self-center sm:min-w-56"><Plus className="size-4 shrink-0" aria-hidden="true" /> {t.add} {t.worker}</Button>
             {msg.text && <Alert tone={msg.bad ? 'err' : 'ok'}>{msg.text}</Alert>}
           </CardBody>
         </form>
@@ -135,7 +136,7 @@ export default function Workers() {
                   <td className={tbl.td}>
                     {w.contractSigned
                       ? <Badge tone="ok">✓ {t.signed}</Badge>
-                      : <Button size="sm" variant="secondary" className="min-h-8 text-xs" onClick={() => markSigned(w._id)}>✍️ {t.markSigned}</Button>}
+                      : <Button size="sm" variant="secondary" className="min-h-8 text-xs" onClick={() => markSigned(w._id)}><PenLine className="size-4 shrink-0" aria-hidden="true" /> {t.markSigned}</Button>}
                   </td>
                   <td className={tbl.td}>{cell('eobiNo')}</td>
                   <td className={tbl.td}>{cell('pessiNo')}</td>

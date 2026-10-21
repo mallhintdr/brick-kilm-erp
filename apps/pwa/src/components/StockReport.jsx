@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useT } from '../i18n.js';
 import { get } from '../api.js';
-import { Section, StatGrid, StatCard } from './ui.jsx';
+import { Section, StatGrid, StatCard, SkeletonCards } from './ui.jsx';
 
 const n = (v) => Number(v || 0).toLocaleString();
 
@@ -10,7 +10,7 @@ export default function StockReport() {
   const t = useT();
   const [r, setR] = useState(null);
   useEffect(() => { get('/stock-report').then(setR).catch(() => {}); }, []);
-  if (!r) return null;
+  if (!r) return <SkeletonCards n={3} />;
   const unitWord = r.unit === 'line' ? t.lines : t.chambers;
 
   // three cards: one row of three; four: 2 x 2 on phones; five: 3 + 2 on phones, one row on wide screens

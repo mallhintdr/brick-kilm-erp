@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useT } from '../i18n.js';
 import { get, post, put, del, uuid } from '../api.js';
 import { Card, CardHeader, CardBody, Field, Input, Select, FormGrid, Button, Alert, Muted, Sheet, TableCard, tbl, cx } from '../components/ui.jsx';
+import { Plus } from 'lucide-react';
 
 const ROLES = ['owner', 'accountant', 'munshi', 'mistri', 'viewer'];
 const MODULES = ['workers', 'peshgi', 'settings', 'types'];
@@ -109,7 +110,7 @@ export default function Users() {
                 <Select value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })}>{ROLES.map((r) => <option key={r} value={r}>{r}</option>)}</Select>
               </Field>
             </FormGrid>
-            <Button type="submit" className="justify-self-center sm:min-w-40">＋ {t.add}</Button>
+            <Button type="submit" className="justify-self-center sm:min-w-40"><Plus className="size-4 shrink-0" aria-hidden="true" /> {t.add}</Button>
             {msg.text && <Alert tone={msg.bad ? 'err' : 'ok'}>{msg.text}</Alert>}
           </CardBody>
         </form>

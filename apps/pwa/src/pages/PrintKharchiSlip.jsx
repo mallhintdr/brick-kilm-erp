@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useT } from '../i18n.js';
 import { get, fmtDateTime } from '../api.js';
 import { Button, StatCard, Muted } from '../components/ui.jsx';
+import { Printer } from 'lucide-react';
 
 // One page per worker, with a page-break between each — so the owner can print the whole
 // settled run in one go and hand each slip out.
@@ -17,7 +18,7 @@ export default function PrintKharchiSlip() {
 
   return (
     <div className="min-h-dvh bg-n-50 p-3 print:bg-white print:p-0">
-      <Button className="no-print mb-3 print:hidden" onClick={() => window.print()}>🖨️ {t.printSlip}</Button>
+      <Button className="no-print mb-3 print:hidden" onClick={() => window.print()}><Printer className="size-4 shrink-0" aria-hidden="true" /> {t.printSlip}</Button>
       {run.items.map((it) => (
         <div key={it.workerId} className="mx-auto mb-4 grid max-w-xl gap-3 break-after-page rounded-lg bg-white p-6 ring-1 ring-n-200 print:mb-0 print:max-w-none print:rounded-none print:ring-0">
           <header className="flex justify-between border-b-2 border-n-900 pb-2 text-sm">

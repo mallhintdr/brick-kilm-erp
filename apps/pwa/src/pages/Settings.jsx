@@ -6,6 +6,7 @@ import DeleteButton from '../components/DeleteButton.jsx';
 import LocationPicker from '../components/LocationPicker.jsx';
 import { useTypes, typeLabel } from '../useTypes.js';
 import { Card, CardHeader, CardBody, Field, Input, FormGrid, Button, Alert, Muted } from '../components/ui.jsx';
+import { MapPin } from 'lucide-react';
 
 const KEYS = [
   'peshgiLimit', 'munshiAdvanceLimit', 'recoveryPct', 'kharchiFloor',
@@ -121,7 +122,7 @@ function KilnLocation({ t, isOwner, vals, onSaved }) {
         </FormGrid>
         {isOwner && (
           <div className="flex flex-wrap justify-center gap-2">
-            <Button disabled={busy} onClick={useGps}>📍 {t.locUseGps}</Button>
+            <Button disabled={busy} onClick={useGps}><MapPin className="size-4 shrink-0" aria-hidden="true" /> {t.locUseGps}</Button>
             <Button variant="secondary" disabled={busy} onClick={() => save()}>{t.save}</Button>
             {set && (
               <a className="inline-flex min-h-11 items-center rounded-lg bg-white px-4 font-semibold text-n-700 no-underline ring-1 ring-n-300 hover:bg-n-50"
