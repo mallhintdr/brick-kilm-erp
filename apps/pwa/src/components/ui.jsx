@@ -51,7 +51,7 @@ export const CardBody = ({ className, children }) => <div className={cx('grid ga
 export const SectionTitle = ({ children, className }) => (
   <h3 className={cx('m-0 flex items-center gap-2 text-center', className)}>
     <span className="h-px flex-1 bg-n-200" aria-hidden="true" />
-    <span className="rounded-full bg-slate-800 px-3 py-0.5 text-sm font-bold leading-6 text-white shadow-sm">{children}</span>
+    <span className="section-pill rounded-full bg-slate-800 px-3.5 py-0.5 text-[16px] font-bold leading-7 text-white shadow-sm">{children}</span>
     <span className="h-px flex-1 bg-n-200" aria-hidden="true" />
   </h3>
 );

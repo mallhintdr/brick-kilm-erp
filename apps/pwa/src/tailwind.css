@@ -130,3 +130,4 @@
   html.dark .text-loss { color: #f87171 !important; }
   html.dark .text-caution { color: #fbbf24 !important; }
 }
+@layer utilities { html[lang='ur'] .section-pill { font-size: 18.5px !important; } }
