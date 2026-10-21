@@ -80,6 +80,19 @@ const TONE = {
   orange: '234 88 12', blue: '2 132 199', violet: '124 58 237', teal: '13 148 136', pink: '219 39 119',
   green: '22 163 74', red: '220 38 38', amber: '217 119 6', slate: '71 85 105',
 };
+// a card label ending in a period, e.g. "Lines Fired (24 h)": the period goes on a second, smaller line
+function CardLabel({ label }) {
+  const m = typeof label === 'string' && label.match(/^(.*?)\s*(\([^()]*\d[^()]*\))$/);
+  const color = { color: 'color-mix(in srgb, rgb(var(--t)) 40%, #44403c)' };
+  if (!m) return <span className="text-xs font-semibold" style={color}>{label}</span>;
+  return (
+    <span className="grid justify-items-center leading-tight" style={color}>
+      <span className="text-xs font-semibold">{m[1]}</span>
+      <span className="text-2xs font-medium opacity-80">{m[2]}</span>
+    </span>
+  );
+}
+
 // numbers count up from 0 when they first show (plain counts like 12,345 only; 0.6 s)
 function CountUp({ value }) {
   const m = typeof value === 'number' ? String(value) : (typeof value === 'string' && /^-?[\d,]+$/.test(value) ? value : null);
@@ -102,7 +115,7 @@ export const StatCard = ({ label, value, tone = 'orange', valueClass, className,
     className={cx('flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-3 py-2.5 text-center ring-1 transition-transform hover:-translate-y-0.5', className)}
     style={{ '--t': TONE[tone] || TONE.orange, background: 'linear-gradient(160deg, rgb(var(--t) / .07), rgb(var(--t) / .2))', boxShadow: '0 4px 14px -6px rgb(var(--t) / .45)', '--tw-ring-color': 'rgb(var(--t) / .3)' }}
   >
-    <span className="text-xs font-semibold" style={{ color: 'color-mix(in srgb, rgb(var(--t)) 40%, #44403c)' }}>{label}</span>
+    <CardLabel label={label} />
     <strong className={cx(compact ? 'text-[15px] leading-tight sm:text-[20px]' : 'text-xl', 'font-extrabold tabular-nums', valueClass)} style={/text-(loss|gain|caution)/.test(valueClass || '') ? undefined : { color: 'color-mix(in srgb, rgb(var(--t)) 75%, #1c1917)' }}><CountUp value={value} /></strong>
     {children}
   </div>
