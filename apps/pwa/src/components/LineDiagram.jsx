@@ -11,14 +11,16 @@ const MARGIN = 20;
 // short date / time for the small writing inside a line
 const dm = (x) => { if (!x) return ''; const d = new Date(x); return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
 
+// Line colours: unfired bricks green (lighter while just loaded, deeper once preheating), fire red,
+// fired bricks gold (cooling: deeper gold with a green dot; ready to unload: light yellow), nikasi blue.
 export const LINE_FILL = {
   Empty: '#e2e8f0',
-  Loading: '#60a5fa',
-  Preheating: '#f59e0b',
+  Loading: '#4ade80',
+  Preheating: '#16a34a',
   Firing: '#ef4444',
-  Cooling: '#6366f1',   // hot, right behind the fire
-  Ready: '#14b8a6',     // fired and cooled enough for nikasi
-  Unloading: '#22c55e',
+  Cooling: '#d4a017',   // hot, right behind the fire
+  Ready: '#fde68a',     // fired and cooled enough for nikasi
+  Unloading: '#3b82f6',
 };
 const STATE_KEY = { Empty: 'empty', Loading: 'loading', Preheating: 'preheating', Firing: 'firingState', Cooling: 'cooling', Ready: 'readyToUnload', Unloading: 'unloading' };
 
@@ -109,6 +111,7 @@ export default function LineDiagram({ lines, selected, onSelect, t, fireIndex, m
                 >
                   <title>{`${t.line} ${l.index} — ${stateLabel(l.state)}${l.currentLoad ? ` — ${l.currentLoad.toLocaleString()}` : ''}`}</title>
                 </rect>
+                {l.state === 'Cooling' && <circle cx={-BAND / 2 + 30} cy="0" r="4.5" fill="#16a34a" stroke="#fff" strokeWidth="1.2" pointerEvents="none" />}
                 {date && <text className="line-info" x="0" y="0" textAnchor="middle" pointerEvents="none" dominantBaseline="central">{dm(date)}</text>}
                 <text className="line-num line-num-out" pointerEvents="none" textAnchor="middle" dominantBaseline="central"
                   transform={`rotate(${(-up).toFixed(1)}) translate(${(Math.cos(r) * off).toFixed(1)} ${(Math.sin(r) * off).toFixed(1)})`}>{l.index}</text>
