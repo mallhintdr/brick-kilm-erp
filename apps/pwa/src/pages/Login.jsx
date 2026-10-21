@@ -39,7 +39,7 @@ export default function Login() {
             <KilnLogo size={34} color="#ffffff" />
           </div>
           <h1 className="m-0 text-xl font-bold text-white">{t.appName}</h1>
-          <p className="m-0 text-xs text-slate-400">Brick kiln operations</p>
+          <p className="m-0 text-xs text-slate-400">Brick Kiln Operations</p>
         </div>
         <form className="grid gap-3.5 p-5" onSubmit={submit}>
           <Field label={t.username}>

@@ -240,7 +240,7 @@ export default function Reports() {
       ],
     },
     selectedModules.nikasi && {
-      id: 'nikasi', title: L('Nikasi (Unloading) — details', 'نکاسی — تفصیل'), rows: nik,
+      id: 'nikasi', title: L('Nikasi (Unloading) — Details', 'نکاسی — تفصیل'), rows: nik,
       cols: [
         { label: t.date, v: (r) => <DateTime value={r.date} /> },
         { label: `${t.line} / ${t.section}`, v: where },
@@ -330,7 +330,7 @@ export default function Reports() {
         </CardHeader>
         <CardBody>
           <FormGrid>
-            <Field label={L('Report period', 'رپورٹ کی مدت')}>
+            <Field label={L('Report Period', 'رپورٹ کی مدت')}>
               <Select value={range} onChange={(e) => {
                 const val = e.target.value === 'custom' ? 'custom' : Number(e.target.value);
                 setRange(val);
@@ -348,9 +348,9 @@ export default function Reports() {
           </FormGrid>
           <div className="grid gap-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-md font-semibold text-n-700"><ListChecks className="size-4 shrink-0" aria-hidden="true" /> {L('Include in report', 'رپورٹ میں شامل کریں')}</span>
+              <span className="text-md font-semibold text-n-700"><ListChecks className="size-4 shrink-0" aria-hidden="true" /> {L('Include in Report', 'رپورٹ میں شامل کریں')}</span>
               <div className="flex gap-1.5">
-                <Button size="sm" variant="secondary" className="min-h-8 text-xs" onClick={() => selectAll(true)}>{L('Select all', 'تمام منتخب کریں')}</Button>
+                <Button size="sm" variant="secondary" className="min-h-8 text-xs" onClick={() => selectAll(true)}>{L('Select All', 'تمام منتخب کریں')}</Button>
                 <Button size="sm" variant="secondary" className="min-h-8 text-xs" onClick={() => selectAll(false)}>{L('Clear', 'غیر منتخب')}</Button>
               </div>
             </div>
@@ -380,16 +380,16 @@ export default function Reports() {
       </Card>
 
       <Card className="grid gap-4 p-4">
-        <Section title={L('Period summary', 'مدت کا خلاصہ')}>
+        <Section title={L('Period Summary', 'مدت کا خلاصہ')}>
           <StatGrid className="sm:grid-cols-4 lg:grid-cols-4">
-            {selectedModules.moulding && <StatCard label={L('Total moulded', 'کل کچی پتھائی')} value={n(stats.totalMoulded)} tone="orange" />}
-            {selectedModules.firing && <StatCard label={L('Firing shifts', 'پکائی شفٹیں')} value={stats.totalShifts} tone="red" />}
-            {selectedModules.coal && <StatCard label={L('Coal burned', 'کوئلہ کھپت')} value={`${n(stats.totalCoalKg)} kg`} tone="slate" />}
-            {selectedModules.sales && <StatCard label={L('Sales revenue', 'کل فروخت آمدن')} value={n(stats.totalSalesRev)} tone="green" />}
-            {selectedModules.peshgi && <StatCard label={L('Peshgi issued', 'پیشگی جاری کردہ')} value={n(stats.totalPeshgi)} tone="amber" />}
-            {selectedModules.kharchi && <StatCard label={L('Kharchi paid', 'خرچی و اجرت')} value={n(stats.totalKharchi)} tone="violet" />}
+            {selectedModules.moulding && <StatCard label={L('Total Moulded', 'کل کچی پتھائی')} value={n(stats.totalMoulded)} tone="orange" />}
+            {selectedModules.firing && <StatCard label={L('Firing Shifts', 'پکائی شفٹیں')} value={stats.totalShifts} tone="red" />}
+            {selectedModules.coal && <StatCard label={L('Coal Burned', 'کوئلہ کھپت')} value={`${n(stats.totalCoalKg)} kg`} tone="slate" />}
+            {selectedModules.sales && <StatCard label={L('Sales Revenue', 'کل فروخت آمدن')} value={n(stats.totalSalesRev)} tone="green" />}
+            {selectedModules.peshgi && <StatCard label={L('Peshgi Issued', 'پیشگی جاری کردہ')} value={n(stats.totalPeshgi)} tone="amber" />}
+            {selectedModules.kharchi && <StatCard label={L('Kharchi Paid', 'خرچی و اجرت')} value={n(stats.totalKharchi)} tone="violet" />}
             {selectedModules.grn && <StatCard label={L('Purchases', 'خریداری خرچ')} value={n(stats.totalPurchases)} tone="blue" />}
-            {selectedModules.cashbook && <StatCard label={L('Net cash flow', 'خالص کیش فلو')} value={n(stats.cashNet)} tone={stats.cashNet >= 0 ? 'green' : 'red'} />}
+            {selectedModules.cashbook && <StatCard label={L('Net Cash Flow', 'خالص کیش فلو')} value={n(stats.cashNet)} tone={stats.cashNet >= 0 ? 'green' : 'red'} />}
           </StatGrid>
         </Section>
         {selectedModules.nikasi && (
