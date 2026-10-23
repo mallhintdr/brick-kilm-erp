@@ -37,6 +37,7 @@ import PrintWorkerSlip from './pages/PrintWorkerSlip.jsx';
 import PrintKharchiSlip from './pages/PrintKharchiSlip.jsx';
 import { Toaster } from './components/ui.jsx';
 import { HelpCircle } from 'lucide-react';
+import TourHost from './components/Tour.jsx';
 
 // Crisp, high-precision SVG icons tailored for Kiln Operations ERP
 const ICONS = {
@@ -213,7 +214,7 @@ function Shell({ children }) {
       <div className="sticky-header-wrapper sticky top-0 z-40 bg-gradient-to-b from-slate-900 to-slate-800 shadow-md print:hidden">
         <header className="mx-auto flex h-14 max-w-[1280px] items-center gap-2 px-3 sm:h-16 sm:px-4">
           {/* logo and name: back to Home (the chimney puffs out a cloud of smoke) */}
-          <NavLink to="/home" title={t.home} onClick={() => setSmokeBurst(Date.now())}
+          <NavLink to="/home" data-tour="logo" title={t.home} onClick={() => setSmokeBurst(Date.now())}
             className="flex min-w-0 items-center gap-2.5 rounded-lg px-1.5 py-1 no-underline hover:bg-white/5">
             <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-brand-600 shadow-[0_2px_8px_rgba(234,88,12,.45)]" aria-hidden="true">
               <KilnLogo size={30} color="#ffffff" burst={smokeBurst} />
@@ -227,13 +228,13 @@ function Shell({ children }) {
           <span className="flex-1" />
 
           {/* help: the step-by-step guide, in the current language */}
-          <a href={lang === 'ur' ? '/guide-ur.html' : '/guide.html'} aria-label={t.help} title={t.help}
-            className="inline-flex size-10 min-h-10 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white no-underline ring-1 ring-white/20 hover:bg-white/20">
+          <button type="button" data-tour="help" onClick={() => window.dispatchEvent(new Event('tour-menu'))} aria-label={t.help} title={t.help}
+            className="inline-flex size-10 border-0 p-0 min-h-10 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white no-underline ring-1 ring-white/20 hover:bg-white/20">
             <HelpCircle className="size-5" aria-hidden="true" />
-          </a>
+          </button>
           {/* single toggle: shows the language it switches to */}
           <button
-            type="button" onClick={() => setLang(lang === 'ur' ? 'en' : 'ur')}
+            type="button" data-tour="lang" onClick={() => setLang(lang === 'ur' ? 'en' : 'ur')}
             title={lang === 'ur' ? 'English' : 'اردو'} aria-label={lang === 'ur' ? 'Switch to English' : 'اردو میں بدلیں'}
             className="inline-flex size-10 min-h-10 shrink-0 items-center justify-center rounded-lg border-0 bg-white/10 p-0 font-sans text-sm leading-none font-extrabold text-white ring-1 ring-white/20 hover:bg-white/20"
           >
@@ -241,7 +242,7 @@ function Shell({ children }) {
           </button>
           <button
             type="button" title={username} aria-label={`${t.logout || 'Logout'} ${username}`}
-            onClick={() => { clearSession(); nav('/login'); }}
+            data-tour="logout" onClick={() => { clearSession(); nav('/login'); }}
             className="flex min-h-10 shrink-0 items-center gap-1.5 rounded-lg border-0 bg-red-600 px-2.5 text-white hover:bg-red-700"
           >
             <Icon name="logout" color="#ffffff" size={16} stroke={2.75} />
@@ -252,8 +253,9 @@ function Shell({ children }) {
 
       <Toaster />
       <QuickEntryHost />
+      <TourHost />
       {/* desktop: the + button in the corner (phones have it in the tab bar) */}
-      <QuickAddFab className="fixed bottom-6 end-6 z-40 hidden lg:grid print:hidden" />
+      <QuickAddFab data-tour="fab" className="fixed bottom-6 end-6 z-40 hidden lg:grid print:hidden" />
       <main id="main" ref={mainRef} tabIndex={-1}
         className="mx-auto w-full max-w-[1280px] flex-1 px-3 pt-3 pb-[calc(84px+env(safe-area-inset-bottom))] outline-none sm:px-4 sm:pt-4 lg:pb-8">
         {children}
@@ -263,9 +265,9 @@ function Shell({ children }) {
       <nav aria-label={t.home}
         className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 items-end gap-1 border-t border-n-200 bg-white/95 px-1 pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] backdrop-blur-md lg:hidden print:hidden">
         {[['/home', 'home', t.home], ['/daily', 'reports', t.dailyEntry], ['+'], ['/kiln-board', 'board', t.kilnBoard], ['/khata', 'kharchi', t.khataTitle]].map(([to, icon, label]) => (to === '+'
-          ? <div key="+" className="grid place-items-center pb-1"><QuickAddFab className="-mt-6 size-13 ring-4 ring-white" /></div>
+          ? <div key="+" className="grid place-items-center pb-1"><QuickAddFab data-tour="fab" className="-mt-6 size-13 ring-4 ring-white" /></div>
           : (
-          <NavLink key={to} to={to}
+          <NavLink key={to} to={to} data-tour={`tab${to}`}
             className={({ isActive }) => `flex min-w-0 flex-col items-center gap-0.5 rounded-lg px-0.5 py-1.5 text-2xs font-semibold no-underline ${isActive ? 'bg-brand-50 text-brand-700' : 'text-n-500 hover:text-n-900'}`}>
             <span className="[&_svg]:stroke-current"><Icon name={icon} size={20} stroke={2} /></span>
             <span className="max-w-full truncate">{label}</span>

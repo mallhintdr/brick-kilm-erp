@@ -174,8 +174,8 @@ export const Muted = ({ className, children }) => <p className={cx('m-0 text-cen
 /* ---------- Tables ---------- */
 // card with a title row and a scrolling table; header peach, filter row paler, zebra rows
 // stack: on phones each row shows as a small card (column name: value) instead of a wide table
-export const TableCard = ({ title, actions, className, children, stack = true }) => (
-  <Card className={cx('overflow-hidden', className)}>
+export const TableCard = ({ title, actions, className, children, stack = true, ...rest }) => (
+  <Card className={cx('overflow-hidden', className)} {...rest}>
     {title != null && <CardHeader title={title}>{actions}</CardHeader>}
     <div className={cx('table-wrap overflow-x-auto', stack && 'stack-wrap')}>{children}</div>
   </Card>
@@ -204,10 +204,10 @@ export const Empty = ({ cols, children }) => (
 export const Sheet = ({ title, onClose, children, footer, wide }) => (
   <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-label={title}>
     <div className="absolute inset-0 animate-[fade-in_.16s_ease-out] bg-n-900/40 backdrop-blur-[2px]" onClick={onClose} />
-    <div className={cx('relative flex max-h-[92dvh] w-full animate-[sheet-up_.22s_cubic-bezier(.2,.8,.2,1)] flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl', wide ? 'sm:max-w-3xl' : 'sm:max-w-lg')}>
+    <div data-tour="sheet" className={cx('relative flex max-h-[92dvh] w-full animate-[sheet-up_.22s_cubic-bezier(.2,.8,.2,1)] flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl', wide ? 'sm:max-w-3xl' : 'sm:max-w-lg')}>
       <div className="flex items-center justify-between gap-2 border-b border-brand-200 bg-brand-100 px-4 py-2.5">
         <h2 className="m-0 text-base font-bold text-brand-800">{title}</h2>
-        <IconButton label="Close" onClick={onClose} className="size-9 text-brand-800 hover:bg-brand-200">✕</IconButton>
+        <IconButton data-tour="sheet-close" label="Close" onClick={onClose} className="size-9 text-brand-800 hover:bg-brand-200">✕</IconButton>
       </div>
       <div className="grid flex-1 gap-3 overflow-y-auto p-4">{children}</div>
       {footer && <div className="border-t border-n-100 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">{footer}</div>}

@@ -42,7 +42,7 @@ export default function TodayPanel() {
   ];
 
   return (
-    <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-brand-900 p-4 text-white shadow-lg sm:p-5">
+    <section data-tour="today" className="overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-brand-900 p-4 text-white shadow-lg sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="m-0 text-sm text-slate-300">{dateText}</p>

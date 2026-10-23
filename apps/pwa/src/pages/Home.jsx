@@ -28,7 +28,7 @@ export default function Home({ links = [] }) {
         const items = g.paths.map((p) => visible.find((l) => l.to === p)).filter(Boolean);
         if (!items.length) return null;
         return (
-          <Wrap more={g.more} label={t[g.titleKey]} key={g.titleKey}><section className="grid gap-3 rounded-lg bg-white p-3.5 ring-1 ring-n-200" aria-label={t[g.titleKey]}>
+          <Wrap more={g.more} label={t[g.titleKey]} key={g.titleKey}><section data-tour={`group-${g.titleKey}`} className="grid gap-3 rounded-lg bg-white p-3.5 ring-1 ring-n-200" aria-label={t[g.titleKey]}>
             <SectionTitle>{t[g.titleKey]}</SectionTitle>
             {/* the full name always shows: it wraps to a second line instead of being cut */}
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">

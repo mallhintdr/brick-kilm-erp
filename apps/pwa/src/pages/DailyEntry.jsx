@@ -71,7 +71,7 @@ export default function DailyEntry() {
   return (
     <div className="grid gap-4">
       {/* the day: ‹ date › */}
-      <Card>
+      <Card data-tour="day-card">
         <CardBody className="gap-3">
           <div className="flex items-center gap-2">
             <button type="button" aria-label={t.previous} onClick={() => setDay(shift(day, -1))} className="grid size-11 min-h-0 place-items-center rounded-xl border-0 bg-n-100 p-0 text-n-700 hover:bg-n-200"><ChevronLeft className="size-5 rtl:rotate-180" /></button>
@@ -87,7 +87,7 @@ export default function DailyEntry() {
           {/* completeness: what is done and what is still missing for this day */}
           {data ? (
             <div className="grid gap-2">
-              <div className="h-2 overflow-hidden rounded-full bg-n-100"><div className="h-full rounded-full bg-gain transition-[width] duration-500" style={{ width: `${(done / checks.length) * 100}%` }} /></div>
+              <div data-tour="day-progress" className="h-2 overflow-hidden rounded-full bg-n-100"><div className="h-full rounded-full bg-gain transition-[width] duration-500" style={{ width: `${(done / checks.length) * 100}%` }} /></div>
               <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
                 {checks.map(([label, ok, val]) => (
                   <span key={label} className={cx('flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold ring-1', ok ? 'bg-green-50 text-gain ring-green-200' : 'bg-amber-50 text-caution ring-amber-200')}>
@@ -100,7 +100,7 @@ export default function DailyEntry() {
           ) : <Skeleton className="h-16" />}
           {/* closing a day: after the owner closes it, staff cannot add or change its entries */}
           {(isLocked || isOwner) && (
-            <div className={cx('flex flex-wrap items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm ring-1', isLocked ? 'bg-slate-100 text-n-700 ring-slate-300' : 'bg-white text-n-600 ring-n-200')}>
+            <div data-tour="close-day" className={cx('flex flex-wrap items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm ring-1', isLocked ? 'bg-slate-100 text-n-700 ring-slate-300' : 'bg-white text-n-600 ring-n-200')}>
               <span className="inline-flex items-center gap-1.5 font-semibold">{isLocked ? <Lock className="size-4" /> : <LockOpen className="size-4" />}{isLocked ? t.dayClosed : t.dayOpen}</span>
               {isOwner && (isLocked
                 ? <Button size="sm" variant="secondary" onClick={() => setLock(shift(day, -1))}><LockOpen className="size-4" /> {t.reopenDay}</Button>
@@ -110,7 +110,7 @@ export default function DailyEntry() {
         </CardBody>
       </Card>
 
-      <WorkerDayCard t={t} day={day} data={data} onSaved={load} />
+      <div data-tour="worker-card"><WorkerDayCard t={t} day={day} data={data} onSaved={load} /></div>
 
       {/* the day sheet: one block per kind of work, + to add, tap to correct */}
       <div className="grid gap-3 lg:grid-cols-2">
@@ -118,14 +118,14 @@ export default function DailyEntry() {
           const rows = rowsOf(k);
           const K = KINDS[k];
           return (
-            <Card key={k} className="overflow-hidden">
+            <Card key={k} data-tour={`block-${k}`} className="overflow-hidden">
               <div className="flex items-center gap-2.5 px-3 py-2.5">
                 <span className="grid size-9 shrink-0 place-items-center rounded-lg" style={{ background: `color-mix(in srgb, ${color} 14%, #fff)`, color }}><Icon className="size-5" aria-hidden="true" /></span>
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-md font-bold text-n-900">{quickLabel(t, k)}</div>
                   <div className="text-xs text-n-500">{data ? (rows.length ? `${rows.length} · ${K.total(rows)}` : t.noEntries) : '…'}</div>
                 </div>
-                <button type="button" aria-label={`${t.add} ${quickLabel(t, k)}`} onClick={() => openQuick(k, { date: day })}
+                <button type="button" data-tour={`add-${k}`} aria-label={`${t.add} ${quickLabel(t, k)}`} onClick={() => openQuick(k, { date: day })}
                   className="grid size-10 min-h-0 place-items-center rounded-xl border-0 p-0 text-white hover:opacity-90" style={{ background: color }}>
                   <Plus className="size-5" aria-hidden="true" />
                 </button>

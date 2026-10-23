@@ -153,7 +153,7 @@ export default function Kharchi() {
             <Field label={t.periodStart}><Input type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} /></Field>
             <Field label={t.periodEnd}><Input type="date" value={periodEnd} max={isoDaysAgo(0)} onChange={(e) => setPeriodEnd(e.target.value)} /></Field>
           </FormGrid>
-          <Button onClick={propose} className="justify-self-center sm:min-w-48"><Calculator className="size-4 shrink-0" aria-hidden="true" /> {t.propose}</Button>
+          <Button data-tour="propose" onClick={propose} className="justify-self-center sm:min-w-48"><Calculator className="size-4 shrink-0" aria-hidden="true" /> {t.propose}</Button>
           {msg.text && <Alert tone={msg.bad ? 'err' : 'ok'}>{msg.text}</Alert>}
         </CardBody>
       </Card>

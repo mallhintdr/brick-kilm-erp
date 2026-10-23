@@ -48,7 +48,7 @@ export function QuickEntryHost() {
       <Sheet title={t.quickAdd} onClose={close}>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {QUICK_KINDS.map(([k, Icon, color]) => (
-            <button key={k} type="button" onClick={() => openQuick(k, open.preset)}
+            <button key={k} type="button" data-tour={`menu-${k}`} onClick={() => openQuick(k, open.preset)}
               className="flex min-h-16 items-center gap-2.5 rounded-xl border-0 bg-white px-3 text-start text-md font-semibold text-n-900 ring-1 ring-n-200 hover:bg-n-50">
               <span className="grid size-9 shrink-0 place-items-center rounded-lg" style={{ background: `color-mix(in srgb, ${color} 14%, #fff)`, color }}><Icon className="size-5" aria-hidden="true" /></span>
               <span className="leading-tight">{quickLabel(t, k)}</span>
@@ -289,8 +289,8 @@ function QuickForm({ kind, preset, onClose }) {
     <Sheet title={quickLabel(t, kind)} onClose={onClose}
       footer={(
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="secondary" loading={busy} disabled={!SPEC?.ok} onClick={() => save(true)}><Plus className="size-4" aria-hidden="true" /> {t.saveNext}</Button>
-          <Button loading={busy} disabled={!SPEC?.ok} onClick={() => save(false)}>{t.save}</Button>
+          <Button data-tour="save-next" variant="secondary" loading={busy} disabled={!SPEC?.ok} onClick={() => save(true)}><Plus className="size-4" aria-hidden="true" /> {t.saveNext}</Button>
+          <Button data-tour="save" loading={busy} disabled={!SPEC?.ok} onClick={() => save(false)}>{t.save}</Button>
         </div>
       )}>
       {body}
@@ -299,10 +299,10 @@ function QuickForm({ kind, preset, onClose }) {
 }
 
 // round + button that opens the quick-add menu (phones: in the tab bar; desktop: bottom corner)
-export function QuickAddFab({ className }) {
+export function QuickAddFab({ className, ...rest }) {
   const t = useT();
   return (
-    <button type="button" aria-label={t.quickAdd} title={t.quickAdd} onClick={() => openQuick('menu')}
+    <button type="button" {...rest} aria-label={t.quickAdd} title={t.quickAdd} onClick={() => openQuick('menu')}
       className={cx('grid size-14 place-items-center rounded-full border-0 bg-brand-600 text-white shadow-[0_6px_18px_rgba(234,88,12,.45)] hover:bg-brand-700 active:scale-95', className)}>
       <Plus className="size-7" aria-hidden="true" />
     </button>

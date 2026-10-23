@@ -289,9 +289,9 @@ export default function KilnBoard({ focus } = {}) {
             <CardHeader title={`${t.kilnBoard} — ${unit === 'line' ? t.lines : t.chambers}`} />
             <CardBody>
               <p className="m-0 text-center text-xs text-n-500">{unit === 'line' ? t.kilnLinesHint : t.kilnHint}</p>
-              <KilnLegend rows={rows} t={t} states={unit === 'line' ? undefined : ['Empty', 'Loading', 'Preheating', 'Firing', 'Cooling', 'Unloading']} />
+              <div data-tour="kiln-legend"><KilnLegend rows={rows} t={t} states={unit === 'line' ? undefined : ['Empty', 'Loading', 'Preheating', 'Firing', 'Cooling', 'Unloading']} /></div>
               {unit === 'line'
-                ? <LineDiagram lines={rows} selected={sel} onSelect={pick} t={t} fireIndex={fire?.index} mode={focus === 'load' ? 'load' : focus === 'unload' ? 'unload' : 'fire'} />
+                ? <div data-tour="kiln-plan"><LineDiagram lines={rows} selected={sel} onSelect={pick} t={t} fireIndex={fire?.index} mode={focus === 'load' ? 'load' : focus === 'unload' ? 'unload' : 'fire'} /></div>
                 : unit && <KilnDiagram sections={rows} selected={sel} onSelect={pick} t={t} />}
             </CardBody>
           </Card>
@@ -319,7 +319,7 @@ export default function KilnBoard({ focus } = {}) {
                   const cur = stageOf(sel);
                   const label = { Loading: t.loading, Preheating: t.preheating, Firing: t.firingState, Cooling: t.cooling, Unloading: t.unloading };
                   return (
-                    <div className="grid grid-cols-6 gap-1.5" role="group" aria-label={t.stages}>
+                    <div data-tour="stage-bar" className="grid grid-cols-6 gap-1.5" role="group" aria-label={t.stages}>
                       {STAGES.map((st, i) => {
                         const done = i < cur || (i === cur && st === 'Cooling' && sel.state === 'Ready');
                         const now = i === cur && !done;
@@ -482,7 +482,7 @@ export default function KilnBoard({ focus } = {}) {
       </div>
 
       {/* every chamber / line as a list (tap a row to open it) */}
-      <TableCard
+      <TableCard data-tour="kiln-list"
         title={`${unit === 'line' ? t.lines : t.chambers} (${shownRows.length} / ${rows.length})`}
         actions={<ClearFilters show={Object.values(lf).some(Boolean)} onClick={() => setLf({})} label={t.clearAll} />}
       >

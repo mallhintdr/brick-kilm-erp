@@ -68,7 +68,7 @@ export default function Workers() {
 
       <Card>
         <CardHeader title={`${t.add} ${t.worker}`} />
-        <form onSubmit={add}>
+        <form data-tour="worker-form" onSubmit={add}>
           <CardBody>
             <FormGrid className="lg:grid-cols-3">
               <Field label={t.name}><Input required {...box('name')} /></Field>

@@ -88,7 +88,7 @@ export default function Firing() {
         <StatCard label={t.coalKg} value={`${totalCoalToday.toLocaleString()} kg`} tone="blue" />
       </StatGrid>
 
-      <Card className="firing-form">
+      <Card data-tour="firing-form" className="firing-form">
         <CardHeader title={t.firing} />
         <form onSubmit={submit}>
           <CardBody>

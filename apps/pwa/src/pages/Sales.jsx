@@ -100,10 +100,10 @@ export default function Sales() {
 
       <Card>
         <CardBody>
-          <Tabs className="grid-cols-2! sm:grid-cols-4!" options={[['invoice', t.newInvoice], ['booking', t.booking], ['payment', t.recordPayment], ['customer', t.newCustomer]]} value={activeFormTab} onChange={setActiveFormTab} />
+          <div data-tour="sales-tabs"><Tabs className="grid-cols-2! sm:grid-cols-4!" options={[['invoice', t.newInvoice], ['booking', t.booking], ['payment', t.recordPayment], ['customer', t.newCustomer]]} value={activeFormTab} onChange={setActiveFormTab} /></div>
 
           {activeFormTab === 'invoice' && (
-            <form className="grid gap-3" onSubmit={addInvoice}>
+            <form data-tour="invoice-form" className="grid gap-3" onSubmit={addInvoice}>
               <FormGrid className="lg:grid-cols-3">
                 <Field label={t.customer} className="col-span-2 lg:col-span-1">
                   <SearchSelect
