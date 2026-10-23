@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { X, ChevronLeft, ChevronRight, Play, BookOpen } from 'lucide-react';
 import { useT, useLang } from '../i18n.js';
-import { TOURS } from './tours.js';
+import { TOURS, TOUR_GROUPS } from './tours.js';
 import { Sheet, cx } from './ui.jsx';
 
 // Guided tours: each step highlights one part of a screen with an explanation and "step x of y".
@@ -106,7 +106,9 @@ export default function TourHost() {
     <Sheet title={t.tourTitle} onClose={() => setMenu(false)}>
       <p className="m-0 text-sm text-n-600">{t.tourIntro}</p>
       <div className="grid gap-2">
-        {TOURS.map((x) => (
+        {TOUR_GROUPS.flatMap(([g, en, urT]) => [
+          <h3 key={`h-${g}`} className="m-0 mt-2 text-xs font-bold uppercase tracking-wide text-n-500">{ur ? urT : en}</h3>,
+          ...TOURS.filter((x) => x.group === g).map((x) => (
           <button key={x.id} type="button" onClick={() => startTour(x.id)}
             className="flex items-center gap-3 rounded-xl border-0 bg-white p-3 text-start ring-1 ring-n-200 hover:bg-brand-50">
             <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-600 text-white"><Play className="size-4" /></span>
@@ -115,7 +117,8 @@ export default function TourHost() {
               <span className="text-xs text-n-500">{x.steps.length} {t.tourSteps}</span>
             </span>
           </button>
-        ))}
+          )),
+        ])}
         <a href={ur ? '/guide-ur.html' : '/guide.html'} className="flex items-center gap-3 rounded-xl bg-n-50 p-3 text-n-900 no-underline ring-1 ring-n-200">
           <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-slate-700 text-white"><BookOpen className="size-4" /></span>
           <strong className="text-md">{t.tourReadGuide}</strong>
