@@ -926,3 +926,17 @@ test('health check lists problems', async () => {
   assert.equal(r.status, 200, JSON.stringify(r.body));
   assert.ok(Array.isArray(r.body.issues));
 });
+
+test('bookings: advance shows as payment, deliveries reduce what is left, challan fields saved', async () => {
+  const c = (await api('POST', '/customers', { name: `Booker ${Date.now()}`, type: 'individual', clientUuid: randomUUID() })).body;
+  const cid = c.id || c._id;
+  const b = await api('POST', '/bookings', { customerId: cid, grade: 'awwal', qty: 20000, advance: 50000, clientUuid: randomUUID() });
+  assert.equal(b.status, 201, JSON.stringify(b.body));
+  await api('PUT', '/settings', { key: 'allowNegativeStock', value: '1' });
+  const inv = await api('POST', '/invoices', { customerId: cid, grade: 'awwal', qty: 8000, bookingId: String(b.body.id), vehicleNo: 'LES-123', driver: 'Aslam', destination: 'Sadiqabad', clientUuid: randomUUID() });
+  assert.equal(inv.status, 201, JSON.stringify(inv.body));
+  const bk = (await api('GET', '/bookings')).body.find((x) => String(x._id) === String(b.body.id));
+  assert.equal(bk.remaining, 12000); assert.equal(bk.advance, 50000);
+  const one = (await api('GET', `/invoices/${inv.body.id}`)).body;
+  assert.equal(one.vehicleNo, 'LES-123'); assert.ok(one.challanNo > 0);
+});

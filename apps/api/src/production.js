@@ -3,7 +3,7 @@ import { ObjectId } from 'mongodb';
 import { z } from 'zod';
 import {
   mouldingInput, sectionLoadInput, fireAdvanceInput, kilnNoteInput, firingLogInput,
-  unloadStartInput, unloadCompleteInput, grnInput, customerInput, invoiceInput, paymentInput,
+  unloadStartInput, unloadCompleteInput, grnInput, customerInput, invoiceInput, bookingInput, paymentInput,
   SETTING_DEFAULTS, toPaisa,
 } from '@kiln/shared';
 import { withTransaction } from './db.js';
@@ -776,6 +776,47 @@ export function registerProductionRoutes(app, db) {
 
   const PRICE_KEY = { awwal: 'priceAwwal', doem: 'priceDoem', khangar: 'priceKhangar' };
 
+  // ---- Bookings: advance orders; the advance is a payment in (shows in the cash book) ----
+  app.post('/bookings', auth('owner', 'munshi', 'accountant'), wrap(async (req, res) => {
+    const b = bookingInput.parse(req.body);
+    const out = await withTransaction(db, async (session) => {
+      const customer = await db.collection('customers').findOne({ _id: oid(b.customerId), ...scope(req.user) }, { session });
+      if (!customer) throw httpError(404, 'Customer not found');
+      const rate = b.rate ?? await getSetting(db, req.user, PRICE_KEY[b.grade], SETTING_DEFAULTS, session);
+      const at = entryAt(b.date);
+      const r = await db.collection('bookings').insertOne({ ...scope(req.user), customerId: b.customerId, grade: b.grade, qty: b.qty, rate: String(rate), note: b.note, date: at, status: 'open', createdAt: new Date() }, { session });
+      if (b.advance > 0) {
+        await db.collection('payments').insertOne({ ...scope(req.user), partyId: b.customerId, bookingId: String(r.insertedId), invoiceId: null, amount: b.advance.toFixed(2), mode: b.mode, direction: 'in', date: at, clientUuid: b.clientUuid }, { session });
+      }
+      await audit(db, session, req.user, 'booking.create', { id: r.insertedId, ...b });
+      return { id: r.insertedId };
+    });
+    res.status(201).json(out);
+  }));
+  app.get('/bookings', auth(), wrap(async (req, res) => {
+    const s = scope(req.user);
+    const [rows, lifted, paid] = await Promise.all([
+      db.collection('bookings').find(s).sort({ date: -1 }).limit(300).toArray(),
+      db.collection('invoices').aggregate([{ $match: { ...s, bookingId: { $ne: null } } }, { $group: { _id: '$bookingId', qty: { $sum: '$qty' } } }]).toArray(),
+      db.collection('payments').aggregate([{ $match: { ...s, bookingId: { $ne: null } } }, { $group: { _id: '$bookingId', amt: { $sum: { $toDouble: '$amount' } } } }]).toArray(),
+    ]);
+    const L = Object.fromEntries(lifted.map((x) => [x._id, x.qty])); const P = Object.fromEntries(paid.map((x) => [x._id, x.amt]));
+    res.json(rows.map((r) => ({ ...r, lifted: L[String(r._id)] || 0, remaining: r.qty - (L[String(r._id)] || 0), advance: P[String(r._id)] || 0 })));
+  }));
+  app.delete('/bookings/:id', auth('owner'), wrap(async (req, res) => {
+    const s = scope(req.user);
+    await db.collection('bookings').deleteOne({ _id: oid(req.params.id), ...s });
+    await db.collection('payments').deleteMany({ ...s, bookingId: req.params.id });
+    await audit(db, undefined, req.user, 'booking.delete', { id: req.params.id });
+    res.json({ ok: true });
+  }));
+  app.get('/invoices/:id', auth(), wrap(async (req, res) => {
+    const inv = await db.collection('invoices').findOne({ _id: oid(req.params.id), ...scope(req.user) });
+    if (!inv) throw httpError(404, 'Invoice not found');
+    const customer = await db.collection('customers').findOne({ _id: oid(inv.customerId), ...scope(req.user) });
+    res.json({ ...inv, customerName: customer?.name || '—', customerPhone: customer?.phone || '' });
+  }));
+
   app.post('/invoices', auth('owner', 'munshi', 'accountant'), wrap(async (req, res) => {
     const b = invoiceInput.parse(req.body);
     const result = await withTransaction(db, async (session) => {
@@ -787,6 +828,9 @@ export function registerProductionRoutes(app, db) {
       const doc = {
         ...scope(req.user), customerId: b.customerId, grade: b.grade, qty: b.qty, rate: String(rate),
         amount, tax, status: 'open', date: entryAt(b.date), clientUuid: b.clientUuid,
+        vehicleNo: b.vehicleNo || '', driver: b.driver || '', destination: b.destination || '', freight: b.freight || '',
+        bookingId: b.bookingId || null,
+        challanNo: (await db.collection('invoices').countDocuments(scope(req.user), { session })) + 1,
       };
       const r = await db.collection('invoices').insertOne(doc, { session });
       await audit(db, session, req.user, 'invoice.create', { id: r.insertedId, ...b });

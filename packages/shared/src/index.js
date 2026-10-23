@@ -347,6 +347,24 @@ export const invoiceInput = z.object({
   qty: positiveInt,
   rate: moneyString.optional(), // defaults to the grade's price-list setting if omitted
   taxPct: z.coerce.number().min(0).max(100).default(0),
+  // delivery challan: which truck/trolley took the bricks, where, and against which booking
+  vehicleNo: z.string().trim().max(30).optional(),
+  driver: z.string().trim().max(60).optional(),
+  destination: z.string().trim().max(120).optional(),
+  freight: z.string().trim().max(60).optional(),
+  bookingId: z.string().optional(),
+  clientUuid: z.string().uuid(),
+});
+// advance booking (parchi): customer books bricks now, lifts them over time
+export const bookingInput = z.object({
+  date: workDate.optional(),
+  customerId: z.string(),
+  grade: z.enum(['awwal', 'doem', 'khangar']),
+  qty: positiveInt,
+  rate: moneyString.optional(),
+  advance: z.coerce.number().min(0).default(0),
+  mode: z.string().optional().default('cash'),
+  note: z.string().trim().max(300).optional().default(''),
   clientUuid: z.string().uuid(),
 });
 

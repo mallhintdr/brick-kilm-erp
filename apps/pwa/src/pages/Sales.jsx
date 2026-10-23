@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useT, useLang } from '../i18n.js';
-import { get, post, uuid, fmtDateTime } from '../api.js';
+import { get, post, uuid, fmtDateTime, fmtDate } from '../api.js';
 import DateTime from '../components/DateTime.jsx';
 import SearchSelect from '../components/SearchSelect.jsx';
 import { useTypes, typeLabel } from '../useTypes.js';
@@ -9,7 +9,7 @@ import {
   Card, CardBody, Field, Input, Select, MoneyInput, FormGrid, Button, Alert, Section, StatGrid, StatCard, Tabs, Badge,
   TableCard, tbl, FilterInput, ClearFilters, Empty, cx,
 } from '../components/ui.jsx';
-import { Plus } from 'lucide-react';
+import { Plus, Printer } from 'lucide-react';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const n = (v) => Number(v || 0).toLocaleString();
@@ -24,7 +24,9 @@ export default function Sales() {
   const [invoices, setInvoices] = useState([]);
   const [receivables, setReceivables] = useState(null);
   const [cf, setCf] = useState({ name: '', type: 'individual' });
-  const [invf, setInvf] = useState({ customerId: '', grade: 'awwal', qty: '', taxPct: '0', date: today() });
+  const [invf, setInvf] = useState({ customerId: '', grade: 'awwal', qty: '', taxPct: '0', date: today(), vehicleNo: '', driver: '', destination: '', freight: '', bookingId: '' });
+  const [bookings, setBookings] = useState([]);
+  const [bkf, setBkf] = useState({ customerId: '', grade: 'awwal', qty: '', advance: '', date: today(), note: '' });
   const [payf, setPayf] = useState({ invoiceId: '', amount: '', mode: 'cash', date: today() });
   const [msg, setMsg] = useState({ text: '', bad: false });
   const editor = useRowEdit();
@@ -38,6 +40,7 @@ export default function Sales() {
     get('/customers').then(setCustomers).catch(() => {});
     get('/invoices').then(setInvoices).catch(() => {});
     get('/receivables').then(setReceivables).catch(() => {});
+    get('/bookings').then(setBookings).catch(() => {});
   };
   useEffect(() => { load(); }, []);
 
@@ -53,8 +56,15 @@ export default function Sales() {
   const addInvoice = (e) => run(e, async () => {
     const r = await post('/invoices', { ...invf, clientUuid: uuid() });
     setMsg({ text: r.queued ? t.queued : `${t.savedOk} — ${r.amount}`, bad: false });
-    setInvf({ ...invf, qty: '' });
+    setInvf({ ...invf, qty: '', vehicleNo: '', driver: '', destination: '', freight: '', bookingId: '' });
+    if (r.id) window.open(`/print/challan/${r.id}`, '_blank', 'noopener');
   });
+  const addBooking = (e) => run(e, async () => {
+    await post('/bookings', { ...bkf, qty: Number(bkf.qty), advance: Number(bkf.advance || 0), clientUuid: uuid() });
+    setBkf({ ...bkf, customerId: '', qty: '', advance: '', note: '' });
+    setMsg({ text: t.savedOk, bad: false });
+  });
+  const openBookings = bookings.filter((b) => b.remaining > 0);
   const addPayment = (e) => run(e, async () => {
     const r = await post('/payments', { ...payf, clientUuid: uuid() });
     setMsg({ text: r.queued ? t.queued : t.savedOk, bad: false });
@@ -90,7 +100,7 @@ export default function Sales() {
 
       <Card>
         <CardBody>
-          <Tabs options={[['invoice', t.newInvoice], ['payment', t.recordPayment], ['customer', t.newCustomer]]} value={activeFormTab} onChange={setActiveFormTab} />
+          <Tabs className="grid-cols-2! sm:grid-cols-4!" options={[['invoice', t.newInvoice], ['booking', t.booking], ['payment', t.recordPayment], ['customer', t.newCustomer]]} value={activeFormTab} onChange={setActiveFormTab} />
 
           {activeFormTab === 'invoice' && (
             <form className="grid gap-3" onSubmit={addInvoice}>
@@ -110,6 +120,19 @@ export default function Sales() {
                 </Field>
                 <Field label={t.quantity}><Input required inputMode="numeric" placeholder={t.bricksUnitHint} value={invf.qty} onChange={(e) => setInvf({ ...invf, qty: e.target.value })} /></Field>
                 <Field label={`${t.taxPct} (%)`}><Input inputMode="decimal" placeholder="0" value={invf.taxPct} onChange={(e) => setInvf({ ...invf, taxPct: e.target.value })} /></Field>
+                {/* delivery challan: truck / trolley details, and the booking this load is lifted against */}
+                <Field label={t.vehicle}><Input placeholder="LES-1234" value={invf.vehicleNo} onChange={(e) => setInvf({ ...invf, vehicleNo: e.target.value })} /></Field>
+                <Field label={t.driver}><Input value={invf.driver} onChange={(e) => setInvf({ ...invf, driver: e.target.value })} /></Field>
+                <Field label={t.destination}><Input value={invf.destination} onChange={(e) => setInvf({ ...invf, destination: e.target.value })} /></Field>
+                <Field label={t.freight}><Input value={invf.freight} placeholder={t.freightWho} onChange={(e) => setInvf({ ...invf, freight: e.target.value })} /></Field>
+                {openBookings.some((b) => b.customerId === invf.customerId) && (
+                  <Field label={t.booking} className="col-span-2">
+                    <Select value={invf.bookingId} onChange={(e) => { const b = bookings.find((x) => x._id === e.target.value); setInvf({ ...invf, bookingId: e.target.value, ...(b ? { grade: b.grade, rate: b.rate } : {}) }); }}>
+                      <option value="">—</option>
+                      {openBookings.filter((b) => b.customerId === invf.customerId).map((b) => <option key={b._id} value={b._id}>{t[b.grade]} — {t.remaining}: {n(b.remaining)}</option>)}
+                    </Select>
+                  </Field>
+                )}
               </FormGrid>
               <Button type="submit" className="justify-self-center sm:min-w-48"><Plus className="size-4 shrink-0" aria-hidden="true" /> {t.newInvoice}</Button>
             </form>
@@ -172,6 +195,40 @@ export default function Sales() {
             </form>
           )}
 
+          {activeFormTab === 'booking' && (
+            <form className="grid gap-3" onSubmit={addBooking}>
+              <FormGrid className="lg:grid-cols-3">
+                <Field label={t.customer} className="col-span-2 lg:col-span-1">
+                  <SearchSelect required ariaLabel={t.customer} placeholder={t.typeToSearch} value={bkf.customerId} onChange={(v) => setBkf({ ...bkf, customerId: v })}
+                    options={customers.map((c) => ({ value: c._id, label: c.name, search: c.phone || '' }))} />
+                </Field>
+                <Field label={t.grade}>
+                  <Select value={bkf.grade} onChange={(e) => setBkf({ ...bkf, grade: e.target.value })}><option value="awwal">{t.awwal}</option><option value="doem">{t.doem}</option><option value="khangar">{t.khangar}</option></Select>
+                </Field>
+                <Field label={t.quantity}><Input required inputMode="numeric" value={bkf.qty} onChange={(e) => setBkf({ ...bkf, qty: e.target.value.replace(/[^\d]/g, '') })} /></Field>
+                <Field label={t.advanceReceived}><MoneyInput value={bkf.advance} onChange={(v) => setBkf({ ...bkf, advance: v })} /></Field>
+                <Field label={t.entryDate}><Input type="date" max={today()} value={bkf.date} onChange={(e) => setBkf({ ...bkf, date: e.target.value })} /></Field>
+              </FormGrid>
+              <Button type="submit" className="justify-self-center sm:min-w-48"><Plus className="size-4 shrink-0" aria-hidden="true" /> {t.booking}</Button>
+              {bookings.length > 0 && (
+                <div className="table-wrap overflow-x-auto rounded-lg ring-1 ring-n-200">
+                  <table className={tbl.table}>
+                    <thead><tr>{[t.date, t.customer, t.grade, t.quantity, t.lifted, t.remaining, t.advanceReceived].map((h) => <th key={h} className={tbl.th}>{h}</th>)}</tr></thead>
+                    <tbody>
+                      {bookings.map((b) => (
+                        <tr key={b._id} className={tbl.tr}>
+                          <td className={tbl.td}>{fmtDate(b.date)}</td><td className={cx(tbl.td, 'font-semibold')}>{customerName(b.customerId)}</td><td className={tbl.td}>{t[b.grade]}</td>
+                          <td className={tbl.td}>{n(b.qty)}</td><td className={tbl.td}>{n(b.lifted)}</td>
+                          <td className={cx(tbl.td, 'font-bold', b.remaining > 0 ? 'text-caution' : 'text-gain')}>{n(b.remaining)}</td><td className={tbl.td}>{n(b.advance)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </form>
+          )}
+
           {activeFormTab === 'customer' && (
             <form className="grid gap-3" onSubmit={addCustomer}>
               <FormGrid>
@@ -226,6 +283,7 @@ export default function Sales() {
                         : <Badge tone="warn">⏳ {t.open}</Badge>}
                   </td>
                   <td className={cx('actions', tbl.td)}>
+                    <a href={`/print/challan/${i._id}`} target="_blank" rel="noopener" title={t.challan} className="me-1 inline-grid size-8 place-items-center rounded-md bg-white align-middle text-n-700 ring-1 ring-n-300"><Printer className="size-4" /></a>
                     <RowActions
                       editor={editor} id={i._id} path={`/invoices/${i._id}`} name={`${customerName(i.customerId)} — ${n(i.amount)}`}
                       initial={{ qty: String(i.qty), rate: String(i.rate) }}

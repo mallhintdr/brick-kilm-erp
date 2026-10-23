@@ -27,6 +27,7 @@ import Roznamcha from './pages/Roznamcha.jsx';
 import DailyEntry from './pages/DailyEntry.jsx';
 import Weekly from './pages/Weekly.jsx';
 import Health from './pages/Health.jsx';
+import PrintChallan from './pages/PrintChallan.jsx';
 import { QuickEntryHost, QuickAddFab } from './components/QuickEntry.jsx';
 import Attendance from './pages/Attendance.jsx';
 import Corrections from './pages/Corrections.jsx';
@@ -304,6 +305,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/print/worker/:id" element={bare(<PrintWorkerSlip />)} />
         <Route path="/print/kharchi/:id" element={bare(<PrintKharchiSlip />)} />
+        <Route path="/print/challan/:id" element={bare(<PrintChallan />)} />
         <Route path="/" element={guard(<Home links={homeLinks} />)} />
         <Route path="/home" element={guard(<Home links={homeLinks} />)} />
         <Route path="/kiln-board" element={guard(<KilnBoard />)} />
