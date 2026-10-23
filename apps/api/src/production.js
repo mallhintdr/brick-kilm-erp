@@ -105,7 +105,7 @@ async function getStockLevels(db, user, session) {
   const open = await openingStock(db, user, session);
   const [moulded] = await db.collection('mouldingBatches').aggregate([{ $match: s }, { $group: { _id: null, net: { $sum: '$netCount' } } }], { session }).toArray();
   const [loaded] = await db.collection('sectionLoads').aggregate([{ $match: s }, { $group: { _id: null, count: { $sum: '$count' } } }], { session }).toArray();
-  const [coalIn] = await db.collection('grns').aggregate([{ $match: { ...s, item: 'coal' } }, { $group: { _id: null, qty: { $sum: '$qty' } } }], { session }).toArray();
+  const [coalIn] = await db.collection('grns').aggregate([{ $match: { ...s, item: 'coal' } }, { $group: { _id: null, qty: { $sum: { $toDouble: { $ifNull: ['$qty', 0] } } } } }], { session }).toArray();
   const [coalUsedKg] = await db.collection('firingLogs').aggregate([{ $match: s }, { $group: { _id: null, kg: { $sum: '$coalKg' } } }], { session }).toArray();
   return {
     greenStock: open.green + (moulded?.net ?? 0) - (loaded?.count ?? 0),
@@ -620,8 +620,8 @@ export function registerProductionRoutes(app, db) {
       sum('mouldingBatches', { count: '$count', net: '$netCount' }),
       sum('sectionLoads', { count: '$count' }),
       sum('unloadings', { awwal: '$awwal', doem: '$doem', khangar: '$khangar', broken: '$broken' }),
-      db.collection('invoices').aggregate([{ $match: s }, { $group: { _id: '$grade', qty: { $sum: '$qty' } } }]).toArray(),
-      sum('grns', { qty: '$qty' }, { item: 'coal' }),
+      db.collection('invoices').aggregate([{ $match: s }, { $group: { _id: '$grade', qty: { $sum: { $toDouble: { $ifNull: ['$qty', 0] } } } } }]).toArray(),
+      sum('grns', { qty: { $toDouble: { $ifNull: ['$qty', 0] } } }, { item: 'coal' }),
       sum('firingLogs', { kg: '$coalKg' }),
       sum('kilnCycles', { kg: '$coalKg' }),
       db.collection(unit === 'line' ? 'kilnLines' : 'kilnSections').aggregate([
@@ -630,7 +630,7 @@ export function registerProductionRoutes(app, db) {
     ]);
     // every other purchased item: total received (only coal has its use recorded)
     const itemsIn = await db.collection('grns').aggregate([
-      { $match: { ...s, item: { $ne: 'coal' } } }, { $group: { _id: '$item', qty: { $sum: '$qty' } } }, { $sort: { _id: 1 } },
+      { $match: { ...s, item: { $ne: 'coal' } } }, { $group: { _id: '$item', qty: { $sum: { $toDouble: { $ifNull: ['$qty', 0] } } } } }, { $sort: { _id: 1 } },
     ]).toArray();
     const open = await openingStock(db, req.user);
     const st = Object.fromEntries(unitStates.map((r) => [r._id, r]));
@@ -732,7 +732,7 @@ export function registerProductionRoutes(app, db) {
       { $match: s }, { $group: { _id: null, awwal: { $sum: '$awwal' }, doem: { $sum: '$doem' }, khangar: { $sum: '$khangar' }, broken: { $sum: '$broken' } } },
     ]).toArray();
     const soldRows = await db.collection('invoices').aggregate([
-      { $match: s }, { $group: { _id: '$grade', qty: { $sum: '$qty' } } },
+      { $match: s }, { $group: { _id: '$grade', qty: { $sum: { $toDouble: { $ifNull: ['$qty', 0] } } } } },
     ]).toArray();
     const fired = unloaded ?? { awwal: 0, doem: 0, khangar: 0, broken: 0 };
     const sold = Object.fromEntries(soldRows.map((r) => [r._id, r.qty]));

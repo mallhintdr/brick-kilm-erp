@@ -175,7 +175,7 @@ export const SETTING_KEYS = [
   'ratePathera', 'rateBharai', 'rateNikasi', 'rateJalai', 'priceAwwal', 'priceDoem', 'priceKhangar',
   'allowNegativeStock', 'kilnUnit', 'kilnLineCount',
   'cutPathera', 'cutBharai', 'cutNikasi',
-  'kilnLat', 'kilnLon', 'kilnPlace', 'hotLines', 'lockedUntil',
+  'kilnLat', 'kilnLon', 'kilnPlace', 'hotLines', 'lockedUntil', 'govRatePathera', 'govRateBharai', 'govRateNikasi', 'govRateCheck',
 ];
 
 export const settingInput = z.object({

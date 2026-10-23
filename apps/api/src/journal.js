@@ -152,4 +152,38 @@ export function registerJournalRoutes(app, db) {
       purchases: grns.map((g) => ({ _id: g._id, item: g.item, who: g.supplierName || '—', qty: g.qty, rate: g.rate, amount: num(g.landedTotal), at: g.date })),
     });
   }));
+
+  // ---- Health check: numbers that look wrong, so the owner can fix them before trusting reports ----
+  app.get('/health', auth(), wrap(async (req, res) => {
+    const s = scope(req.user);
+    const DAY = 864e5;
+    const [stock, workers, lastMarks, ready, grns, openDoc] = await Promise.all([
+      fetchJson(req, '/stock-report'),
+      db.collection('workers').find({ ...s, status: { $ne: 'inactive' } }, { projection: { name: 1 } }).toArray(),
+      db.collection('attendance').aggregate([{ $match: s }, { $group: { _id: '$workerId', last: { $max: '$date' } } }]).toArray(),
+      db.collection('kilnLines').find({ ...s, state: 'Ready', firedAt: { $lt: new Date(Date.now() - 15 * DAY) } }, { projection: { index: 1 } }).toArray(),
+      db.collection('grns').countDocuments({ ...s, supplierName: { $in: [null, ''] } }),
+      db.collection('openingStock').findOne(s),
+    ]);
+    const last = Object.fromEntries(lastMarks.map((m) => [String(m._id), m.last]));
+    const weekAgo = new Date(Date.now() - 7 * DAY).toISOString().slice(0, 10);
+    const noAtt = workers.filter((w) => !last[String(w._id)] || last[String(w._id)] < weekAgo);
+    const issues = [];
+    const add = (level, key, value, link) => issues.push({ level, key, value, link });
+    if (!openDoc) add('warn', 'hcNoOpening', '', '/settings');
+    if (stock.coal?.remainingKg < 0) add('err', 'hcCoalNegative', `${stock.coal.remainingKg.toLocaleString()} kg`, '/inventory');
+    if (stock.stock?.green < 0) add('err', 'hcGreenNegative', stock.stock.green.toLocaleString(), '/moulding');
+    for (const g of ['awwal', 'doem', 'khangar']) if (stock.stock?.[g] < 0) add('err', 'hcGradeNegative', `${g}: ${stock.stock[g].toLocaleString()}`, '/sales');
+    if (noAtt.length) add('warn', 'hcNoAttendance', `${noAtt.length}: ${noAtt.slice(0, 6).map((w) => w.name).join(', ')}${noAtt.length > 6 ? '…' : ''}`, '/attendance');
+    if (ready.length) add('warn', 'hcReadyLong', ready.map((l) => l.index).slice(0, 12).join(', '), '/kiln-board');
+    if (grns) add('warn', 'hcNoSupplier', String(grns), '/inventory');
+    res.json({ issues, checkedAt: new Date() });
+  }));
+}
+
+// call another route of this server with the same login (keeps the stock maths in one place)
+async function fetchJson(req, path) {
+  const port = req.socket.localPort;
+  const r = await fetch(`http://127.0.0.1:${port}${path}`, { headers: { authorization: req.headers.authorization } });
+  return r.ok ? r.json() : {};
 }

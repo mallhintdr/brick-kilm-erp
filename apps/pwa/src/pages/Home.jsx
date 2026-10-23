@@ -5,10 +5,14 @@ import HomeStock from '../components/HomeStock.jsx';
 import TodayPanel from '../components/TodayPanel.jsx';
 import { SectionTitle } from '../components/ui.jsx';
 
+// Five main sections; everything else sits under "More" (closed by default)
 const GROUPS = [
-  { titleKey: 'dailyOps', paths: ['/daily', '/weekly', '/attendance', '/moulding', '/loading', '/kiln-board', '/firing', '/unloading'] },
-  { titleKey: 'commercialAndFinance', paths: ['/cashbook', '/roznamcha', '/khata', '/sales', '/peshgi', '/kharchi', '/inventory', '/parties', '/personal'] },
-  { titleKey: 'managementAndReports', paths: ['/reports', '/insights', '/weather', '/activity', '/workers', '/settings', '/corrections', '/audit-logs', '/users'] },
+  { titleKey: 'secToday', paths: ['/daily', '/attendance', '/weekly'] },
+  { titleKey: 'secKiln', paths: ['/kiln-board', '/firing', '/moulding', '/loading', '/unloading'] },
+  { titleKey: 'secPeople', paths: ['/workers', '/khata', '/kharchi', '/peshgi'] },
+  { titleKey: 'secMoney', paths: ['/cashbook', '/sales', '/inventory', '/parties', '/personal'] },
+  { titleKey: 'secReports', paths: ['/insights', '/reports', '/roznamcha', '/health'] },
+  { titleKey: 'more', more: true, paths: ['/weather', '/activity', '/audit-logs', '/corrections', '/settings', '/users'] },
 ];
 
 export default function Home({ links = [] }) {
@@ -24,7 +28,7 @@ export default function Home({ links = [] }) {
         const items = g.paths.map((p) => visible.find((l) => l.to === p)).filter(Boolean);
         if (!items.length) return null;
         return (
-          <section key={g.titleKey} className="grid gap-3 rounded-lg bg-white p-3.5 ring-1 ring-n-200" aria-label={t[g.titleKey]}>
+          <Wrap more={g.more} label={t[g.titleKey]} key={g.titleKey}><section className="grid gap-3 rounded-lg bg-white p-3.5 ring-1 ring-n-200" aria-label={t[g.titleKey]}>
             <SectionTitle>{t[g.titleKey]}</SectionTitle>
             {/* the full name always shows: it wraps to a second line instead of being cut */}
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
@@ -40,9 +44,20 @@ export default function Home({ links = [] }) {
                 </Link>
               ))}
             </div>
-          </section>
+          </section></Wrap>
         );
       })}
     </div>
+  );
+}
+
+// "More" opens on tap so Home stays short
+function Wrap({ more, label, children }) {
+  if (!more) return children;
+  return (
+    <details className="group">
+      <summary className="mx-auto w-fit cursor-pointer list-none rounded-full bg-white px-4 py-2 text-sm font-bold text-n-700 ring-1 ring-n-200">{label} ▾</summary>
+      <div className="mt-3">{children}</div>
+    </details>
   );
 }

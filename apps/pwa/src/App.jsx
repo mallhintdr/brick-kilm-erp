@@ -26,6 +26,7 @@ import Khata from './pages/Khata.jsx';
 import Roznamcha from './pages/Roznamcha.jsx';
 import DailyEntry from './pages/DailyEntry.jsx';
 import Weekly from './pages/Weekly.jsx';
+import Health from './pages/Health.jsx';
 import { QuickEntryHost, QuickAddFab } from './components/QuickEntry.jsx';
 import Attendance from './pages/Attendance.jsx';
 import Corrections from './pages/Corrections.jsx';
@@ -161,6 +162,7 @@ const ROW_2_LINKS = [
   { to: '/khata', icon: 'kharchi', color: '#9333ea', labelKey: 'khataTitle' },
   { to: '/roznamcha', icon: 'reports', color: '#0f766e', labelKey: 'roznamcha' },
   { to: '/daily', icon: 'reports', color: '#ea580c', labelKey: 'dailyEntry' },
+  { to: '/health', icon: 'settings', color: '#dc2626', labelKey: 'healthCheck', roles: ['owner', 'accountant'] },
   { to: '/weekly', icon: 'board', color: '#0891b2', labelKey: 'weeklyEntry' },
   { to: '/attendance', icon: 'workers', color: '#16a34a', labelKey: 'attendance' },
   { to: '/corrections', icon: 'settings', color: '#dc2626', labelKey: 'corrections', roles: ['owner'] },
@@ -310,6 +312,7 @@ export default function App() {
         <Route path="/roznamcha" element={guard(<Roznamcha />)} />
         <Route path="/daily" element={guard(<DailyEntry />)} />
         <Route path="/weekly" element={guard(<Weekly />)} />
+        <Route path="/health" element={guard(<Health />)} />
         <Route path="/attendance" element={guard(<Attendance />)} />
         <Route path="/corrections" element={guard(<Corrections />)} />
         <Route path="/personal" element={guard(<PersonalFinance />)} />

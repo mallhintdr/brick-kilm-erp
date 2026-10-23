@@ -5,7 +5,7 @@ import TypesManager from '../components/TypesManager.jsx';
 import DeleteButton from '../components/DeleteButton.jsx';
 import LocationPicker from '../components/LocationPicker.jsx';
 import { useTypes, typeLabel } from '../useTypes.js';
-import { Card, CardHeader, CardBody, Field, Input, FormGrid, Button, Alert, Muted } from '../components/ui.jsx';
+import { Card, CardHeader, CardBody, Field, Input, FormGrid, Button, Alert, Muted, toast } from '../components/ui.jsx';
 import { MapPin } from 'lucide-react';
 
 const KEYS = [
@@ -63,6 +63,7 @@ export default function Settings() {
         </CardBody>
       </Card>
 
+      <GovRates t={t} isOwner={isOwner} vals={vals} onSaved={(k, v) => setVals((x) => ({ ...x, [k]: v }))} />
       <OpeningStock t={t} isOwner={isOwner} />
       <KilnLocation t={t} isOwner={isOwner} vals={vals} onSaved={(v) => setVals((x) => ({ ...x, ...v }))} />
       <TypesManager isOwner={isOwner} />
@@ -180,6 +181,33 @@ function OpeningStock({ t, isOwner }) {
         </FormGrid>
         {isOwner && <Button onClick={save} className="justify-self-center sm:min-w-40">{t.save}</Button>}
         {msg.text && <Alert tone={msg.bad ? 'err' : 'ok'}>{msg.text}</Alert>}
+      </CardBody>
+    </Card>
+  );
+}
+
+// Government-notified piece rates (per 1,000 bricks). Kept for reference only: the check against
+// workers' rates is switched off for now (the switch is shown but disabled).
+function GovRates({ t, isOwner, vals, onSaved }) {
+  const [v, setV] = useState({});
+  useEffect(() => { setV({ govRatePathera: vals.govRatePathera || '', govRateBharai: vals.govRateBharai || '', govRateNikasi: vals.govRateNikasi || '' }); }, [vals.govRatePathera, vals.govRateBharai, vals.govRateNikasi]);
+  async function save() {
+    try { for (const k of Object.keys(v)) { await put('/settings', { key: k, value: v[k] || '' }); onSaved(k, v[k]); } toast(t.savedOk); } catch (e) { toast(e.message, 'err'); }
+  }
+  return (
+    <Card>
+      <CardHeader title={t.govRates} />
+      <CardBody>
+        <Muted>{t.govRatesNote}</Muted>
+        <FormGrid className="lg:grid-cols-3">
+          {[['govRatePathera', t.moulding], ['govRateBharai', t.loadingBharai], ['govRateNikasi', t.unloadingNikasi]].map(([k, label]) => (
+            <Field key={k} label={label}><Input inputMode="decimal" disabled={!isOwner} value={v[k] ?? ''} onChange={(e) => setV({ ...v, [k]: e.target.value.replace(/[^\d.]/g, '') })} /></Field>
+          ))}
+        </FormGrid>
+        <label className="flex items-center justify-center gap-2 text-sm text-n-500">
+          <input type="checkbox" disabled checked={false} readOnly className="size-4 min-h-0" /> {t.govRateCheck}
+        </label>
+        {isOwner && <Button className="justify-self-center sm:min-w-40" onClick={save}>{t.save}</Button>}
       </CardBody>
     </Card>
   );

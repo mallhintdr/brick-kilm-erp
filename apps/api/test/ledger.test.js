@@ -920,3 +920,9 @@ test('party accounts pick up purchases entered before they existed', async () =>
   assert.equal(rows.length, 1); assert.equal(rows[0].amount, 6000);
   await testDb.collection('grns').deleteOne({ _id: insertedId });
 });
+
+test('health check lists problems', async () => {
+  const r = await api('GET', '/health');
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.ok(Array.isArray(r.body.issues));
+});
