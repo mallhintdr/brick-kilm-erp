@@ -1,3 +1,4 @@
+import { syncGrnToParty } from './personal.js';
 import { ObjectId } from 'mongodb';
 import {
   workerUpdate, mouldingUpdate, firingUpdate, customerUpdate, grnUpdate, invoiceUpdate, paymentUpdate, expenseUpdate, advanceUpdate,
@@ -87,6 +88,7 @@ export function registerEditRoutes(app, db) {
         { $set: { amount: landedTotal, payee: patch.supplierName ?? g.supplierName } }, { session },
       );
     }
+    await syncGrnToParty(db, session, req.user, { ...g, ...patch, qty, rate, freight, landedTotal });
     return { ...patch, qty, rate, freight, landedTotal, landedUnitCost };
   });
 

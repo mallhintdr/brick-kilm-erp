@@ -7,7 +7,7 @@ import { SectionTitle } from '../components/ui.jsx';
 
 const GROUPS = [
   { titleKey: 'dailyOps', paths: ['/daily', '/weekly', '/attendance', '/moulding', '/loading', '/kiln-board', '/firing', '/unloading'] },
-  { titleKey: 'commercialAndFinance', paths: ['/cashbook', '/roznamcha', '/khata', '/sales', '/peshgi', '/kharchi', '/inventory', '/personal'] },
+  { titleKey: 'commercialAndFinance', paths: ['/cashbook', '/roznamcha', '/khata', '/sales', '/peshgi', '/kharchi', '/inventory', '/parties', '/personal'] },
   { titleKey: 'managementAndReports', paths: ['/reports', '/insights', '/weather', '/activity', '/workers', '/settings', '/corrections', '/audit-logs', '/users'] },
 ];
 

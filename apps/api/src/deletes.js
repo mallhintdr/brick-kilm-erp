@@ -1,3 +1,4 @@
+import { syncGrnToParty } from './personal.js';
 import { ObjectId } from 'mongodb';
 import { SETTING_KEYS } from '@kiln/shared';
 import { withTransaction } from './db.js';
@@ -62,6 +63,7 @@ export function registerDeleteRoutes(app, db) {
 
   deleter('/grns/:id', 'grns', 'grn.delete', async (g, session, req) => {
     if (g.expenseId) await db.collection('expenses').deleteOne({ _id: g.expenseId, ...scope(req.user) }, { session });
+    await syncGrnToParty(db, session, req.user, { _id: g._id, deleted: true });
     return { expenseRemoved: !!g.expenseId };
   });
 

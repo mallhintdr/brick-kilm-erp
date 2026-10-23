@@ -892,3 +892,31 @@ test('insights summary for a period (one completed day)', async () => {
   assert.ok(one.body.moulded <= all.moulded);
   assert.equal(one.body.receivablesOutstanding, all.receivablesOutstanding); // always to date
 });
+
+test('party accounts: a purchase posts to the supplier, payments reduce it, edits and deletes follow', async () => {
+  const sup = `Coal Party ${Date.now()}`;
+  const g = await api('POST', '/grns', { item: 'coal', supplierName: sup, qty: '10', rate: '30000', freight: '5000', date: '2026-10-10', clientUuid: randomUUID() });
+  assert.equal(g.status, 201, JSON.stringify(g.body));
+  let rows = (await api('GET', `/parties?party=${encodeURIComponent(sup)}`)).body;
+  assert.equal(rows.length, 1); assert.equal(rows[0].amount, 305000); assert.equal(rows[0].direction, 'in');
+  assert.equal((await api('POST', '/parties', { date: '2026-10-12', party: sup, type: 'payment', direction: 'out', amount: 100000 }, 'munshi')).status, 201);
+  rows = (await api('GET', `/parties?party=${encodeURIComponent(sup)}`)).body;
+  assert.equal(rows.reduce((a, r) => a + (r.direction === 'in' ? r.amount : -r.amount), 0), 205000);
+  const grn = (await api('GET', '/grns')).body.find((x) => x.supplierName === sup);
+  assert.equal((await api('PUT', `/grns/${grn._id}`, { qty: 5 })).status, 200);
+  rows = (await api('GET', `/parties?party=${encodeURIComponent(sup)}`)).body;
+  assert.equal(rows.find((r) => r.type === 'purchase').amount, 155000);
+  assert.equal((await api('DELETE', `/grns/${grn._id}`)).status, 200);
+  rows = (await api('GET', `/parties?party=${encodeURIComponent(sup)}`)).body;
+  assert.equal(rows.length, 1); // only the payment is left
+  // the personal book is separate and owner-only
+  assert.equal((await api('GET', '/personal', null, 'munshi')).status, 403);
+  assert.ok(!(await api('GET', '/personal')).body.some((r) => r.party === sup));
+});
+
+test('party accounts pick up purchases entered before they existed', async () => {
+  const { insertedId } = await testDb.collection('grns').insertOne({ tenantId: ctx.tenantId, kilnId: ctx.kilnId, item: 'soil', supplierName: 'Old Soil Party', qty: 3, rate: '2000', freight: '0', landedTotal: '6000.00', date: new Date('2026-09-01T07:00:00Z') });
+  const rows = (await api('GET', '/parties?party=Old%20Soil%20Party')).body;
+  assert.equal(rows.length, 1); assert.equal(rows[0].amount, 6000);
+  await testDb.collection('grns').deleteOne({ _id: insertedId });
+});

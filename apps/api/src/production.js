@@ -1,3 +1,4 @@
+import { syncGrnToParty } from './personal.js';
 import { ObjectId } from 'mongodb';
 import { z } from 'zod';
 import {
@@ -709,10 +710,11 @@ export function registerProductionRoutes(app, db) {
     const at = entryAt(b.date);
     await withTransaction(db, async (session) => {
       const exp = await db.collection('expenses').insertOne({ ...scope(req.user), category: b.item, amount: landedTotal, payee: b.supplierName, date: at }, { session });
-      await db.collection('grns').insertOne({
+      const grn = await db.collection('grns').insertOne({
         ...scope(req.user), item: b.item, supplierName: b.supplierName, vehicleNo: b.vehicleNo, description: b.description || '',
         qty: b.qty, rate: b.rate, freight, landedTotal, landedUnitCost, labFields: b.labFields ?? {}, date: at, expenseId: exp.insertedId,
       }, { session });
+      await syncGrnToParty(db, session, req.user, await db.collection('grns').findOne({ _id: grn.insertedId }, { session }));
       await audit(db, session, req.user, 'grn.create', b);
     });
     res.status(201).json({ ok: true, landedUnitCost });

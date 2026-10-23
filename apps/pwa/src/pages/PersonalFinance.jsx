@@ -10,11 +10,16 @@ import { FileDown, Pencil, Plus } from 'lucide-react';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const TYPES = ['borrowed', 'loanGiven', 'repaymentIn', 'repaymentOut', 'cashGiven', 'expense', 'income', 'other'];
+// Party accounts (mistri, tractor, coal supplier…): in = owed to them, out = paid to them
+const PARTY_TYPES = ['workBill', 'purchase', 'serviceCharge', 'payment', 'advance', 'other'];
+const PARTY_DIR = { workBill: 'in', purchase: 'in', serviceCharge: 'in', payment: 'out', advance: 'out', other: 'out' };
 // usual direction for each type (it can still be changed)
 const DIR = { borrowed: 'in', loanGiven: 'out', repaymentIn: 'in', repaymentOut: 'out', cashGiven: 'out', expense: 'out', income: 'in', other: 'out' };
 const MODES = ['cash', 'account', 'jazzcash', 'easypaisa', 'other'];
 const rs = (n) => Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
-const blank = () => ({ date: today(), party: '', type: 'expense', direction: 'out', amount: '', mode: 'cash', note: '' });
+const blank = (t) => (t?.__base === '/parties'
+  ? { date: today(), party: '', type: 'workBill', direction: 'in', amount: '', mode: 'cash', note: '' }
+  : { date: today(), party: '', type: 'expense', direction: 'out', amount: '', mode: 'cash', note: '' });
 const sum = (list, d) => list.filter((r) => r.direction === d).reduce((a, r) => a + r.amount, 0);
 const signed = (r) => (r.direction === 'in' ? r.amount : -r.amount);
 const balCls = (v) => (v < 0 ? 'text-loss' : 'text-gain');
@@ -43,15 +48,20 @@ function NameBox({ value, onChange, names, t, required, compact }) {
 }
 
 // Owner's personal finances (borrowing, cash given, daily expenses...). Owner only.
-export default function PersonalFinance() {
-  const t = useT();
+// book "personal": the owner's own money; book "parties": the kiln's accounts with other people
+export default function PersonalFinance({ book = 'personal' }) {
+  const tt = useT();
+  const parties_ = book === 'parties';
+  const t = useMemo(() => (parties_
+    ? { ...tt, pfIn: tt.ptIn, pfOut: tt.ptOut, pfParty: tt.ptParty, __types: PARTY_TYPES, __dir: PARTY_DIR, __base: '/parties', __tp: 'pt_' }
+    : { ...tt, __types: TYPES, __dir: DIR, __base: '/personal', __tp: 'pf_' }), [tt, parties_]);
   const [view, setView] = useState('home'); // home | add | list | report
   const [rows, setRows] = useState([]);
   const [msg, setMsg] = useState({ text: '', bad: false });
-  const load = () => get('/personal').then(setRows).catch((e) => setMsg({ text: e.message, bad: true }));
+  const load = () => get(t.__base).then(setRows).catch((e) => setMsg({ text: e.message, bad: true }));
   useEffect(() => { load(); }, []);
   const parties = useMemo(() => [...new Set(rows.map((r) => r.party))].sort((a, b) => a.localeCompare(b)), [rows]);
-  const typeText = (k) => t[`pf_${k}`] || k;
+  const typeText = (k) => t[`${t.__tp}${k}`] || t[`pf_${k}`] || k;
   const modeText = (m) => t[`pm_${m || 'cash'}`];
 
   return (
@@ -77,11 +87,11 @@ function PfHome({ t, rows, parties }) {
     <Card className="grid gap-4 p-4">
       <Section title={t.pfSummary}>
         <StatGrid className="sm:grid-cols-3 lg:grid-cols-5">
-          <StatCard label={t.pfTotalIn} value={rs(allIn)} tone="green" />
-          <StatCard label={t.pfTotalOut} value={rs(allOut)} tone="red" />
-          <StatCard label={t.balance} value={rs(allIn - allOut)} tone={allIn - allOut < 0 ? 'red' : 'teal'} />
-          <StatCard label={t.pfEntries} value={rows.length} tone="blue" />
-          <StatCard label={t.pfPeople} value={parties.length} tone="violet" />
+          <StatCard compact label={t.pfTotalIn} value={rs(allIn)} tone="green" />
+          <StatCard compact label={t.pfTotalOut} value={rs(allOut)} tone="red" />
+          <StatCard compact label={t.balance} value={rs(allIn - allOut)} tone={allIn - allOut < 0 ? 'red' : 'teal'} />
+          <StatCard compact label={t.pfEntries} value={rows.length} tone="blue" />
+          <StatCard compact label={t.pfPeople} value={parties.length} tone="violet" />
         </StatGrid>
       </Section>
       <Section title={t.pfPersonSummary}>
@@ -91,10 +101,10 @@ function PfHome({ t, rows, parties }) {
         </Select>
         {person && (
           <StatGrid className="sm:grid-cols-4 lg:grid-cols-4">
-            <StatCard label={t.pfTotalIn} value={rs(pIn)} tone="green" />
-            <StatCard label={t.pfTotalOut} value={rs(pOut)} tone="red" />
-            <StatCard label={t.balance} value={rs(pIn - pOut)} tone={pIn - pOut < 0 ? 'red' : 'teal'} />
-            <StatCard label={t.pfLastEntry} value={pRows.length ? fmtDate(pRows[pRows.length - 1].date) : '—'} tone="blue" />
+            <StatCard compact label={t.pfTotalIn} value={rs(pIn)} tone="green" />
+            <StatCard compact label={t.pfTotalOut} value={rs(pOut)} tone="red" />
+            <StatCard compact label={t.balance} value={rs(pIn - pOut)} tone={pIn - pOut < 0 ? 'red' : 'teal'} />
+            <StatCard compact label={t.pfLastEntry} value={pRows.length ? fmtDate(pRows[pRows.length - 1].date) : '—'} tone="blue" />
           </StatGrid>
         )}
       </Section>
@@ -104,12 +114,12 @@ function PfHome({ t, rows, parties }) {
 
 // ---- Add ----
 function PfAdd({ t, parties, typeText, onSaved, onError }) {
-  const [f, setF] = useState(blank());
+  const [f, setF] = useState(blank(t));
   async function submit(e) {
     e.preventDefault();
     try {
-      await post('/personal', { ...f, amount: Number(f.amount) });
-      setF({ ...blank(), date: f.date });
+      await post(t.__base, { ...f, amount: Number(f.amount) });
+      setF({ ...blank(t), date: f.date });
       onSaved();
     } catch (e2) { onError(e2.message); }
   }
@@ -122,8 +132,8 @@ function PfAdd({ t, parties, typeText, onSaved, onError }) {
             <Field label={t.date}><Input type="date" required max={today()} value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></Field>
             <Field label={t.pfName}><NameBox required value={f.party} onChange={(v) => setF({ ...f, party: v })} names={parties} t={t} /></Field>
             <Field label={t.pfType}>
-              <Select value={f.type} onChange={(e) => setF({ ...f, type: e.target.value, direction: DIR[e.target.value] })}>
-                {TYPES.map((k) => <option key={k} value={k}>{typeText(k)}</option>)}
+              <Select value={f.type} onChange={(e) => setF({ ...f, type: e.target.value, direction: t.__dir[e.target.value] })}>
+                {t.__types.map((k) => <option key={k} value={k}>{typeText(k)}</option>)}
               </Select>
             </Field>
             <Field label={t.pfDirection}>
@@ -161,13 +171,13 @@ function PfList({ t, rows, parties, typeText, modeText, reload, setMsg }) {
 
   async function save() {
     try {
-      await put(`/personal/${edit._id}`, { date: edit.date, party: edit.party, type: edit.type, direction: edit.direction, amount: Number(edit.amount), mode: edit.mode, note: edit.note });
+      await put(`${t.__base}/${edit._id}`, { date: edit.date, party: edit.party, type: edit.type, direction: edit.direction, amount: Number(edit.amount), mode: edit.mode, note: edit.note });
       setEdit(null); setMsg({ text: t.savedOk, bad: false }); reload();
     } catch (e) { setMsg({ text: e.message, bad: true }); }
   }
   async function remove(r) {
     if (!window.confirm(`${t.confirmDelete}: ${r.party} — ${rs(r.amount)}?`)) return;
-    try { await del(`/personal/${r._id}`); reload(); } catch (e) { setMsg({ text: e.message, bad: true }); }
+    try { await del(`${t.__base}/${r._id}`); reload(); } catch (e) { setMsg({ text: e.message, bad: true }); }
   }
   const E = (k) => ({ value: edit[k] ?? '', onChange: (e) => setEdit({ ...edit, [k]: e.target.value }) });
   const fsel = (k, opts, label) => (
@@ -206,7 +216,7 @@ function PfList({ t, rows, parties, typeText, modeText, reload, setMsg }) {
                 <tr key={r._id} ref={editRow} className="bg-amber-50 *:bg-inherit">
                   <td className={tbl.td}><input type="date" className={tbl.cell} max={today()} {...E('date')} /></td>
                   <td className={tbl.td}><NameBox compact value={edit.party} onChange={(v) => setEdit({ ...edit, party: v })} names={parties} t={t} /></td>
-                  <td className={tbl.td}><select className={tbl.cell} value={edit.type} onChange={(e) => setEdit({ ...edit, type: e.target.value, direction: DIR[e.target.value] })}>{TYPES.map((k) => <option key={k} value={k}>{typeText(k)}</option>)}</select></td>
+                  <td className={tbl.td}><select className={tbl.cell} value={edit.type} onChange={(e) => setEdit({ ...edit, type: e.target.value, direction: t.__dir[e.target.value] })}>{t.__types.map((k) => <option key={k} value={k}>{typeText(k)}</option>)}</select></td>
                   <td className={tbl.td}><select className={tbl.cell} {...E('mode')}>{MODES.map((m) => <option key={m} value={m}>{t[`pm_${m}`]}</option>)}</select></td>
                   <td colSpan={2} className={tbl.td}>
                     <div className="grid gap-1">

@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Users, BookOpen, ArrowLeft } from 'lucide-react';
 import { useT } from '../i18n.js';
 import { get, fmtDate } from '../api.js';
 import SearchSelect from '../components/SearchSelect.jsx';
@@ -27,9 +29,30 @@ export default function Khata() {
   const has = (v, q) => !q || String(v ?? '').toLowerCase().includes(q.toLowerCase());
   const rows = (khata?.rows || []).filter((r) => has(fmtDate(r.at), lf.date) && has(r.detail, lf.detail) && has(r.naam, lf.naam) && has(r.jama, lf.jama));
   const bal = khata?.totals.balance || 0;
+  const [view, setView] = useState('');
+
+  // first screen: two boxes — every worker's khata, or every other khata (mistri, tractor, coal, soil, buyers…)
+  if (!view) {
+    const box = 'flex min-h-36 flex-col items-center justify-center gap-3 rounded-2xl p-5 text-center no-underline ring-1 transition hover:-translate-y-0.5';
+    return (
+      <div className="grid gap-3 sm:grid-cols-2">
+        <button type="button" onClick={() => setView('workers')} className={`${box} border-0 bg-orange-50 text-n-900 ring-orange-200`}>
+          <span className="grid size-14 place-items-center rounded-2xl bg-brand-600 text-white"><Users className="size-7" aria-hidden="true" /></span>
+          <strong className="text-lg">{t.workerKhata}</strong>
+          <span className="text-sm text-n-600">{t.workerKhataHint}</span>
+        </button>
+        <Link to="/parties" className={`${box} bg-teal-50 text-n-900 ring-teal-200`}>
+          <span className="grid size-14 place-items-center rounded-2xl bg-teal-600 text-white"><BookOpen className="size-7" aria-hidden="true" /></span>
+          <strong className="text-lg">{t.partyAccounts}</strong>
+          <span className="text-sm text-n-600">{t.partyKhataHint}</span>
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-4">
+      <button type="button" onClick={() => setView('')} className="inline-flex w-fit items-center gap-1.5 border-0 bg-transparent p-0 text-md font-semibold text-brand-700"><ArrowLeft className="size-4 rtl:rotate-180" />{t.khataTitle}</button>
       <Card>
         <CardHeader title={t.khataTitle} />
         <CardBody>
