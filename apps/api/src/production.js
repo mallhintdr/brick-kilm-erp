@@ -1048,7 +1048,16 @@ export function registerProductionRoutes(app, db) {
       totalIn: totalIn.toFixed(2),
       totalOut: totalOut.toFixed(2),
       closingCash: (openingCash + totalIn - totalOut).toFixed(2),
+      counted: (await db.collection('cashCounts').findOne({ ...s, date: dateStr }))?.amount ?? null,
       income, expense,
     });
+  }));
+
+  // cash actually counted at the end of a day; the cash book shows the difference with its closing figure
+  app.put('/cash-count', auth('owner', 'accountant', 'munshi'), wrap(async (req, res) => {
+    const b = z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), amount: z.coerce.number().min(0) }).parse(req.body);
+    await db.collection('cashCounts').updateOne({ ...scope(req.user), date: b.date }, { $set: { amount: b.amount, by: req.user.sub, at: new Date() } }, { upsert: true });
+    await audit(db, undefined, req.user, 'cash.count', b);
+    res.json({ ok: true });
   }));
 }

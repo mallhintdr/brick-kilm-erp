@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useT } from '../i18n.js';
-import { get, fmtDate, fmtDateTime, getRole } from '../api.js';
+import { get, put, fmtDate, fmtDateTime, getRole } from '../api.js';
 import DateTime from '../components/DateTime.jsx';
 import RowActions, { useRowEdit } from '../components/RowActions.jsx';
-import { Card, CardBody, Input, Button, Alert, Section, StatGrid, StatCard, Badge, TableCard, tbl, FilterInput, ClearFilters, Empty, cx } from '../components/ui.jsx';
+import { Card, CardBody, Field, Input, MoneyInput, Button, Alert, Section, StatGrid, StatCard, Badge, TableCard, tbl, FilterInput, ClearFilters, Empty, toast, cx } from '../components/ui.jsx';
 
 const EDIT_PATH = { payment: 'payments', expense: 'expenses', advance: 'advances' };
 const today = () => new Date().toISOString().slice(0, 10);
@@ -63,6 +63,7 @@ export default function CashBook() {
                 <StatCard label={t.closingCash} value={n(book.closingCash)} tone="orange" />
               </StatGrid>
             </Section>
+            <CashCount t={t} date={date} book={book} reload={load} />
           </Card>
 
           <CashTable t={t} title={t.incomeDetails} rows={book.income} sign="+" total={book.totalIn} editor={editor} canEdit={canEdit} setMsg={setMsg} reload={load} />
@@ -133,5 +134,28 @@ function CashTable({ t, title, rows, sign, total, editor, canEdit, setMsg, reloa
         </tbody>
       </table>
     </TableCard>
+  );
+}
+
+// count the cash in hand and compare with the book; a difference shows in red
+function CashCount({ t, date, book, reload }) {
+  const [v, setV] = useState('');
+  useEffect(() => { setV(book.counted != null ? String(book.counted) : ''); }, [book.counted, date]);
+  const diff = book.counted != null ? Number(book.counted) - Number(book.closingCash) : null;
+  async function save() {
+    try { await put('/cash-count', { date, amount: Number(v || 0) }); reload(); } catch (e) { toast(e.message, 'err'); }
+  }
+  return (
+    <Section title={t.cashCount}>
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2">
+        <Field label={t.cashCounted}><MoneyInput value={v} onChange={setV} /></Field>
+        <Button onClick={save} disabled={v === ''}>{t.save}</Button>
+      </div>
+      {diff != null && (
+        <p className={`m-0 rounded-md px-3 py-2 text-center text-md font-semibold ${Math.abs(diff) < 1 ? 'bg-green-50 text-gain' : 'bg-red-50 text-loss'}`}>
+          {Math.abs(diff) < 1 ? t.cashMatches : `${t.cashDifference}: ${diff > 0 ? '+' : ''}${n(diff)}`}
+        </p>
+      )}
+    </Section>
   );
 }
