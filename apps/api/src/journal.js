@@ -179,6 +179,53 @@ export function registerJournalRoutes(app, db) {
     if (grns) add('warn', 'hcNoSupplier', String(grns), '/inventory');
     res.json({ issues, checkedAt: new Date() });
   }));
+
+  // ---- Owner summary: Thursday cash needed, jamadar groups, what we owe, cost per 1,000 bricks ----
+  app.get('/owner-summary', auth('owner', 'accountant'), wrap(async (req, res) => {
+    const s = scope(req.user);
+    const PK = 5 * 3600e3; const DAY = 864e5;
+    const pkNow = new Date(Date.now() + PK);
+    const weekStart = new Date(Date.UTC(pkNow.getUTCFullYear(), pkNow.getUTCMonth(), pkNow.getUTCDate()) - PK - ((pkNow.getUTCDay() + 1) % 7) * DAY);
+    const since30 = new Date(Date.now() - 30 * DAY);
+    const [workers, earn, dasti, peshgi, parties, unload30, earn30, exp30] = await Promise.all([
+      db.collection('workers').find(s, { projection: { name: 1, category: 1, reference: 1, status: 1 } }).toArray(),
+      db.collection('ledgerEntries').aggregate([{ $match: { ...s, account: 'earnings', type: { $ne: 'kharchi_paid' }, createdAt: { $gte: weekStart } } },
+        { $group: { _id: '$partyId', d: { $sum: { $toDouble: '$debit' } }, c: { $sum: { $toDouble: '$credit' } } } }]).toArray(),
+      db.collection('kharchaEntries').aggregate([{ $match: { ...s, date: { $gte: weekStart } } }, { $group: { _id: '$workerId', amt: { $sum: { $toDouble: '$amount' } } } }]).toArray(),
+      db.collection('ledgerEntries').aggregate([{ $match: { ...s, account: 'peshgi' } }, { $group: { _id: '$partyId', d: { $sum: { $toDouble: '$debit' } }, c: { $sum: { $toDouble: '$credit' } } } }]).toArray(),
+      db.collection('personalEntries').aggregate([{ $match: { ...s, book: 'parties' } }, { $group: { _id: '$party', bal: { $sum: { $cond: [{ $eq: ['$direction', 'in'] }, '$amount', { $multiply: ['$amount', -1] }] } }, last: { $max: '$date' } } }]).toArray(),
+      db.collection('unloadings').aggregate([{ $match: { ...s, date: { $gte: since30 } } }, { $group: { _id: null, b: { $sum: { $add: [{ $ifNull: ['$awwal', 0] }, { $ifNull: ['$doem', 0] }, { $ifNull: ['$khangar', 0] }] } } } }]).toArray(),
+      db.collection('ledgerEntries').aggregate([{ $match: { ...s, account: 'earnings', type: { $ne: 'kharchi_paid' }, createdAt: { $gte: since30 } } }, { $group: { _id: null, d: { $sum: { $toDouble: '$debit' } }, c: { $sum: { $toDouble: '$credit' } } } }]).toArray(),
+      db.collection('expenses').aggregate([{ $match: { ...s, date: { $gte: since30 } } }, { $group: { _id: '$category', amt: { $sum: { $toDouble: '$amount' } } } }]).toArray(),
+    ]);
+    const W = Object.fromEntries(workers.map((w) => [String(w._id), w]));
+    const D = Object.fromEntries(dasti.map((x) => [String(x._id), x.amt]));
+    const P = Object.fromEntries(peshgi.map((x) => [String(x._id), x.d - x.c]));
+    // Thursday: this week's wages earned, less dasti already taken (peshgi cut is applied at settlement)
+    const pay = earn.map((e) => ({ workerId: e._id, name: W[e._id]?.name || '—', category: W[e._id]?.category, earned: e.d - e.c, dasti: D[e._id] || 0 }))
+      .map((r) => ({ ...r, cash: Math.max(0, r.earned - r.dasti) })).filter((r) => r.earned > 0).sort((a, b) => b.cash - a.cash);
+    // jamadar / reference groups with their peshgi
+    const groups = {};
+    for (const w of workers) {
+      const k = (w.reference || '').trim() || '—';
+      groups[k] ||= { jamadar: k, workers: 0, peshgi: 0 };
+      groups[k].workers += 1; groups[k].peshgi += P[String(w._id)] || 0;
+    }
+    // workers who left or are inactive but still owe peshgi
+    const leftOwing = workers.filter((w) => w.status === 'inactive' && (P[String(w._id)] || 0) > 0).map((w) => ({ name: w.name, peshgi: P[String(w._id)] }));
+    const bricks = unload30[0]?.b || 0;
+    const labour = (earn30[0]?.d || 0) - (earn30[0]?.c || 0);
+    const expenses = exp30.reduce((a, x) => a + x.amt, 0);
+    res.json({
+      weekStart,
+      payroll: { rows: pay, earned: pay.reduce((a, r) => a + r.earned, 0), dasti: pay.reduce((a, r) => a + r.dasti, 0), cash: pay.reduce((a, r) => a + r.cash, 0) },
+      jamadars: Object.values(groups).sort((a, b) => b.peshgi - a.peshgi),
+      payables: parties.filter((p) => Math.abs(p.bal) > 0.5).map((p) => ({ party: p._id, balance: +p.bal.toFixed(2), last: p.last })).sort((a, b) => b.balance - a.balance),
+      leftOwing,
+      cost30: { bricks, labour: +labour.toFixed(2), expenses: +expenses.toFixed(2), byCategory: exp30.map((x) => ({ category: x._id, amount: +x.amt.toFixed(2) })),
+        per1000: bricks ? +(((labour + expenses) / bricks) * 1000).toFixed(0) : 0 },
+    });
+  }));
 }
 
 // call another route of this server with the same login (keeps the stock maths in one place)

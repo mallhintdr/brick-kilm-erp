@@ -940,3 +940,10 @@ test('bookings: advance shows as payment, deliveries reduce what is left, challa
   const one = (await api('GET', `/invoices/${inv.body.id}`)).body;
   assert.equal(one.vehicleNo, 'LES-123'); assert.ok(one.challanNo > 0);
 });
+
+test('owner summary: payroll, jamadars, payables, cost per 1000', async () => {
+  const r = await api('GET', '/owner-summary');
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  for (const k of ['payroll', 'jamadars', 'payables', 'cost30']) assert.ok(k in r.body, k);
+  assert.equal((await api('GET', '/owner-summary', null, 'munshi')).status, 403);
+});

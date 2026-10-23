@@ -11,7 +11,7 @@ const GROUPS = [
   { titleKey: 'secKiln', paths: ['/kiln-board', '/firing', '/moulding', '/loading', '/unloading'] },
   { titleKey: 'secPeople', paths: ['/workers', '/khata', '/kharchi', '/peshgi'] },
   { titleKey: 'secMoney', paths: ['/cashbook', '/sales', '/inventory', '/parties', '/personal'] },
-  { titleKey: 'secReports', paths: ['/insights', '/reports', '/roznamcha', '/health'] },
+  { titleKey: 'secReports', paths: ['/owner', '/insights', '/reports', '/roznamcha', '/health'] },
   { titleKey: 'more', more: true, paths: ['/weather', '/activity', '/audit-logs', '/corrections', '/settings', '/users'] },
 ];
 
