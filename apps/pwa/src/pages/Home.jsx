@@ -12,7 +12,7 @@ const GROUPS = [
   { titleKey: 'secPeople', paths: ['/workers', '/khata', '/kharchi', '/peshgi'] },
   { titleKey: 'secMoney', paths: ['/cashbook', '/sales', '/inventory', '/parties', '/personal'] },
   { titleKey: 'secReports', paths: ['/owner', '/insights', '/reports', '/roznamcha', '/health'] },
-  { titleKey: 'more', more: true, paths: ['/weather', '/activity', '/audit-logs', '/corrections', '/settings', '/users'] },
+  { titleKey: 'more', more: true, paths: ['/help', '/weather', '/activity', '/audit-logs', '/corrections', '/settings', '/users'] },
 ];
 
 export default function Home({ links = [] }) {

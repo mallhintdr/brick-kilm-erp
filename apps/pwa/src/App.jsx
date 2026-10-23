@@ -36,7 +36,7 @@ import PersonalFinance from './pages/PersonalFinance.jsx';
 import PrintWorkerSlip from './pages/PrintWorkerSlip.jsx';
 import PrintKharchiSlip from './pages/PrintKharchiSlip.jsx';
 import { Toaster } from './components/ui.jsx';
-import { Moon, Sun } from 'lucide-react';
+import { Moon, Sun, HelpCircle } from 'lucide-react';
 
 // Crisp, high-precision SVG icons tailored for Kiln Operations ERP
 const ICONS = {
@@ -164,6 +164,7 @@ const ROW_2_LINKS = [
   { to: '/khata', icon: 'kharchi', color: '#9333ea', labelKey: 'khataTitle' },
   { to: '/roznamcha', icon: 'reports', color: '#0f766e', labelKey: 'roznamcha' },
   { to: '/daily', icon: 'reports', color: '#ea580c', labelKey: 'dailyEntry' },
+  { to: '/help', icon: 'reports', color: '#2563eb', labelKey: 'help' },
   { to: '/owner', icon: 'reports', color: '#0f766e', labelKey: 'ownerSummary', roles: ['owner', 'accountant'] },
   { to: '/health', icon: 'settings', color: '#dc2626', labelKey: 'healthCheck', roles: ['owner', 'accountant'] },
   { to: '/weekly', icon: 'board', color: '#0891b2', labelKey: 'weeklyEntry' },
@@ -226,6 +227,11 @@ function Shell({ children }) {
 
           <span className="flex-1" />
 
+          {/* help: the step-by-step guide, in the current language */}
+          <a href={lang === 'ur' ? '/guide-ur.html' : '/guide.html'} aria-label={t.help} title={t.help}
+            className="inline-flex size-10 min-h-10 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white no-underline ring-1 ring-white/20 hover:bg-white/20">
+            <HelpCircle className="size-5" aria-hidden="true" />
+          </a>
           {/* night mode: dark screens for night firing shifts */}
           <button type="button" onClick={toggleDark} aria-label={dark ? 'Light mode' : 'Night mode'} title={dark ? 'Light mode' : 'Night mode'}
             className="inline-flex size-10 min-h-10 shrink-0 items-center justify-center rounded-lg border-0 bg-white/10 p-0 text-white ring-1 ring-white/20 hover:bg-white/20">
@@ -312,6 +318,7 @@ export default function App() {
         <Route path="/home" element={guard(<Home links={homeLinks} />)} />
         <Route path="/kiln-board" element={guard(<KilnBoard />)} />
         <Route path="/weather" element={guard(<Weather />)} />
+        <Route path="/help" element={<GuideRedirect />} />
         <Route path="/khata" element={guard(<Khata />)} />
         <Route path="/roznamcha" element={guard(<Roznamcha />)} />
         <Route path="/daily" element={guard(<DailyEntry />)} />
@@ -342,4 +349,11 @@ export default function App() {
       </Routes>
     </LangContext.Provider>
   );
+}
+
+// /help opens the guide in the language the app is showing
+function GuideRedirect() {
+  const { lang } = useLang();
+  useEffect(() => { window.location.replace(lang === 'ur' ? '/guide-ur.html' : '/guide.html'); }, [lang]);
+  return null;
 }

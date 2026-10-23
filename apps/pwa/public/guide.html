@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bhatta Manager Guide</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: a guide book — sticky contents on the side (top on phones), lessons as numbered chapters with step lists */
+:root {
+  --bg: #f8f6f2; --paper: #ffffff; --ink: #1d1a17; --muted: #6b635b; --line: #e7e1d8;
+  --brick: #c2410c; --brick-soft: #fff1e6; --ok: #15803d; --ok-soft: #ecf8ef; --warn: #a16207; --warn-soft: #fdf6e3;
+  --display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+  --body: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #14110f; --paper: #1c1916; --ink: #f1ece6; --muted: #a89f95; --line: #332d28;
+  --brick: #fb8a4c; --brick-soft: #2a1b12; --ok: #4ade80; --ok-soft: #12271a; --warn: #fbbf24; --warn-soft: #2a2210; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #14110f; --paper: #1c1916; --ink: #f1ece6; --muted: #a89f95; --line: #332d28;
+  --brick: #fb8a4c; --brick-soft: #2a1b12; --ok: #4ade80; --ok-soft: #12271a; --warn: #fbbf24; --warn-soft: #2a2210; color-scheme: dark }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 400 17px/1.6 var(--body); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 80px;
+  display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 40px; align-items: start; }
+@media (max-width: 860px) { .wrap { grid-template-columns: minmax(0, 1fr); gap: 20px; } }
+
+header.hero { grid-column: 1 / -1; display: grid; gap: 10px; padding-bottom: 18px; border-bottom: 2px solid var(--ink); }
+.eyebrow { font: 600 13px var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--brick); }
+h1 { font: 800 clamp(34px, 6vw, 56px)/1.02 var(--display); margin: 0; text-wrap: balance; letter-spacing: -.01em; }
+.lede { margin: 0; max-width: 62ch; color: var(--muted); font-size: 19px; }
+.roles { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.roles span { font: 600 13px var(--body); padding: 4px 10px; border-radius: 6px; background: var(--paper); border: 1px solid var(--line); }
+
+nav.toc { position: sticky; top: calc(16px + env(safe-area-inset-top, 0px)); max-height: calc(100vh - 32px); overflow: auto; font-size: 15px; }
+nav.toc h2 { font: 700 13px var(--body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: toc; }
+nav.toc a { display: grid; grid-template-columns: 26px 1fr; gap: 6px; padding: 4px 6px; border-radius: 6px; color: var(--ink); text-decoration: none; }
+nav.toc a::before { counter-increment: toc; content: counter(toc, decimal-leading-zero); font: 500 12px var(--mono); color: var(--muted); padding-top: 3px; }
+nav.toc a:hover, nav.toc a:focus-visible { background: var(--brick-soft); outline: none; }
+nav.toc .part { font: 700 12px var(--body); color: var(--brick); text-transform: uppercase; letter-spacing: .08em; margin: 12px 6px 2px; }
+@media (max-width: 860px) { nav.toc { position: static; max-height: none; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+  nav.toc ol { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); } }
+
+main { min-width: 0; display: grid; gap: 30px; }
+section.lesson { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 24px clamp(16px, 4vw, 32px); scroll-margin-top: 16px; }
+.lesson-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
+.num { font: 500 13px var(--mono); color: var(--brick); }
+h2 { font: 700 26px/1.15 var(--display); margin: 0; text-wrap: balance; }
+h3 { font: 700 18px/1.3 var(--body); margin: 20px 0 6px; }
+.who { font: 600 12px var(--body); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+p { margin: 8px 0; max-width: 68ch; }
+.where { font: 500 14px var(--mono); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; white-space: nowrap; }
+ol.steps { counter-reset: s; list-style: none; padding: 0; margin: 10px 0; display: grid; gap: 10px; max-width: 72ch; }
+ol.steps > li { counter-increment: s; display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 10px; }
+ol.steps > li::before { content: counter(s); display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--ink); color: var(--paper); font: 700 13px var(--body); margin-top: 1px; }
+ul { padding-left: 20px; margin: 8px 0; max-width: 70ch; }
+li { margin: 3px 0; }
+b { font-weight: 700; }
+.ui { font-weight: 700; color: var(--brick); }
+.note, .tip, .warn { border-radius: 8px; padding: 10px 14px; margin: 12px 0; max-width: 72ch; font-size: 16px; }
+.tip { background: var(--ok-soft); border-left: 4px solid var(--ok); }
+.warn { background: var(--warn-soft); border-left: 4px solid var(--warn); }
+.note { background: var(--brick-soft); border-left: 4px solid var(--brick); }
+.tip strong, .warn strong, .note strong { display: block; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 2px; }
+.table { overflow-x: auto; margin: 10px 0; }
+table { border-collapse: collapse; width: 100%; min-width: 460px; font-size: 15px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 700; background: var(--bg); }
+td:first-child { white-space: nowrap; font-weight: 600; }
+.swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; margin-right: 6px; border: 1px solid rgba(0,0,0,.15); }
+code { font: 500 14px var(--mono); background: var(--bg); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line); overflow-wrap: anywhere; }
+.practice { border: 2px dashed var(--brick); }
+footer { color: var(--muted); font-size: 14px; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+</head>
+<body>
+<p style="max-width:1180px;margin:12px auto 0;padding:0 16px"><a href="/home" style="color:var(--brick);font-weight:700;text-decoration:none">‹ Back to the app</a> · <a href="/guide-ur.html" style="color:var(--brick);font-weight:700;text-decoration:none">اردو</a></p>
+<div class="wrap">
+  <header class="hero">
+    <span class="eyebrow">Brick Kiln Manager · بھٹہ منیجر · Training Guide</span>
+    <h1>Bhatta Manager Guide</h1>
+    <p class="lede">Step-by-step lessons for every screen of the app, from the first login to the Thursday settlement. Do the practice day in lesson 3 with sample entries, then read the lessons for your own work.</p>
+    <div class="roles"><span>Owner · مالک</span><span>Accountant · اکاؤنٹنٹ</span><span>Munshi · منشی</span><span>Mistri · مستری</span><span>Viewer</span></div>
+  </header>
+
+  <nav class="toc" aria-label="Lessons">
+    <h2>Lessons</h2>
+    <ol>
+      <li class="part">Start here</li>
+      <li><a href="#start">Open the app and log in</a></li>
+      <li><a href="#tour">Tour of the screen</a></li>
+      <li><a href="#practice">Practice day</a></li>
+      <li><a href="#setup">First-time setup (owner)</a></li>
+      <li class="part">Every day</li>
+      <li><a href="#daily">Daily Entry</a></li>
+      <li><a href="#quick">Quick forms and the + button</a></li>
+      <li><a href="#workercard">Worker Day Card</a></li>
+      <li><a href="#attendance">Attendance</a></li>
+      <li><a href="#moulding">Moulding (Pathai)</a></li>
+      <li><a href="#weekly">Weekly Entry grid</a></li>
+      <li class="part">The kiln</li>
+      <li><a href="#board">Kiln Board</a></li>
+      <li><a href="#loading">Loading (Bharai)</a></li>
+      <li><a href="#firing">Firing (Jalai)</a></li>
+      <li><a href="#nikasi">Unloading (Nikasi)</a></li>
+      <li class="part">People and money</li>
+      <li><a href="#workers">Workers</a></li>
+      <li><a href="#peshgi">Peshgi and recovery</a></li>
+      <li><a href="#thursday">Dasti and Thursday settlement</a></li>
+      <li><a href="#khata">Khata</a></li>
+      <li><a href="#parties">Party Accounts</a></li>
+      <li><a href="#sales">Sales, bookings and challans</a></li>
+      <li><a href="#purchases">Purchases (Maal Aaya)</a></li>
+      <li><a href="#cash">Cash Book and cash count</a></li>
+      <li><a href="#personal">Personal Finance (owner)</a></li>
+      <li class="part">Checking and reports</li>
+      <li><a href="#roznamcha">Roznamcha</a></li>
+      <li><a href="#owner">Owner Summary</a></li>
+      <li><a href="#health">Health Check</a></li>
+      <li><a href="#insights">Insights</a></li>
+      <li><a href="#reports">Reports and printing</a></li>
+      <li><a href="#corrections">Corrections and history</a></li>
+      <li><a href="#weather">Weather</a></li>
+      <li class="part">Admin</li>
+      <li><a href="#settings">Settings in detail</a></li>
+      <li><a href="#users">Users and permissions</a></li>
+      <li><a href="#closeday">Closing a day</a></li>
+      <li><a href="#backup">Backups and updates</a></li>
+      <li><a href="#faq">Problems and answers</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+<section class="lesson" id="start">
+  <div class="lesson-head"><span class="num">01</span><h2>Open the app and log in</h2></div>
+  <span class="who">Everyone</span>
+  <ol class="steps">
+    <li>Open the kiln's web address in Chrome on your phone, for example <span class="where">kiln.naqsha-zameen.com</span>.</li>
+    <li>Install it once: tap Chrome's <b>⋮</b> menu, then <b>Add to Home screen</b> (or <b>Install app</b>). A "Bhatta Manager" icon appears with your other apps. From then on, open it from that icon.</li>
+    <li>Type your <b>username</b> and <b>password</b> (the owner gives these to you) and tap <span class="ui">Log In</span>.</li>
+    <li>If the app asks for a <b>Kiln Code</b>, type the code the owner gave you (for example <code>SAD208</code>). It is asked only once on a phone.</li>
+    <li>To switch between Urdu and English, tap the <span class="ui">UR / EN</span> button in the top bar. The app remembers your choice.</li>
+  </ol>
+  <div class="tip"><strong>Tip</strong>The app keeps working when the signal drops. Entries made without signal are saved on the phone and sent when the signal returns; the pop-up says "Saved offline, will sync later".</div>
+  <p>To log out, tap the red button with your name at the top right.</p>
+</section>
+
+<section class="lesson" id="tour">
+  <div class="lesson-head"><span class="num">02</span><h2>Tour of the screen</h2></div>
+  <span class="who">Everyone</span>
+  <h3>Top bar</h3>
+  <ul>
+    <li><b>Logo and name</b>: tap to return to Home (the chimney puffs smoke). The small number under it is the app version.</li>
+    <li><b>🌙 Moon</b>: night mode, dark screens for night firing shifts. Tap again (☀) for day mode.</li>
+    <li><b>UR / EN</b>: language. <b>Red button</b>: log out.</li>
+  </ul>
+  <h3>Bottom bar (phones)</h3>
+  <p><b>Home</b>, <b>Daily Entry</b>, the round orange <b>+</b>, <b>Kiln Board</b> and <b>Khata</b>. On a computer the + sits in the bottom corner instead.</p>
+  <h3>Home</h3>
+  <ul>
+    <li><b>Today panel</b> (dark box): greeting, date, weather, bricks moulded today, where the fire is, today's cash, and how many daily items are still missing. The big <span class="ui">Daily Entry</span> button opens today.</li>
+    <li><b>Stock</b>: Awwal, Doem, Khangar, green bricks in the field, green and fired bricks in the kiln, and coal left. Tap the title to open Purchases.</li>
+    <li><b>Five sections</b>: Today, Kiln, People, Money, Reports. Rarely used pages are under <span class="ui">More ▾</span>.</li>
+  </ul>
+  <h3>Things that look the same everywhere</h3>
+  <ul>
+    <li><b>Orange button</b> saves. <b>White button</b> is a second choice. <b>Red</b> deletes.</li>
+    <li>In lists: <b>✏ blue</b> edits the row in place, <b>✓ green</b> saves the change, <b>✕</b> cancels, <b>🗑 red</b> deletes (asks first).</li>
+    <li>The boxes under a list heading are <b>filters</b>: type part of a name or date to narrow the list. <span class="ui">✕ Clear All</span> removes them.</li>
+    <li>On phones, long lists show each row as a small card (column name on the left, value on the right).</li>
+    <li>Money boxes add commas as you type and show the amount in Urdu words underneath, so mistakes like an extra zero are easy to spot.</li>
+    <li>A dark pop-up at the top says <b>Saved ✓</b>; a red pop-up explains an error.</li>
+  </ul>
+</section>
+
+<section class="lesson practice" id="practice">
+  <div class="lesson-head"><span class="num">03</span><h2>Practice day</h2></div>
+  <span class="who">New munshi and owner · about 15 minutes</span>
+  <p>Do this once on a test day to get a feel for the app. Ask the owner which date to use, or use today and delete the entries afterwards (step 9 below).</p>
+  <ol class="steps">
+    <li>Tap <b>Daily Entry</b> in the bottom bar. Check the date at the top says today. The coloured bar shows what is done and what is missing.</li>
+    <li>Open <b>Attendance</b> from Home › Today and tap <b>P</b> for three workers. Tap <span class="ui">Save</span>, then go back to Daily Entry.</li>
+    <li>Back on Daily Entry, tap the orange <b>+</b> on the <b>Moulding</b> block. Pick a moulder, type <code>5000</code> bricks, tap <span class="ui">Save</span>. The block now shows the entry with its time, and the Moulding check turns green.</li>
+    <li>Tap <b>✏</b> on that entry, change it to <code>5200</code>, tap <span class="ui">Save</span>. This is how every mistake is corrected.</li>
+    <li>Tap the big round <b>+</b> at the bottom, choose <b>Firing</b>. Pick the fireman, the line, coal <code>1200</code>, temperature <code>950</code>, and <span class="ui">Save</span>.</li>
+    <li>Open <b>Worker Day Card</b> on Daily Entry, pick one worker, give <b>Dasti</b> <code>500</code> and tap <span class="ui">Save</span>.</li>
+    <li>Open <b>Kiln Board</b> and tap the line you fired. Its panel shows the firing date and coal.</li>
+    <li>Open <b>Roznamcha</b> (Home › Reports). Everything you did today is listed in time order.</li>
+    <li>Delete the practice entries from Daily Entry with <b>🗑</b>, or ask the owner to.</li>
+  </ol>
+</section>
+
+<section class="lesson" id="setup">
+  <div class="lesson-head"><span class="num">04</span><h2>First-time setup</h2></div>
+  <span class="who">Owner · once, at the start of the season</span>
+  <ol class="steps">
+    <li><b>Rates</b>: Home › More › <b>Settings</b>. Enter moulding, loading, unloading and firing rates, peshgi cuts per 1,000, brick prices, and the peshgi limits. Tap the green <span class="ui">Save</span> next to each one.</li>
+    <li><b>Opening Stock</b> (same page): what is physically at the kiln on the first day: Awwal, Doem, Khangar, green bricks, coal in kg, and other items. Tap <span class="ui">Save</span>. Without this, stock and coal figures start from zero and can go negative.</li>
+    <li><b>Kiln Location</b>: tap the kiln on the map, or use <span class="ui">Use My Location</span> while standing at the kiln. Weather comes from this spot.</li>
+    <li><b>Kiln layout</b>: on Kiln Board, under <b>Count By</b>, choose <b>Lines</b> (one line per round) or <b>Chambers</b>.</li>
+    <li><b>Hot lines behind the fire</b> (Settings): how many fired lines stay "Cooling" before they count as Ready to Unload. For example 40.</li>
+    <li><b>Types</b> (Settings, bottom): worker categories, purchase items, customer types and payment modes. Add your own, such as "Office Boy" or "Diesel".</li>
+    <li><b>Government Rates</b> (Settings): the notified rates per 1,000 bricks, for your record. They do not change any wages; the warning switch is off for now.</li>
+    <li><b>Users</b>: Home › More › <b>Users</b>. Add the munshi and accountant (lesson 32).</li>
+    <li><b>Workers</b>: add every worker with their opening peshgi (lesson 15).</li>
+  </ol>
+</section>
+
+<section class="lesson" id="daily">
+  <div class="lesson-head"><span class="num">05</span><h2>Daily Entry</h2></div>
+  <span class="who">Munshi, owner · the main screen for daily typing</span>
+  <p>Daily Entry is the one place to enter and correct everything done on a day. Open it from the bottom bar or Home.</p>
+  <h3>Choose the day</h3>
+  <p>Use <b>‹</b> and <b>›</b> to go back or forward a day, or tap the date to pick any past day. Every entry you add here gets that date.</p>
+  <h3>Read the progress bar</h3>
+  <p>Four checks show whether the day is complete: <b>Attendance</b> (marked / total workers), <b>Moulding</b>, <b>Firing</b> (two shifts expected) and <b>Loading</b>. Green means done, amber means missing.</p>
+  <h3>Add, correct, delete</h3>
+  <ol class="steps">
+    <li>Each kind of work has a block: Moulding, Loading, Firing, Unloading, Dasti, Peshgi, Sale, Payment, Purchase. Tap its coloured <b>+</b> to add.</li>
+    <li>Entries already saved for the day are listed in the block with their time.</li>
+    <li>Tap <b>✏</b> to change the numbers; wages are corrected automatically.</li>
+    <li>Tap <b>🗑</b> to delete. Some deletes are owner-only.</li>
+  </ol>
+  <div class="note"><strong>Remember</strong>If a day is closed by the owner (a lock note appears), only the owner can change it. See lesson 33.</div>
+</section>
+
+<section class="lesson" id="quick">
+  <div class="lesson-head"><span class="num">06</span><h2>Quick forms and the + button</h2></div>
+  <span class="who">Munshi, owner</span>
+  <p>The round orange <b>+</b> opens a menu of quick forms from any page. Each form slides up from the bottom with only the boxes it needs.</p>
+  <div class="table"><table>
+    <thead><tr><th>Form</th><th>What you fill</th><th>Good to know</th></tr></thead>
+    <tbody>
+      <tr><td>Moulding</td><td>Moulder, bricks, breakage %, quality, date</td><td>Breakage % is 2 by default.</td></tr>
+      <tr><td>Loading / Bharai</td><td>Empty line, bricks, loader, date</td><td>The next empty line is chosen for you.</td></tr>
+      <tr><td>Firing</td><td>Fireman, Day/Night, line, coal kg, °C, date, time</td><td>The line on fire is chosen for you; time is now.</td></tr>
+      <tr><td>Unloading / Nikasi</td><td>Ready line, unloader, Awwal, Doem, Khangar, Broken</td><td>One save starts and finishes the nikasi.</td></tr>
+      <tr><td>Dasti</td><td>Worker, amount, date</td><td>Cash taken during the week.</td></tr>
+      <tr><td>Peshgi</td><td>Advance or Recovery, worker, amount</td><td>Above the limit needs the owner.</td></tr>
+      <tr><td>Sale</td><td>Customer, grade, quantity, tax</td><td>Price comes from Settings.</td></tr>
+      <tr><td>Payment</td><td>Unpaid bill, amount, mode</td><td>The bill's balance fills in by itself.</td></tr>
+      <tr><td>Purchase</td><td>Item, supplier, quantity, rate, vehicle or description</td><td>Posts to the supplier's party account.</td></tr>
+      <tr><td>Attendance</td><td>Opens the Attendance page</td><td>See lesson 08.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="tip"><strong>Save &amp; Next</strong>Use <span class="ui">Save &amp; Next</span> when entering many in a row: the form stays open and clears only what changes. For loading it moves to the next empty line with the same loader.</div>
+</section>
+
+<section class="lesson" id="workercard">
+  <div class="lesson-head"><span class="num">07</span><h2>Worker Day Card</h2></div>
+  <span class="who">Munshi</span>
+  <p>Everything for one worker on one card, on Daily Entry.</p>
+  <ol class="steps">
+    <li>Type part of the worker's name in <b>Worker Day Card</b> and pick them.</li>
+    <li>Tap <b>Present</b>, <b>Absent</b>, <b>Leave</b> or <b>Half Day</b>. It saves at once.</li>
+    <li>For moulders, loaders and unloaders, type the bricks they did and tap <span class="ui">Save</span>. Unloaders also choose the grade.</li>
+    <li>Type any <b>Dasti</b> or <b>Peshgi</b> and tap its <span class="ui">Save</span>.</li>
+    <li>The card lists what is already recorded for them today, and their peshgi balance.</li>
+  </ol>
+</section>
+
+<section class="lesson" id="attendance">
+  <div class="lesson-head"><span class="num">08</span><h2>Attendance</h2></div>
+  <span class="who">Munshi · every morning</span>
+  <ol class="steps">
+    <li>Home › Today › <b>Attendance</b>. Check the date.</li>
+    <li>Filter by <b>Category</b> or type a name to find people quickly.</li>
+    <li>Tap <b>P</b> (present), <b>A</b> (absent), <b>L</b> (leave) or <b>½</b> for each worker. <span class="ui">Mark All Present</span> fills everyone, then change the few who are absent.</li>
+    <li>Tap <span class="ui">Save</span> at the top, or the small <b>✓</b> at the end of a row to save one person.</li>
+    <li>Tap a worker's name to see their record for a week, 15 days or a month.</li>
+  </ol>
+</section>
+
+<section class="lesson" id="moulding">
+  <div class="lesson-head"><span class="num">09</span><h2>Moulding (Pathai)</h2></div>
+  <span class="who">Munshi</span>
+  <p>Daily moulding is best entered on Daily Entry. The <b>Moulding</b> page (Home › Kiln) keeps the full list and totals.</p>
+  <ul>
+    <li><b>Net count</b> = bricks moulded − breakage %. Wages are paid on the net count at the moulding rate per 1,000.</li>
+    <li>Correct a past entry with <b>✏</b> in the list; wages change with it.</li>
+    <li>The weekly grid on this page lets you enter a whole week for every moulder at once (lesson 10).</li>
+  </ul>
+</section>
+
+<section class="lesson" id="weekly">
+  <div class="lesson-head"><span class="num">10</span><h2>Weekly Entry grid</h2></div>
+  <span class="who">Munshi · when entries come in a notebook at the end of the week</span>
+  <ol class="steps">
+    <li>Home › Today › <b>Weekly Entry</b>. Choose <b>Moulding</b>, <b>Loading</b> or <b>Unloading</b> at the top.</li>
+    <li>Use <b>‹ ›</b> to pick the week (Saturday to Friday).</li>
+    <li>Type each worker's count under each day. Green cells are already saved and cannot be typed over.</li>
+    <li>Unloading asks for the grade (Awwal, Doem, Khangar); enter one grade at a time.</li>
+    <li>Tap <span class="ui">Save Whole Week</span>.</li>
+  </ol>
+</section>
+
+<section class="lesson" id="board">
+  <div class="lesson-head"><span class="num">11</span><h2>Kiln Board</h2></div>
+  <span class="who">Everyone</span>
+  <p>The kiln drawn line by line. Line 1 is at the top middle and the lines run counter-clockwise to 240. The cards above the plan count lines in each state.</p>
+  <div class="table"><table>
+    <thead><tr><th>Colour</th><th>State</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><span class="swatch" style="background:#e2e8f0"></span>Grey</td><td>Empty</td><td>Ready to load.</td></tr>
+      <tr><td><span class="swatch" style="background:#4ade80"></span>Light green</td><td>Loading</td><td>Green bricks in, not preheating yet.</td></tr>
+      <tr><td><span class="swatch" style="background:#16a34a"></span>Green</td><td>Preheating</td><td>Marked by hand as preheating.</td></tr>
+      <tr><td><span class="swatch" style="background:#ef4444"></span>Red</td><td>Firing</td><td>The fire is here (latest firing entry).</td></tr>
+      <tr><td><span class="swatch" style="background:#d4a017"></span>Gold + green dot</td><td>Cooling</td><td>Fired, still hot behind the fire.</td></tr>
+      <tr><td><span class="swatch" style="background:#fde68a"></span>Light yellow</td><td>Ready to Unload</td><td>Cool enough for nikasi.</td></tr>
+      <tr><td><span class="swatch" style="background:#3b82f6"></span>Blue</td><td>Unloading</td><td>Nikasi team working.</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Using a line</h3>
+  <ol class="steps">
+    <li>Tap a line. Its panel slides up (on a computer it opens beside the plan).</li>
+    <li>The coloured stage buttons walk the line forward: Loading › Preheating › Firing › Cooling › Unloading. Only the next allowed step can be tapped.</li>
+    <li><b>‹ ›</b> in the panel moves to the previous or next line; <b>✕</b> closes.</li>
+    <li>The panel shows loading date, firing date, cooling date, bricks, coal, notes on issues, and the history of earlier rounds.</li>
+  </ol>
+  <div class="tip"><strong>Fire position</strong>The red line always follows the latest firing entry (lesson 13). To move the fire, log firing on the next line.</div>
+</section>
+
+<section class="lesson" id="loading">
+  <div class="lesson-head"><span class="num">12</span><h2>Loading (Bharai)</h2></div>
+  <span class="who">Munshi</span>
+  <ol class="steps">
+    <li>Tap an <b>empty (grey)</b> line on the Kiln Board, or use the Loading quick form.</li>
+    <li>Pick the loader or team, type the bricks (for example <code>4200</code>), check the date.</li>
+    <li>Tap <span class="ui">Save Line Bharai</span>. The next line opens with the same loader, so a whole run can be entered quickly.</li>
+    <li>To mark it preheating, tap the <b>Preheating</b> stage button.</li>
+  </ol>
+  <p>Owner only: <span class="ui">Edit Loading</span> corrects the count, loader or date; <span class="ui">Undo Loading</span> removes a load that has not been fired. Wages follow automatically.</p>
+</section>
+
+<section class="lesson" id="firing">
+  <div class="lesson-head"><span class="num">13</span><h2>Firing (Jalai)</h2></div>
+  <span class="who">Munshi, mistri · every shift</span>
+  <ol class="steps">
+    <li>Home › Kiln › <b>Firing</b>, or the Firing quick form.</li>
+    <li>Choose the <b>Fireman</b>, <b>Day</b> or <b>Night</b>, and the <b>Line No</b> being fired. You can also tap the line on the small plan under the form.</li>
+    <li>Type <b>Coal (kg)</b> and <b>Temperature (°C)</b>; check date and time.</li>
+    <li>Tap <span class="ui">Log Entry</span>. The line turns red on the Kiln Board and its coal is added to that line.</li>
+  </ol>
+  <p>The Line No list shows the line on fire, preheating lines and the next 15 loaded lines (after 240 it continues at 1).</p>
+</section>
+
+<section class="lesson" id="nikasi">
+  <div class="lesson-head"><span class="num">14</span><h2>Unloading (Nikasi)</h2></div>
+  <span class="who">Munshi</span>
+  <ol class="steps">
+    <li>Tap a <b>light yellow</b> (Ready) line, choose the unloader or team, and tap <span class="ui">Assign Unloader Team</span>. The line turns blue.</li>
+    <li>When the line is empty, open it again, type <b>Awwal</b>, <b>Doem</b>, <b>Khangar</b> and <b>Broken</b>, and tap <span class="ui">Save Counts</span>.</li>
+    <li>The line becomes empty, stock goes up and the unloader's wages are credited.</li>
+  </ol>
+  <p>The Unloading quick form does both steps in one save. Owner: <span class="ui">Cancel Nikasi</span> removes a team assigned by mistake.</p>
+</section>
+
+<section class="lesson" id="workers">
+  <div class="lesson-head"><span class="num">15</span><h2>Workers</h2></div>
+  <span class="who">Owner, munshi</span>
+  <ol class="steps">
+    <li>Home › People › <b>Workers</b>.</li>
+    <li>Fill <b>Name</b>, <b>Father Name</b>, <b>CNIC</b>, <b>Date of Birth</b>, <b>Category</b>, <b>Mobile No.</b>, <b>Opening Peshgi</b> (0 if none) and <b>Agreed Daily Bricks</b>. These are required.</li>
+    <li>Optional: <b>Reference / Jamadar</b> (groups workers under their jamadar in the Owner Summary), their own rate and peshgi cut per 1,000 (blank uses the kiln rate), EOBI and PESSI numbers.</li>
+    <li>Tap <span class="ui">+ Add Worker</span>.</li>
+  </ol>
+  <p>The list shows each worker's mobile, <b>peshgi balance</b> and daily bricks, for counter-checking with the worker. <span class="ui">Mark Signed</span> records the contract.</p>
+  <div class="warn"><strong>Age</strong>The app warns when a worker's date of birth shows they are under age. Keep CNIC and contract records complete for inspections.</div>
+</section>
+
+<section class="lesson" id="peshgi">
+  <div class="lesson-head"><span class="num">16</span><h2>Peshgi and recovery</h2></div>
+  <span class="who">Owner, munshi</span>
+  <ol class="steps">
+    <li>Home › People › <b>Peshgi</b>, or the Peshgi quick form.</li>
+    <li>Pick the worker. Their outstanding peshgi shows at the top.</li>
+    <li>Type the amount and date. Tap <span class="ui">Give Advance</span>, or <span class="ui">Record Recovery</span> when money comes back.</li>
+    <li>Above the limit in Settings, the owner must give a reason.</li>
+    <li><span class="ui">Print Slip</span> prints the worker's statement.</li>
+  </ol>
+</section>
+
+<section class="lesson" id="thursday">
+  <div class="lesson-head"><span class="num">17</span><h2>Dasti and Thursday settlement</h2></div>
+  <span class="who">Owner, accountant</span>
+  <h3>During the week: Dasti</h3>
+  <p>Cash a worker takes before Thursday. Enter it on the Worker Day Card, the Dasti quick form, or Home › People › <b>Hafta Hisab</b> › Dasti.</p>
+  <h3>Thursday: Hafta Hisab</h3>
+  <ol class="steps">
+    <li>Check <b>Owner Summary</b> on Wednesday for the cash needed (lesson 25).</li>
+    <li>Open <b>Hafta Hisab</b>. Choose the category and the week's start and end dates.</li>
+    <li>Tap <span class="ui">Propose</span>. Each worker's bricks, wages, peshgi cut, dasti already taken and cash to pay are calculated.</li>
+    <li>Change any amount if needed, then tap <span class="ui">Save and Settle</span>.</li>
+    <li>In <b>Recent Settlements</b>, tap <span class="ui">Print Slip</span> for one slip per worker to hand out.</li>
+  </ol>
+  <p>Formula: <b>wages − peshgi cut (per 1,000) − dasti = cash on Thursday</b>.</p>
+</section>
+
+<section class="lesson" id="khata">
+  <div class="lesson-head"><span class="num">18</span><h2>Khata</h2></div>
+  <span class="who">Owner, accountant</span>
+  <p>Tap <b>Khata</b> in the bottom bar. Two boxes:</p>
+  <ul>
+    <li><b>Worker Khata</b>: pick any worker (moulder, loader, fireman, munshi, office boy). Every entry from day one, like the paper khata: Naam (given), Jama (earned) and the running Baqaya.</li>
+    <li><b>Party Accounts</b>: everyone else (lesson 19).</li>
+  </ul>
+</section>
+
+<section class="lesson" id="parties">
+  <div class="lesson-head"><span class="num">19</span><h2>Party Accounts</h2></div>
+  <span class="who">Owner, accountant, munshi</span>
+  <p>For anyone who is not a worker or customer: the mistri who built the kiln, a tractor owner, coal and soil suppliers, diesel.</p>
+  <ol class="steps">
+    <li>Khata › <b>Party Accounts</b>, then <b>Add New Entry</b>.</li>
+    <li>Type the name (earlier names appear as you type), choose the type and check <b>Jama</b> (owed to them) or <b>Naam</b> (paid to them).</li>
+    <li>Types: <b>Work Bill</b> and <b>Rent / Service</b> are Jama; <b>Payment Made</b> and <b>Advance Given</b> are Naam.</li>
+    <li>Type the amount, mode of payment and a note. Tap <span class="ui">+ Add</span>.</li>
+  </ol>
+  <p><b>All Entries</b> shows each party's running balance; <b>Generate Report</b> gives one party or everyone for a date range, with <span class="ui">Export PDF</span>.</p>
+  <div class="tip"><strong>Automatic</strong>Every purchase (lesson 21) posts to its supplier as Jama by itself. Record what you pay them as Payment Made, and the balance shows what is still owed.</div>
+  <p><b>Example — Kashif Mistri:</b> each bill for his work is a Work Bill (Jama); every payment to him is Payment Made (Naam). His balance is what the kiln still owes him.</p>
+</section>
+
+<section class="lesson" id="sales">
+  <div class="lesson-head"><span class="num">20</span><h2>Sales, bookings and challans</h2></div>
+  <span class="who">Owner, accountant, munshi</span>
+  <h3>New customer</h3>
+  <p>Home › Money › <b>Sales</b> › <b>New Customer</b>: name and type, then <span class="ui">Add Customer</span>.</p>
+  <h3>Booking (Parchi)</h3>
+  <ol class="steps">
+    <li>Tab <b>Booking</b>: customer, grade, quantity booked and the advance received.</li>
+    <li>Tap <span class="ui">+ Booking</span>. The advance goes into the cash book.</li>
+    <li>The booking list shows bricks lifted and bricks remaining.</li>
+  </ol>
+  <h3>Delivery (bill and challan)</h3>
+  <ol class="steps">
+    <li>Tab <b>New Invoice</b>: customer, grade, quantity, tax.</li>
+    <li>Fill <b>Vehicle No</b>, <b>Driver</b>, <b>Destination</b> and <b>Freight</b> for the truck or trolley.</li>
+    <li>If the customer has a booking, choose it so the bricks come off what they booked.</li>
+    <li>Tap <span class="ui">New Invoice</span>. The <b>Delivery Challan</b> opens with a challan number: <span class="ui">Print Slip</span> or <span class="ui">WhatsApp</span> it to the customer.</li>
+  </ol>
+  <h3>Payment received</h3>
+  <p>Tab <b>Record Payment</b>: tap the unpaid bill, check the amount and mode, and save. The summary cards show total receivable and how overdue it is.</p>
+</section>
+
+<section class="lesson" id="purchases">
+  <div class="lesson-head"><span class="num">21</span><h2>Purchases (Maal Aaya)</h2></div>
+  <span class="who">Munshi, accountant</span>
+  <ol class="steps">
+    <li>Home › Money › <b>Purchases</b>, or the Purchase quick form.</li>
+    <li>Choose the <b>Item</b>. For a new item, pick <span class="ui">+ Add New Item</span>.</li>
+    <li>Type the <b>Supplier</b> name exactly the same each time, so all their purchases land in one party account.</li>
+    <li><b>Coal</b>: vehicle number, quantity in <b>tonnes</b>, rate per tonne, freight, and optional lab tests. <b>Other items</b>: description, quantity and rate.</li>
+    <li>Tap <span class="ui">+ Add</span>. Coal stock rises (tonnes × 1,000 kg) and the supplier's party account gets the full amount as Jama.</li>
+  </ol>
+  <div class="warn"><strong>Payments are not purchases</strong>Money paid to a supplier or mistri goes in Party Accounts as Payment Made, not here.</div>
+</section>
+
+<section class="lesson" id="cash">
+  <div class="lesson-head"><span class="num">22</span><h2>Cash Book and cash count</h2></div>
+  <span class="who">Owner, accountant</span>
+  <ol class="steps">
+    <li>Home › Money › <b>Cash Book</b>. Pick the day.</li>
+    <li>Cards: <b>Opening Cash</b>, <b>Total In</b> (payments and booking advances), <b>Total Out</b> (expenses, purchases, peshgi, dasti), <b>Closing Cash</b>.</li>
+    <li>At the end of the day, count the notes in hand and type the amount in <b>Cash Count</b>, then <span class="ui">Save</span>.</li>
+    <li>Green means it matches the book. Red shows the difference: find the missing entry before closing the day.</li>
+  </ol>
+</section>
+
+<section class="lesson" id="personal">
+  <div class="lesson-head"><span class="num">23</span><h2>Personal Finance</h2></div>
+  <span class="who">Owner only · private</span>
+  <p>The owner's own money, kept apart from the kiln: borrowing, loans given, repayments, household expenses. Only the owner sees it. It works exactly like Party Accounts: <b>Home</b> cards and a person picker, <b>Add New Entry</b>, <b>All Entries</b> with edit in the row (edited rows stay highlighted), and <b>Generate Report</b> with a net option and PDF export.</p>
+</section>
+
+<section class="lesson" id="roznamcha">
+  <div class="lesson-head"><span class="num">24</span><h2>Roznamcha</h2></div>
+  <span class="who">Everyone</span>
+  <p>Home › Reports › <b>Roznamcha</b>. Pick a date: everything done that day in time order (moulding, bharai, nikasi, sales, payments, purchases, coal, peshgi, dasti, issues, absences), with a summary count at the top. Filter by type or detail.</p>
+</section>
+
+<section class="lesson" id="owner">
+  <div class="lesson-head"><span class="num">25</span><h2>Owner Summary</h2></div>
+  <span class="who">Owner, accountant</span>
+  <ul>
+    <li><b>Cash Needed Thursday</b>: this week's wages minus dasti already given, per worker. Peshgi cut comes off at settlement.</li>
+    <li><b>Cost per 1,000 Bricks</b> (last 30 days): labour plus other costs, divided by bricks unloaded.</li>
+    <li><b>We Owe</b>: every supplier or party with an open balance.</li>
+    <li><b>Jamadar Groups</b>: workers and total peshgi under each jamadar.</li>
+    <li><b>Left With Peshgi Due</b>: inactive workers who still owe money.</li>
+  </ul>
+  <p>Tap <span class="ui">WhatsApp</span> to send the day's short summary to yourself or a partner.</p>
+</section>
+
+<section class="lesson" id="health">
+  <div class="lesson-head"><span class="num">26</span><h2>Health Check</h2></div>
+  <span class="who">Owner, accountant · once a week</span>
+  <p>Home › Reports › <b>Health Check</b> lists figures that look wrong, each with a link to fix it: no opening stock, coal or bricks below zero, workers with no attendance for 7 days, lines ready to unload for over 15 days, purchases without a supplier. "Everything looks right" means the reports can be trusted.</p>
+</section>
+
+<section class="lesson" id="insights">
+  <div class="lesson-head"><span class="num">27</span><h2>Insights</h2></div>
+  <span class="who">Owner, accountant</span>
+  <ol class="steps">
+    <li>Home › Reports › <b>Insights</b>.</li>
+    <li>Choose the period: <b>1 Day</b> (yesterday, full 24 hours), 7, 15, 30, 90, 180, 365 days, or Custom.</li>
+    <li>Cards: moulding (total, this week, this month), loading, lines fired, kiln situation line by line, nikasi by grade, sales, coal, stock in hand, production and quality, finance, risk.</li>
+    <li>Charts: moulding, Awwal share, coal per 1,000, sales and fired stock by grade, each with Daily Avg (left) and Trend (right). Tick or untick the legend boxes to show or hide parts of a chart.</li>
+  </ol>
+</section>
+
+<section class="lesson" id="reports">
+  <div class="lesson-head"><span class="num">28</span><h2>Reports and printing</h2></div>
+  <span class="who">Owner, accountant</span>
+  <ol class="steps">
+    <li>Home › Reports › <b>Reports</b>. Choose the period.</li>
+    <li>Tick the parts to include: moulding, bharai, nikasi, stock, firing, coal, sales, peshgi, settlements, purchases, cash book.</li>
+    <li>Tap <span class="ui">Print / PDF</span> and choose <b>Save as PDF</b> in the print window to keep or share the report.</li>
+  </ol>
+  <p>Other printouts: worker peshgi slip (Peshgi page), Thursday slips (Hafta Hisab), delivery challan (Sales), party and personal reports (Export PDF).</p>
+</section>
+
+<section class="lesson" id="corrections">
+  <div class="lesson-head"><span class="num">29</span><h2>Corrections and history</h2></div>
+  <span class="who">Owner</span>
+  <ul>
+    <li><b>Best place to correct</b>: Daily Entry for that date, with ✏ or 🗑.</li>
+    <li><b>Corrections &amp; Erase</b> (Home › More): loading and nikasi records over a date range, edited or erased with wages reversed. Moulding and firing are corrected on their own pages.</li>
+    <li><b>All Entries</b> (Activity) and <b>Audit Logs</b> (Home › More): who changed what and when.</li>
+  </ul>
+</section>
+
+<section class="lesson" id="weather">
+  <div class="lesson-head"><span class="num">30</span><h2>Weather</h2></div>
+  <span class="who">Everyone</span>
+  <p>Home › More › <b>Weather</b>. Today hour by hour, or 3, 7 and 15 days, with kiln advice: cover kachi bricks when rain is likely, strong wind, heat for workers, good drying days. The round ↻ button refreshes the forecast. Days 8–15 are a trend only.</p>
+</section>
+
+<section class="lesson" id="settings">
+  <div class="lesson-head"><span class="num">31</span><h2>Settings in detail</h2></div>
+  <span class="who">Owner</span>
+  <div class="table"><table>
+    <thead><tr><th>Setting</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td>Peshgi / munshi limits</td><td>Largest advance without the owner's reason; munshi's own limit.</td></tr>
+      <tr><td>Rates per 1,000</td><td>Moulding, loading, unloading wages; firing per shift.</td></tr>
+      <tr><td>Peshgi cuts per 1,000</td><td>How much peshgi comes off at Thursday settlement.</td></tr>
+      <tr><td>Brick prices</td><td>Default sale price for Awwal, Doem, Khangar.</td></tr>
+      <tr><td>Hot lines behind the fire</td><td>How many fired lines stay Cooling before Ready.</td></tr>
+      <tr><td>Allow negative stock</td><td>Lets entries go through even when stock would fall below zero.</td></tr>
+      <tr><td>Government Rates</td><td>Notified rates for record. No effect on wages; warning switch disabled for now.</td></tr>
+      <tr><td>Opening Stock</td><td>What was at the kiln on day one.</td></tr>
+      <tr><td>Kiln Location</td><td>Spot used for the weather.</td></tr>
+      <tr><td>Manage Types</td><td>Worker categories, purchase items, customer types, payment modes.</td></tr>
+    </tbody>
+  </table></div>
+  <p><span class="ui">Reset</span> next to a setting returns it to the default.</p>
+</section>
+
+<section class="lesson" id="users">
+  <div class="lesson-head"><span class="num">32</span><h2>Users and permissions</h2></div>
+  <span class="who">Owner</span>
+  <ol class="steps">
+    <li>Home › More › <b>Users</b>. Type a username, password and role, and tap <span class="ui">Add</span>.</li>
+    <li>Roles: <b>Owner</b> sees everything. <b>Accountant</b> sees money and reports. <b>Munshi</b> enters daily work. <b>Mistri</b> logs firing and nikasi counts. <b>Viewer</b> only looks.</li>
+    <li>Tap <span class="ui">Permissions</span> on a user to fine-tune what they can view, add, edit or delete in Workers, Peshgi, Settings and Types.</li>
+  </ol>
+</section>
+
+<section class="lesson" id="closeday">
+  <div class="lesson-head"><span class="num">33</span><h2>Closing a day</h2></div>
+  <span class="who">Owner</span>
+  <ol class="steps">
+    <li>On Daily Entry, check the day is complete and the cash count matches.</li>
+    <li>Tap <span class="ui">Close Day</span>. That day and all days before it are locked: staff cannot add or change entries dated then.</li>
+    <li>To fix something later, tap <span class="ui">Reopen Day</span>, correct it, and close again.</li>
+  </ol>
+</section>
+
+<section class="lesson" id="backup">
+  <div class="lesson-head"><span class="num">34</span><h2>Backups and updates</h2></div>
+  <span class="who">Owner or whoever manages the server</span>
+  <p>A backup of the whole database is taken every night at 11:59 pm Pakistan time; the last 3 are kept. These commands run on the server (VPS):</p>
+  <div class="table"><table>
+    <thead><tr><th>Job</th><th>Command</th></tr></thead>
+    <tbody>
+      <tr><td>Update the app</td><td><code>bash /var/www/brick-kilm-erp/update.sh</code></td></tr>
+      <tr><td>Turn on nightly backups (once)</td><td><code>bash /var/www/brick-kilm-erp/scripts/backup.sh --install</code></td></tr>
+      <tr><td>Back up now</td><td><code>bash /var/www/brick-kilm-erp/scripts/backup.sh</code></td></tr>
+      <tr><td>Restore a backup</td><td><code>bash /var/www/brick-kilm-erp/scripts/backup.sh --restore &lt;file&gt;</code></td></tr>
+    </tbody>
+  </table></div>
+  <div class="warn"><strong>Restoring</strong>A restore replaces the live data. The current data is always saved first in <code>/var/backups/brick-kiln/before-restore/</code>, and the command prints how to undo it.</div>
+</section>
+
+<section class="lesson" id="faq">
+  <div class="lesson-head"><span class="num">35</span><h2>Problems and answers</h2></div>
+  <span class="who">Everyone</span>
+  <h3>The app looks old or a new button is missing</h3>
+  <p>Pull down to refresh, or close and reopen the app. Check the version number under the logo.</p>
+  <h3>"Saved offline, will sync later"</h3>
+  <p>No signal. Keep working; entries send themselves when the signal returns. Don't enter them twice.</p>
+  <h3>Coal or stock shows a minus figure</h3>
+  <p>Open Health Check. Usually opening stock is missing, or a purchase was not entered.</p>
+  <h3>A line is stuck on Unloading</h3>
+  <p>The nikasi was started but not finished. Finish it with the counts, or the owner taps Cancel Nikasi.</p>
+  <h3>I entered something on the wrong day</h3>
+  <p>Open Daily Entry for that day, delete it, and enter it on the right day. If the day is closed, ask the owner.</p>
+  <h3>"Days up to … are closed by the owner"</h3>
+  <p>That date is locked. Ask the owner to reopen it.</p>
+  <h3>A supplier appears twice in Party Accounts</h3>
+  <p>The name was typed differently (for example "Haji Coal" and "Haji Coal Co"). Edit the entries so the name is exactly the same.</p>
+  <h3>I was logged out by myself</h3>
+  <p>Logins renew while you use the app. After a long gap, log in again; nothing saved is lost.</p>
+</section>
+
+    <footer>Bhatta Manager · Brick Kiln Manager. Written for app version 2.3.6. Screens may look slightly different after later updates.</footer>
+  </main>
+</div>
+
+</body>
+</html>
